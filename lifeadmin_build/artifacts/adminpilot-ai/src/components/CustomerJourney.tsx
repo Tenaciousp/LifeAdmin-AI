@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useTasks, useNotes, useCreateTask, useGeneratePlan, useUpdateTask, useDeleteTask, useSuggestMatch, useCatalog } from "@/hooks/use-api";
 import { getBuyerId } from "@/lib/auth";
 import { trackEvent } from "@/lib/analytics";
@@ -53,6 +53,19 @@ export function CustomerJourney() {
   const [aiHandoffOpen, setAiHandoffOpen] = useState(false);
   const [aiPrompt, setAiPrompt] = useState("");
   const [aiHandoffMode, setAiHandoffMode] = useState<"review" | "compare">("review");
+  const aiPromptRef = useRef<HTMLTextAreaElement | null>(null);
+
+  useEffect(() => {
+    if (!aiHandoffOpen) return;
+    const timer = window.setTimeout(() => {
+      const el = aiPromptRef.current;
+      if (!el) return;
+      el.scrollTop = 0;
+      el.setSelectionRange(0, 0);
+      el.blur();
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [aiHandoffOpen, aiHandoffMode, aiPrompt]);
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -898,21 +911,44 @@ Do not make the final decision for me. Give me a comparison I can review.`;
                 ? "This prompt asks a web-enabled AI assistant to research current alternatives, prices and source links. Nothing is sent automatically."
                 : "The text below is not sent anywhere automatically. Review it, then choose how you want to copy it or open an assistant separately."}
             </p>
-            
-            <textarea 
+
+            {aiHandoffMode === "compare" && (
+              <div className="grid grid-cols-3 gap-2 mb-4 text-center">
+                <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-3">
+                  <strong className="block text-slate-900 text-sm">3+ alternatives</strong>
+                  <span className="text-xs text-slate-500">Like-for-like options</span>
+                </div>
+                <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-3">
+                  <strong className="block text-slate-900 text-sm">Current prices</strong>
+                  <span className="text-xs text-slate-500">Terms and total cost</span>
+                </div>
+                <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-3">
+                  <strong className="block text-slate-900 text-sm">Source links</strong>
+                  <span className="text-xs text-slate-500">Official pages where possible</span>
+                </div>
+              </div>
+            )}
+
+            <div className="mb-2 flex items-center justify-between gap-3">
+              <label htmlFor="ai-prompt-preview" className="text-sm font-extrabold text-slate-900">Prompt preview</label>
+              <span className="text-xs text-slate-500">Edit before sharing if needed</span>
+            </div>
+            <textarea
+              id="ai-prompt-preview"
+              ref={aiPromptRef}
               value={aiPrompt}
               onChange={e => setAiPrompt(e.target.value)}
               aria-label="Structured AI Prompt"
-              className="w-full bg-slate-50 border border-slate-200 rounded-xl p-4 text-sm font-mono text-slate-700 h-64 mb-6 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl p-4 text-sm font-mono text-slate-700 h-56 mb-5 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
             />
-            
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-              <button onClick={() => copyToClipboard(aiPrompt, "ai_prompt_copied")} className="min-h-[44px] px-4 py-2 bg-slate-100 hover:bg-slate-200 rounded-lg text-sm font-bold text-slate-700">Copy for ChatGPT</button>
-              <button onClick={() => copyToClipboard(aiPrompt, "ai_prompt_copied")} className="min-h-[44px] px-4 py-2 bg-slate-100 hover:bg-slate-200 rounded-lg text-sm font-bold text-slate-700">Copy for Claude</button>
-              <button onClick={() => copyToClipboard(aiPrompt, "ai_prompt_copied")} className="min-h-[44px] px-4 py-2 bg-slate-100 hover:bg-slate-200 rounded-lg text-sm font-bold text-slate-700">Copy for another AI</button>
-              
-              <button onClick={() => openAiAssistant("https://chatgpt.com/", "ChatGPT")} className="min-h-[44px] px-4 py-2 bg-[#10a37f] hover:bg-[#0e906f] rounded-lg text-sm font-bold text-white text-center flex items-center justify-center gap-2 col-span-1 sm:col-span-1">Open ChatGPT <ExternalLink className="w-4 h-4" /></button>
-              <button onClick={() => openAiAssistant("https://claude.ai/new", "Claude")} className="min-h-[44px] px-4 py-2 bg-[#d97757] hover:bg-[#c4684a] rounded-lg text-sm font-bold text-white text-center flex items-center justify-center gap-2 col-span-1 sm:col-span-1">Open Claude <ExternalLink className="w-4 h-4" /></button>
+
+            <div className="grid grid-cols-2 gap-3 mb-3">
+              <button onClick={() => openAiAssistant("https://chatgpt.com/", "ChatGPT")} className="min-h-[48px] px-4 py-2 bg-[#10a37f] hover:bg-[#0e906f] rounded-xl text-sm font-extrabold text-white text-center flex items-center justify-center gap-2">Copy & open ChatGPT <ExternalLink className="w-4 h-4" /></button>
+              <button onClick={() => openAiAssistant("https://claude.ai/new", "Claude")} className="min-h-[48px] px-4 py-2 bg-[#d97757] hover:bg-[#c4684a] rounded-xl text-sm font-extrabold text-white text-center flex items-center justify-center gap-2">Copy & open Claude <ExternalLink className="w-4 h-4" /></button>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+              <button onClick={() => copyToClipboard(aiPrompt, "ai_prompt_copied")} className="min-h-[44px] px-3 py-2 bg-slate-100 hover:bg-slate-200 rounded-lg text-sm font-bold text-slate-700">Copy prompt</button>
+              <button onClick={() => copyToClipboard(aiPrompt, "ai_prompt_copied")} className="min-h-[44px] px-3 py-2 bg-slate-100 hover:bg-slate-200 rounded-lg text-sm font-bold text-slate-700">Copy for another AI</button>
             </div>
             <div className="mt-4 flex justify-end">
               <button onClick={() => setAiHandoffOpen(false)} className="min-h-[44px] px-4 py-2 text-slate-500 hover:text-slate-700 text-sm font-bold focus:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-lg">Close</button>
