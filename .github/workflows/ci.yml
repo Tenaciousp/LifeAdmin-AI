@@ -39,5 +39,31 @@ jobs:
       - name: Run type checks
         run: npm run typecheck
 
+      - name: Smoke test API
+        shell: bash
+        run: |
+          npm run dev:api > /tmp/lifeadmin-api.log 2>&1 &
+          API_PID=$!
+          trap 'kill "$API_PID" 2>/dev/null || true' EXIT
+          for attempt in {1..20}; do
+            if curl --fail --silent http://127.0.0.1:8000/api/health > /tmp/health.json; then
+              break
+            fi
+            sleep 1
+          done
+          python - <<'PY'
+          import json
+          import urllib.request
+
+          with urllib.request.urlopen("http://127.0.0.1:8000/api/health", timeout=5) as response:
+              health = json.load(response)
+          assert health["status"] == "ok"
+
+          with urllib.request.urlopen("http://127.0.0.1:8000/api/catalog", timeout=5) as response:
+              catalog = json.load(response)
+          assert len(catalog["categories"]) == 12
+          assert len(catalog["goals"]) == 7
+          PY
+
       - name: Build production frontend
         run: npm run build:web
