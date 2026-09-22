@@ -1273,6 +1273,22 @@ def result_contract(text, task):
     return sections
 
 
+REQUIRED_AI_HEADINGS = [
+    "Next steps",
+    "Provider message",
+    "Things to check",
+    "Approval checklist",
+]
+
+
+def valid_ai_result_contract(text):
+    """Accept live-model output only when it follows the four-section contract exactly."""
+    if not isinstance(text, str) or not text.strip():
+        return False
+    headings = re.findall(r"(?m)^##\s+(.+?)\s*$", text)
+    return headings == REQUIRED_AI_HEADINGS
+
+
 def call_openai(task, mode="full"):
     api_key = os.environ.get("OPENAI_API_KEY")
     if not api_key:
@@ -1323,8 +1339,11 @@ def call_openai(task, mode="full"):
                         if content.get("type") in ("output_text", "text"):
                             parts.append(content.get("text", ""))
                 text = "\n".join(p for p in parts if p).strip()
-            return text or fallback_agent(task, mode), "openai"
-    except (urllib.error.URLError, urllib.error.HTTPError, TimeoutError, Exception) as exc:
+            candidate = (text or "").strip()
+            if not valid_ai_result_contract(candidate):
+                return fallback_agent(task, mode), "fallback"
+            return candidate, "openai"
+    except (urllib.error.URLError, urllib.error.HTTPError, TimeoutError, Exception):
         return fallback_agent(task, mode), "fallback"
 
 
