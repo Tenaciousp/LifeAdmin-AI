@@ -667,11 +667,16 @@ Do not make the final decision for me. Tell me what I should consider next.`;
             {planResult && (
               <div className="flex flex-wrap gap-2 w-full xl:w-auto">
                 <button 
-                  onClick={() => copyToClipboard(planResult[activeTab] || "", activeTab === 'provider_message' ? "provider_message_copied" : "section_copied")} 
+                  onClick={() => copyToClipboard(
+                    activeTab === "provider_message" && providerEmail?.body ? providerEmail.body : (planResult[activeTab] || ""),
+                    activeTab === "provider_message" ? "provider_message_copied" : "section_copied"
+                  )} 
                   className="min-h-[44px] flex-1 xl:flex-none px-4 py-2 bg-white text-slate-900 hover:bg-slate-100 rounded-xl text-sm font-bold transition-colors shadow-lg flex items-center justify-center gap-2"
                 >
                   <Copy className="w-4 h-4" />
-                  Copy {activeTab.replace(/_/g, ' ')}
+                  {activeTab === "provider_message" && providerEmail?.kind === "bank_query"
+                    ? "Copy bank query message"
+                    : `Copy ${activeTab.replace(/_/g, " ")}`}
                 </button>
                 
                 <DropdownMenu.Root>
