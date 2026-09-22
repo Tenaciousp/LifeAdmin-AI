@@ -1,6 +1,10 @@
+import { lazy, Suspense } from "react";
 import { Switch, Route } from "wouter";
 import { LandingPage } from "./pages/LandingPage";
-import { AdminDashboard } from "./pages/AdminDashboard";
+
+const AdminDashboard = lazy(() =>
+  import("./pages/AdminDashboard").then((module) => ({ default: module.AdminDashboard })),
+);
 import { Toaster } from "@/components/ui/sonner";
 import { CheckoutReturnHandler } from "@/components/CheckoutReturnHandler";
 
@@ -20,11 +24,13 @@ export default function App() {
   return (
     <>
       <CheckoutReturnHandler />
-      <Switch>
-        <Route path="/" component={LandingPage} />
-        <Route path="/admin" component={AdminDashboard} />
-        <Route component={NotFound} />
-      </Switch>
+      <Suspense fallback={<div className="min-h-screen grid place-items-center bg-slate-50 text-slate-600 font-semibold" aria-live="polite">Loading…</div>}>
+        <Switch>
+          <Route path="/" component={LandingPage} />
+          <Route path="/admin" component={AdminDashboard} />
+          <Route component={NotFound} />
+        </Switch>
+      </Suspense>
       <Toaster position="bottom-right" />
     </>
   );
