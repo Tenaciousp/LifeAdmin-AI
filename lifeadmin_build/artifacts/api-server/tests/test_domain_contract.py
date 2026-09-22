@@ -109,6 +109,22 @@ class ResultContractTests(unittest.TestCase):
         self.assertIn("standing charges", result["things_to_check"].lower())
         self.assertIn("exit fees", result["things_to_check"].lower())
 
+    def test_live_ai_output_requires_exact_four_section_contract(self):
+        valid = """## Next steps
+Do this.
+
+## Provider message
+Hello.
+
+## Things to check
+Check this.
+
+## Approval checklist
+Review this."""
+        self.assertTrue(app.valid_ai_result_contract(valid))
+        self.assertFalse(app.valid_ai_result_contract("## Next steps\nOnly one section"))
+        self.assertFalse(app.valid_ai_result_contract(valid.replace("Things to check", "Other notes")))
+
 
 class SecurityDefaultsTests(unittest.TestCase):
     def test_demo_payments_are_disabled_by_default(self):
