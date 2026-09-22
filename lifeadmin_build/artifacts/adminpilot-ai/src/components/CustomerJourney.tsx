@@ -836,17 +836,94 @@ function sectionHelperText(section: string) {
 }
 
 function formatResultText(text: string) {
-  if (!text) return "No data available for this section.";
-  return text
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;")
-    .replace(/\n\n/g, "</p><p>")
-    .replace(/\n/g, "<br>")
-    .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
-    .replace(/\*(.*?)\*/g, "<em>$1</em>");
+  if (!text?.trim()) return "<p>No data available for this section.</p>";
+
+  const escapeHtml = (value: string) =>
+    value
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
+
+  const inline = (value: string) =>
+    escapeHtml(value)
+      .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
+      .replace(/\*(.+?)\*/g, "<em>$1</em>");
+
+  const lines = text.replace(/\r\n?/g, "\n").split("\n");
+  const blocks: string[] = [];
+  let listType: "ul" | "ol" | null = null;
+  let listItems: string[] = [];
+
+  const flushList = () => {
+    if (!listType || listItems.length === 0) return;
+    blocks.push(
+      `<${listType} class="my-3 space-y-2 pl-5 ${listType === "ul" ? "list-disc" : "list-decimal"}">${listItems
+        .map(item => `<li>${item}</li>`)
+        .join("")}</${listType}>`
+    );
+    listType = null;
+    listItems = [];
+  };
+
+  for (const rawLine of lines) {
+    const line = rawLine.trim();
+
+    if (!line) {
+      flushList();
+      continue;
+    }
+
+    const heading = line.match(/^(#{1,3})\s+(.+)$/);
+    if (heading) {
+      flushList();
+      const level = heading[1].length;
+      const cls = level === 1
+        ? "text-xl font-extrabold text-white mt-5 mb-2"
+        : level === 2
+          ? "text-base font-bold text-white mt-4 mb-2"
+          : "text-sm font-bold text-slate-100 mt-3 mb-1";
+      blocks.push(`<h${level} class="${cls}">${inline(heading[2])}</h${level}>`);
+      continue;
+    }
+
+    const checklist = line.match(/^[-*]\s+\[([ xX])\]\s+(.+)$/);
+    if (checklist) {
+      flushList();
+      const checked = checklist[1].toLowerCase() === "x";
+      blocks.push(
+        `<div class="my-2 flex items-start gap-2"><span aria-hidden="true" class="mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded border border-slate-500 text-xs">${checked ? "✓" : ""}</span><span>${inline(checklist[2])}</span></div>`
+      );
+      continue;
+    }
+
+    const bullet = line.match(/^[-*]\s+(.+)$/);
+    if (bullet) {
+      if (listType !== "ul") {
+        flushList();
+        listType = "ul";
+      }
+      listItems.push(inline(bullet[1]));
+      continue;
+    }
+
+    const numbered = line.match(/^\d+[.)]\s+(.+)$/);
+    if (numbered) {
+      if (listType !== "ol") {
+        flushList();
+        listType = "ol";
+      }
+      listItems.push(inline(numbered[1]));
+      continue;
+    }
+
+    flushList();
+    blocks.push(`<p class="my-2 leading-7">${inline(line)}</p>`);
+  }
+
+  flushList();
+  return blocks.join("");
 }
 
 function formatDetailList(details: Record<string, unknown> | string[]) {
