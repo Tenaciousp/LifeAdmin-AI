@@ -147,6 +147,15 @@ class OutputQualityRegressionTests(unittest.TestCase):
         self.assertIn("Recent plans", source)
         self.assertIn("handleOpenSavedPlan", source)
 
+    def test_result_renderer_formats_headings_lists_and_checklists(self):
+        root = pathlib.Path(__file__).resolve().parents[2] / "adminpilot-ai" / "src" / "components" / "CustomerJourney.tsx"
+        source = root.read_text(encoding="utf-8")
+        self.assertIn("heading = line.match", source)
+        self.assertIn("list-disc", source)
+        self.assertIn("list-decimal", source)
+        self.assertIn("checklist = line.match", source)
+        self.assertIn("dangerouslySetInnerHTML", source)
+
 
 if __name__ == "__main__":
     unittest.main()
