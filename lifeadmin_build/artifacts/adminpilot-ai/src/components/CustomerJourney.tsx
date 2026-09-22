@@ -316,7 +316,13 @@ Do not make the final decision for me. Tell me what I should consider next.`;
     const task = tasks.find((t: any) => t.id === selectedTaskId);
     if (!task || !planResult) return;
 
-    const prompt = `I am comparing alternatives for a household bill or subscription.
+    const prompt = `I want to reduce the cost of a household bill or subscription without losing important features.
+
+My priority:
+${String((lastKnownDetails as Record<string, unknown>)?.deal_priority || (lastKnownDetails as Record<string, unknown>)?.renewal_priority || (lastKnownDetails as Record<string, unknown>)?.desired_outcome || "Get a better deal / lower price")}
+
+Would I switch provider?
+${String((lastKnownDetails as Record<string, unknown>)?.switch_willingness || "Not sure")}
 
 Current task:
 ${task.title}
@@ -333,19 +339,20 @@ ${formatDetailList(lastKnownDetails)}
 Missing details:
 ${lastMissingDetails.length > 0 ? lastMissingDetails.join('\n') : "None"}
 
-Current LifeAdmin plan:
+LifeAdmin plan:
 ${planResult.next_steps || "None"}
 
-Please use current web information where available and:
-1. Find at least three realistic competing alternatives.
-2. Include current prices, contract length, introductory period, setup fees, price-rise terms, key features and total minimum-term cost.
-3. Link to the official provider page or another reliable source for each option.
-4. Separate confirmed facts from anything that still needs checking.
-5. Flag anything that depends on postcode/address availability.
-6. Compare the alternatives with my current package on a like-for-like basis.
-7. Suggest negotiation questions I can take back to my current provider.
+Please use current web information where available. I want a practical comparison I can use to negotiate or switch.
 
-Do not make the final decision for me. Give me a comparison I can review.`;
+1. Find at least five realistic alternatives where enough current information is available.
+2. Include current price, introductory period, standard price after the offer, contract length, setup fees, annual price-rise terms, important features and total minimum-term cost.
+3. Link to the official provider page or another reliable source for every option.
+4. Show which option is closest to my existing service and which offers the lowest total cost.
+5. Flag anything that depends on postcode/address availability or eligibility.
+6. Separate confirmed facts from anything still needing verification.
+7. Suggest the three strongest negotiation points I can take back to my current provider.
+8. Give me a short provider-ready negotiation message based on the best evidence.
+9. Do not make the final decision for me. Present the options clearly so I can choose.`;
 
     setAiPrompt(prompt);
     setAiHandoffMode("compare");
@@ -942,17 +949,26 @@ Do not make the final decision for me. Give me a comparison I can review.`;
               className="w-full bg-slate-50 border border-slate-200 rounded-xl p-4 text-sm font-mono text-slate-700 h-56 mb-5 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
             />
 
-            <div className="grid grid-cols-2 gap-3 mb-3">
-              <button onClick={() => openAiAssistant("https://chatgpt.com/", "ChatGPT")} className="min-h-[48px] px-4 py-2 bg-[#10a37f] hover:bg-[#0e906f] rounded-xl text-sm font-extrabold text-white text-center flex items-center justify-center gap-2">Copy & open ChatGPT <ExternalLink className="w-4 h-4" /></button>
-              <button onClick={() => openAiAssistant("https://claude.ai/new", "Claude")} className="min-h-[48px] px-4 py-2 bg-[#d97757] hover:bg-[#c4684a] rounded-xl text-sm font-extrabold text-white text-center flex items-center justify-center gap-2">Copy & open Claude <ExternalLink className="w-4 h-4" /></button>
+            <div className="mb-3">
+              <p className="text-xs font-black uppercase tracking-wider text-slate-500 mb-2">Recommended free options</p>
+              <div className="grid grid-cols-2 gap-3">
+                <button onClick={() => openAiAssistant("https://gemini.google.com/", "Google Gemini")} className="min-h-[48px] px-4 py-2 bg-blue-600 hover:bg-blue-500 rounded-xl text-sm font-extrabold text-white text-center flex items-center justify-center gap-2">Copy & open Gemini <ExternalLink className="w-4 h-4" /></button>
+                <button onClick={() => openAiAssistant("https://copilot.microsoft.com/", "Microsoft Copilot")} className="min-h-[48px] px-4 py-2 bg-slate-900 hover:bg-slate-800 rounded-xl text-sm font-extrabold text-white text-center flex items-center justify-center gap-2">Copy & open Copilot <ExternalLink className="w-4 h-4" /></button>
+              </div>
             </div>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-              <button onClick={() => copyToClipboard(aiPrompt, "ai_prompt_copied")} className="min-h-[44px] px-3 py-2 bg-slate-100 hover:bg-slate-200 rounded-lg text-sm font-bold text-slate-700">Copy prompt</button>
-              <button onClick={() => copyToClipboard(aiPrompt, "ai_prompt_copied")} className="min-h-[44px] px-3 py-2 bg-slate-100 hover:bg-slate-200 rounded-lg text-sm font-bold text-slate-700">Copy for another AI</button>
+
+            <p className="text-xs font-black uppercase tracking-wider text-slate-500 mb-2">Other popular AI assistants</p>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-3">
+              <button onClick={() => openAiAssistant("https://chatgpt.com/", "ChatGPT")} className="min-h-[44px] px-3 py-2 bg-[#10a37f] hover:bg-[#0e906f] rounded-lg text-sm font-bold text-white flex items-center justify-center gap-2">ChatGPT <ExternalLink className="w-4 h-4" /></button>
+              <button onClick={() => openAiAssistant("https://claude.ai/new", "Claude")} className="min-h-[44px] px-3 py-2 bg-[#d97757] hover:bg-[#c4684a] rounded-lg text-sm font-bold text-white flex items-center justify-center gap-2">Claude <ExternalLink className="w-4 h-4" /></button>
+              <button onClick={() => openAiAssistant("https://www.perplexity.ai/", "Perplexity")} className="min-h-[44px] px-3 py-2 bg-slate-100 hover:bg-slate-200 rounded-lg text-sm font-bold text-slate-800 flex items-center justify-center gap-2">Perplexity <ExternalLink className="w-4 h-4" /></button>
             </div>
-            <div className="mt-4 flex justify-end">
-              <button onClick={() => setAiHandoffOpen(false)} className="min-h-[44px] px-4 py-2 text-slate-500 hover:text-slate-700 text-sm font-bold focus:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-lg">Close</button>
+
+            <div className="grid grid-cols-2 gap-2">
+              <button onClick={() => copyToClipboard(aiPrompt, "ai_prompt_copied")} className="min-h-[44px] px-3 py-2 bg-slate-100 hover:bg-slate-200 rounded-lg text-sm font-bold text-slate-700">Copy prompt only</button>
+              <button onClick={() => setAiHandoffOpen(false)} className="min-h-[44px] px-3 py-2 border border-slate-200 hover:bg-slate-50 rounded-lg text-sm font-bold text-slate-700">Close</button>
             </div>
+
           </div>
         </div>
       )}
