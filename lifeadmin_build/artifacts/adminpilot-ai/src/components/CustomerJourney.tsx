@@ -297,6 +297,47 @@ Do not make the final decision for me. Tell me what I should consider next.`;
     trackEvent("ai_handoff_opened");
     setActiveStep(6);
   };
+  const handleCompareWithAi = () => {
+    const task = tasks.find((t: any) => t.id === selectedTaskId);
+    if (!task || !planResult) return;
+
+    const prompt = `I am comparing alternatives for a household bill or subscription.
+
+Current task:
+${task.title}
+
+Category:
+${task.category}
+
+Goal:
+${goals.find((g: any) => g.id === task.goal_id)?.label || "Compare alternatives"}
+
+Known details:
+${formatDetailList(lastKnownDetails)}
+
+Missing details:
+${lastMissingDetails.length > 0 ? lastMissingDetails.join('\n') : "None"}
+
+Current LifeAdmin plan:
+${planResult.next_steps || "None"}
+
+Please use current web information where available and:
+1. Find at least three realistic competing alternatives.
+2. Include current prices, contract length, introductory period, setup fees, price-rise terms, key features and total minimum-term cost.
+3. Link to the official provider page or another reliable source for each option.
+4. Separate confirmed facts from anything that still needs checking.
+5. Flag anything that depends on postcode/address availability.
+6. Compare the alternatives with my current package on a like-for-like basis.
+7. Suggest negotiation questions I can take back to my current provider.
+
+Do not make the final decision for me. Give me a comparison I can review.`;
+
+    setAiPrompt(prompt);
+    setAiHandoffOpen(true);
+    trackEvent("ai_comparison_opened");
+    setActiveStep(6);
+  };
+
 
   const copyToClipboard = async (text: string, eventName: string) => {
     if (!text?.trim()) {
@@ -678,6 +719,17 @@ Do not make the final decision for me. Tell me what I should consider next.`;
                     ? "Copy bank query message"
                     : `Copy ${activeTab.replace(/_/g, " ")}`}
                 </button>
+                {(tasks.find((t: any) => t.id === selectedTaskId)?.category_id === "tv_broadband_mobile" ||
+                  tasks.find((t: any) => t.id === selectedTaskId)?.goal_id === "reduce_price" ||
+                  tasks.find((t: any) => t.id === selectedTaskId)?.goal_id === "prepare_renewal") && (
+                  <button
+                    onClick={handleCompareWithAi}
+                    className="min-h-[44px] flex-1 xl:flex-none px-4 py-2 bg-cyan-400 hover:bg-cyan-300 text-slate-950 rounded-xl text-sm font-extrabold transition-colors shadow-lg flex items-center justify-center gap-2"
+                  >
+                    <Bot className="w-4 h-4" />
+                    Compare alternatives with AI
+                  </button>
+                )}
                 
                 <DropdownMenu.Root>
                   <DropdownMenu.Trigger asChild>
