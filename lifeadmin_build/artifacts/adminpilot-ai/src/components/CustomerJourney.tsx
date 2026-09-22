@@ -3,7 +3,7 @@ import { useTasks, useNotes, useCreateTask, useGeneratePlan, useUpdateTask, useD
 import { getBuyerId } from "@/lib/auth";
 import { trackEvent } from "@/lib/analytics";
 import { toast } from "sonner";
-import { ChevronDown, Loader2, Info, MoreHorizontal, Mail, Copy, Bot, Search, Zap, Trash2 } from "lucide-react";
+import { ChevronDown, Loader2, Info, MoreHorizontal, Mail, Copy, Bot, Search, Zap, Trash2, ExternalLink } from "lucide-react";
 import * as Collapsible from "@radix-ui/react-collapsible";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 
@@ -52,6 +52,7 @@ export function CustomerJourney() {
   
   const [aiHandoffOpen, setAiHandoffOpen] = useState(false);
   const [aiPrompt, setAiPrompt] = useState("");
+  const [aiHandoffMode, setAiHandoffMode] = useState<"review" | "compare">("review");
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -293,6 +294,7 @@ ${planResult.approval_checklist || 'None'}
 Do not make the final decision for me. Tell me what I should consider next.`;
 
     setAiPrompt(prompt);
+    setAiHandoffMode("review");
     setAiHandoffOpen(true);
     trackEvent("ai_handoff_opened");
     setActiveStep(6);
@@ -333,6 +335,7 @@ Please use current web information where available and:
 Do not make the final decision for me. Give me a comparison I can review.`;
 
     setAiPrompt(prompt);
+    setAiHandoffMode("compare");
     setAiHandoffOpen(true);
     trackEvent("ai_comparison_opened");
     setActiveStep(6);
@@ -362,6 +365,17 @@ Do not make the final decision for me. Give me a comparison I can review.`;
       setActiveStep(6);
     }
   };
+  const openAiAssistant = async (url: string, name: string) => {
+    try {
+      await navigator.clipboard.writeText(aiPrompt);
+      toast.success(`Comparison prompt copied. Paste it into ${name}.`);
+      trackEvent("ai_prompt_copied");
+    } catch {
+      toast.info(`Open ${name}, then copy the prompt from this window.`);
+    }
+    window.open(url, "_blank", "noopener,noreferrer");
+  };
+
 
   const tabRefs = useRef<(HTMLButtonElement | null)[]>([]);
   const tabIds = ["next_steps", "provider_message", "things_to_check", "approval_checklist"];
@@ -764,6 +778,32 @@ Do not make the final decision for me. Give me a comparison I can review.`;
             )}
           </div>
 
+          {planResult && (() => {
+            const currentTask = tasks.find((t: any) => t.id === selectedTaskId);
+            const alternatives = potentialAlternatives(currentTask);
+            if (!alternatives.length) return null;
+            return (
+              <div className="mb-4 rounded-xl border border-cyan-400/30 bg-cyan-400/10 p-4">
+                <div className="flex flex-col lg:flex-row lg:items-center gap-3">
+                  <div className="flex-1">
+                    <p className="text-xs font-black uppercase tracking-wider text-cyan-300 mb-1">Potential alternatives</p>
+                    <p className="text-sm text-slate-200 leading-relaxed">
+                      {alternatives.join(" · ")}
+                    </p>
+                    <p className="text-xs text-slate-400 mt-2">Examples to investigate, not live price quotes. Use AI research to check current offers and official source links.</p>
+                  </div>
+                  <button
+                    onClick={handleCompareWithAi}
+                    className="min-h-[44px] px-4 py-2.5 rounded-xl bg-cyan-300 hover:bg-cyan-200 text-slate-950 font-extrabold text-sm flex items-center justify-center gap-2 shrink-0"
+                  >
+                    <Bot className="w-4 h-4" />
+                    Find current alternatives with AI
+                  </button>
+                </div>
+              </div>
+            );
+          })()}
+
           <div className="flex-1 bg-[#1e293b] border border-slate-700 rounded-xl p-6">
             {generatePlan.isPending ? (
               <div className="h-full flex flex-col items-center justify-center text-slate-400 gap-3 min-h-[250px]">
@@ -847,14 +887,16 @@ Do not make the final decision for me. Give me a comparison I can review.`;
           onKeyDown={e => e.key === 'Escape' && setAiHandoffOpen(false)}
         >
           <div className="bg-white rounded-2xl max-w-2xl w-full p-6 shadow-2xl animate-in fade-in zoom-in-95 duration-200 max-h-[90vh] flex flex-col" role="dialog" aria-modal="true" aria-labelledby="aiHandoffTitle">
-            <h3 id="aiHandoffTitle" className="text-xl font-extrabold text-slate-900 mb-2">Continue with an AI assistant</h3>
+            <h3 id="aiHandoffTitle" className="text-xl font-extrabold text-slate-900 mb-2">{aiHandoffMode === "compare" ? "Find current alternatives with AI" : "Continue with an AI assistant"}</h3>
             
             <div className="bg-orange-50 border border-orange-200 text-orange-900 p-3 rounded-xl text-sm font-medium mb-4">
               <strong>Check before copying:</strong> remove account numbers, payment-card details, passwords and any sensitive information you do not want to share.
             </div>
             
             <p className="text-slate-600 text-sm mb-4">
-              The text below is not sent anywhere automatically. Review it, then choose how you want to copy it or open an assistant separately.
+              {aiHandoffMode === "compare"
+                ? "This prompt asks a web-enabled AI assistant to research current alternatives, prices and source links. Nothing is sent automatically."
+                : "The text below is not sent anywhere automatically. Review it, then choose how you want to copy it or open an assistant separately."}
             </p>
             
             <textarea 
@@ -869,8 +911,8 @@ Do not make the final decision for me. Give me a comparison I can review.`;
               <button onClick={() => copyToClipboard(aiPrompt, "ai_prompt_copied")} className="min-h-[44px] px-4 py-2 bg-slate-100 hover:bg-slate-200 rounded-lg text-sm font-bold text-slate-700">Copy for Claude</button>
               <button onClick={() => copyToClipboard(aiPrompt, "ai_prompt_copied")} className="min-h-[44px] px-4 py-2 bg-slate-100 hover:bg-slate-200 rounded-lg text-sm font-bold text-slate-700">Copy for another AI</button>
               
-              <a href="https://chatgpt.com/" target="_blank" rel="noreferrer" className="min-h-[44px] px-4 py-2 bg-[#10a37f] hover:bg-[#0e906f] rounded-lg text-sm font-bold text-white text-center flex items-center justify-center col-span-1 sm:col-span-1">Open ChatGPT</a>
-              <a href="https://claude.ai/new" target="_blank" rel="noreferrer" className="min-h-[44px] px-4 py-2 bg-[#d97757] hover:bg-[#c4684a] rounded-lg text-sm font-bold text-white text-center flex items-center justify-center col-span-1 sm:col-span-1">Open Claude</a>
+              <button onClick={() => openAiAssistant("https://chatgpt.com/", "ChatGPT")} className="min-h-[44px] px-4 py-2 bg-[#10a37f] hover:bg-[#0e906f] rounded-lg text-sm font-bold text-white text-center flex items-center justify-center gap-2 col-span-1 sm:col-span-1">Open ChatGPT <ExternalLink className="w-4 h-4" /></button>
+              <button onClick={() => openAiAssistant("https://claude.ai/new", "Claude")} className="min-h-[44px] px-4 py-2 bg-[#d97757] hover:bg-[#c4684a] rounded-lg text-sm font-bold text-white text-center flex items-center justify-center gap-2 col-span-1 sm:col-span-1">Open Claude <ExternalLink className="w-4 h-4" /></button>
             </div>
             <div className="mt-4 flex justify-end">
               <button onClick={() => setAiHandoffOpen(false)} className="min-h-[44px] px-4 py-2 text-slate-500 hover:text-slate-700 text-sm font-bold focus:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-lg">Close</button>
@@ -880,6 +922,27 @@ Do not make the final decision for me. Give me a comparison I can review.`;
       )}
     </section>
   );
+}
+
+function potentialAlternatives(task: any): string[] {
+  if (!task) return [];
+  const category = task.category_id;
+  if (category === "tv_broadband_mobile") {
+    return ["Virgin Media", "BT / EE", "NOW", "Full-fibre broadband + separate streaming"];
+  }
+  if (category === "energy_water") {
+    return ["Current supplier retention tariff", "Alternative fixed tariff", "Flexible / standard tariff", "Accredited comparison-market options"];
+  }
+  if (category === "insurance") {
+    return ["Current insurer retention quote", "Comparison-market quote", "Direct-only insurer", "Higher-excess / adjusted-cover option"];
+  }
+  if (category === "subscriptions_memberships") {
+    return ["Cheaper plan tier", "Annual billing", "Bundle through another service", "Cancel and replace with a lower-cost alternative"];
+  }
+  if (category === "home_security_maintenance") {
+    return ["Provider renewal offer", "Independent local service", "Pay-as-you-go alternative", "Equivalent cover from another provider"];
+  }
+  return [];
 }
 
 function sectionHelperText(section: string) {
