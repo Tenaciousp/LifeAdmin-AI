@@ -41,7 +41,7 @@ export function LandingPage() {
             <a href="#addons" className="hover:text-white transition-colors">Pricing</a>
             <a href="#faq" className="hover:text-white transition-colors">FAQ</a>
           </div>
-          <a href="#app" className="min-h-[40px] inline-flex items-center bg-white text-slate-900 hover:bg-blue-50 px-4 py-2 rounded-full text-sm font-bold transition-colors">
+          <a href="#app" className="min-h-[44px] inline-flex items-center bg-white text-slate-900 hover:bg-blue-50 px-4 py-2 rounded-full text-sm font-bold transition-colors">
             Start with a bill
           </a>
         </div>
