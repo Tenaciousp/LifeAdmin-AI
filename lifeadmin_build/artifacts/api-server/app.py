@@ -970,12 +970,35 @@ def playbook_sections(playbook, task=None):
             ("Record keeping checklist", ["- Save final copy, attachments, receipt/reference, date sent and any reply."])
         ],
         "communications": [
-            ("Services and bundle check", ["- List every service included: Sky TV or another TV package, Virgin Media, broadband, mobile phone, handset finance and landline.", "- Separate essential services from optional channels, boosts, data add-ons and equipment charges."]),
-            ("Monthly payment check", ["- Record the normal monthly payment, recent price increases, one-off charges and discounts that expire.", "- Check whether TV, broadband and phone services have different contract-end dates."]),
-            ("Contract and cancellation check", ["- Confirm minimum term, contract-end date, notice period, exit fee, equipment return and whether changing one service affects a bundle discount."]),
-            ("Comparison checklist", ["- Compare like-for-like speed, data, calls, channels, equipment, setup fees and total contract cost.", "- Check service availability and installation dates before cancelling the current provider."]),
-            ("Provider contact draft", ["Hello, please review my current package and confirm the monthly price, services included, contract-end date, exit fees and your best available like-for-like offer in writing."]),
-            ("Approval checklist", ["- Package and equipment checked.", "- Total cost and contract length compared.", "- Service continuity confirmed.", "- No switch or cancellation submitted without approval."])
+            ("Your action plan", [
+                "1. Write down the current monthly price, contract-end date and every service you actually use.",
+                "2. Mark anything you would happily remove, such as premium channels, boosts, add-ons, landline or extra data.",
+                "3. Set a target monthly price before speaking to the provider. Base it on the best genuinely comparable alternative you find, not on the headline introductory price alone.",
+                "4. Compare at least three realistic alternatives before negotiating. Include the current provider's new-customer equivalent where visible and at least two competing providers or a broadband-plus-streaming combination.",
+                "5. Compare total contract cost, setup fees, annual price rises, contract length, speed, channels, equipment and exit terms.",
+                "6. Contact the current provider only after you have a comparison figure. Ask for its best retention price in writing and do not accept a new minimum term until the full cost is clear.",
+                "7. Decide using the full-term cost and services you will actually use. Keep the written quote before switching or renewing."
+            ]),
+            ("Competition comparison", [
+                "- For UK TV/broadband packages, useful comparison targets often include Virgin Media, BT/EE, NOW and standalone fibre providers plus separate streaming services, subject to availability at your address.",
+                "- Record: monthly price, introductory period, price after discounts, contract length, setup fee, broadband speed, included TV/sports/cinema, equipment charge and total minimum-term cost.",
+                "- Treat advertised deals as leads only. Confirm current availability and terms on the provider's official site before acting.",
+                "- Use the AI comparison button in LifeAdmin AI to take this plan into ChatGPT or another web-enabled assistant and ask it to find current alternatives with source links."
+            ]),
+            ("Contract and cancellation check", [
+                "- Confirm minimum term, contract-end date, notice period, exit fee, equipment return and whether changing one service affects a bundle discount.",
+                "- Check whether any discount expires before the contract itself and whether a replacement service will be live before cancellation."
+            ]),
+            ("Provider contact draft", [
+                "Hello, I am reviewing my package and comparing current alternatives. Please confirm my current monthly price, contract-end date, any exit fees, discounts due to end, and the cheapest package that keeps the services I actually use. Please also confirm your best retention price, the new minimum term, any future price rises and the total cost over that term in writing."
+            ]),
+            ("Approval checklist", [
+                "- At least three realistic options compared.",
+                "- Full-term cost compared, not just the first-month price.",
+                "- Required channels, speed and equipment checked.",
+                "- Exit fee and new minimum term understood.",
+                "- No switch or renewal submitted until the written offer is reviewed."
+            ])
         ],
         "utilities": [
             ("Utility account check", ["- Identify gas, electricity, dual fuel or water and record the supplier, tariff, account reference and payment method.", "- Record meter type and readings where relevant."]),
