@@ -126,6 +126,26 @@ Review this."""
         self.assertFalse(app.valid_ai_result_contract(valid.replace("Things to check", "Other notes")))
 
 
+class TaskUpdateValidationTests(unittest.TestCase):
+    def test_task_updates_are_bounded_and_canonical(self):
+        changes = app.sanitize_task_changes({
+            "title": "x" * 500,
+            "category_id": "not-real",
+            "goal_id": "not-real",
+            "details": {"provider": "p" * 700},
+            "priority": "Critical",
+            "status": "Anything",
+            "notes": "n" * 5000,
+        })
+        self.assertEqual(len(changes["title"]), 160)
+        self.assertEqual(changes["category_id"], "other_regular_payment")
+        self.assertEqual(changes["goal_id"], "check_bill")
+        self.assertEqual(len(changes["details"]["provider"]), 500)
+        self.assertEqual(changes["priority"], "Medium")
+        self.assertEqual(changes["status"], "Open")
+        self.assertEqual(len(changes["notes"]), 4000)
+
+
 class SecurityDefaultsTests(unittest.TestCase):
     def test_demo_payments_are_disabled_by_default(self):
         with patch.dict(os.environ, {}, clear=True):
