@@ -15,7 +15,18 @@ _BASE_FIELDS = [
     {"id": "amount", "label": "Amount", "type": "text", "required": False, "placeholder": "e.g. £42.99 per month"},
     {"id": "date", "label": "Relevant date", "type": "date", "required": False, "placeholder": "Renewal, payment or deadline date"},
     {"id": "what_happened", "label": "What happened?", "type": "textarea", "required": False, "placeholder": "Tell us what changed or what you need help with"},
-    {"id": "desired_outcome", "label": "What would you like to happen?", "type": "textarea", "required": False, "placeholder": "e.g. a lower price, clarification or cancellation"},
+    {"id": "desired_outcome", "label": "What would you like to achieve?", "type": "select", "required": False, "options": [
+        "Get a better deal / lower price",
+        "Compare alternatives",
+        "Keep the same service for less",
+        "Remove extras I do not use",
+        "Prepare for renewal",
+        "Switch provider",
+        "Cancel the service",
+        "Challenge a charge / request a refund",
+        "Understand my bill",
+        "Other"
+    ]},
 ]
 
 _SPECIAL_FIELDS = {
@@ -93,11 +104,40 @@ _GOAL_FIELDS = {
         {"id": "date", "label": "Renewal date", "type": "date", "required": False, "recommended": True, "placeholder": "When does it renew?"},
         {"id": "amount", "label": "Current price", "type": "text", "required": False, "recommended": True, "placeholder": "Current monthly or annual price"},
         {"id": "new_quote", "label": "Renewal quote", "type": "text", "required": False, "recommended": True, "placeholder": "New price if supplied"},
+        {"id": "renewal_priority", "label": "What matters most?", "type": "select", "required": False, "recommended": False, "options": [
+            "Lower price",
+            "Lowest total cost",
+            "Keep the same cover / service",
+            "Better features or cover",
+            "Shorter / more flexible term",
+            "Not sure"
+        ]},
+        {"id": "switch_willingness", "label": "Would you switch provider?", "type": "select", "required": False, "recommended": False, "options": [
+            "Yes, if the deal is better",
+            "Prefer to stay if the price is competitive",
+            "Only want a retention deal",
+            "Not sure"
+        ]},
         {"id": "auto_renewal", "label": "Auto-renewal", "type": "select", "required": False, "recommended": False, "options": ["Yes", "No", "Not sure"]},
     ],
     "reduce_price": [
         {"id": "amount", "label": "Current price", "type": "text", "required": False, "recommended": True, "placeholder": "Current monthly or annual price"},
         {"id": "contract_end_date", "label": "Contract end date", "type": "date", "required": False, "recommended": True, "placeholder": "If there is a minimum term"},
+        {"id": "deal_priority", "label": "What is your priority?", "type": "select", "required": False, "recommended": False, "options": [
+            "Lowest monthly price",
+            "Lowest total contract cost",
+            "Keep the same service for less",
+            "Keep key features but pay less",
+            "Remove unused extras",
+            "Shorter / more flexible contract",
+            "Not sure"
+        ]},
+        {"id": "switch_willingness", "label": "Would you switch provider?", "type": "select", "required": False, "recommended": False, "options": [
+            "Yes, if the deal is better",
+            "Prefer to stay if the price is competitive",
+            "Only want a retention deal",
+            "Not sure"
+        ]},
         {"id": "must_keep", "label": "What must you keep?", "type": "text", "required": False, "recommended": False, "placeholder": "e.g. sports channels, roaming, specific cover"},
     ],
     "cancel_switch": [
@@ -120,12 +160,12 @@ _GOAL_FIELDS = {
 }
 
 _GOAL_DATA = [
-    ("identify_payment", "Identify a payment", "Work out what a payment might relate to and what to check next.", ["unknown payment", "unknown recurring payment", "recurring payment", "unrecognised", "unrecognized", "do not recognise", "mystery payment", "merchant i do not know", "what is this payment"]),
-    ("check_bill", "Check my bill", "Understand a charge, increase or payment.", ["check bill", "review bill", "understand bill", "payment amount", "invoice", "statement", "bill increase", "direct debit increased"]),
+    ("reduce_price", "Get a better deal / reduce cost", "Compare realistic alternatives and prepare to negotiate a lower overall cost.", ["cheaper", "save money", "reduce price", "lower bill", "better deal", "negotiate", "too expensive", "price rise", "discount", "haggle"]),
     ("prepare_renewal", "Prepare for renewal", "Get ready before a policy, contract or deal renews.", ["renewal", "renew", "contract ending", "coming up", "expires", "expiry", "deal ending", "tariff ending"]),
-    ("reduce_price", "Reduce my price", "Ask for a better deal, discount or cheaper package.", ["cheaper", "save money", "reduce price", "lower bill", "better deal", "negotiate", "too expensive", "price rise", "discount", "haggle"]),
     ("cancel_switch", "Cancel or switch", "Leave, cancel, switch or stop future payments.", ["cancel", "switch", "leave", "stop paying", "change provider", "end membership", "terminate", "stop payments"]),
-    ("challenge_charge", "Challenge a charge", "Query a mistake, refund or unexpected payment.", ["challenge", "dispute", "wrong charge", "charged too much", "complaint", "refund", "not received", "overcharged", "unexpected charge", "unauthorised", "unauthorized"]),
+    ("check_bill", "Check my bill / price increase", "Understand a charge, increase or payment.", ["check bill", "review bill", "understand bill", "payment amount", "invoice", "statement", "bill increase", "direct debit increased"]),
+    ("challenge_charge", "Challenge a charge / request a refund", "Query a mistake, refund or unexpected payment.", ["challenge", "dispute", "wrong charge", "charged too much", "complaint", "refund", "not received", "overcharged", "unexpected charge", "unauthorised", "unauthorized"]),
+    ("identify_payment", "Identify a payment", "Work out what a payment might relate to and what to check next.", ["unknown payment", "unknown recurring payment", "recurring payment", "unrecognised", "unrecognized", "do not recognise", "mystery payment", "merchant i do not know", "what is this payment"]),
     ("contact_provider", "Contact provider", "Create a clear message to send.", ["contact provider", "write to", "message supplier", "ask provider", "query provider", "call provider", "email provider", "letter"]),
 ]
 
