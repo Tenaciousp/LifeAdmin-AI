@@ -1425,6 +1425,46 @@ def admin_overview(user):
     }
 
 
+def sanitize_task_changes(body):
+    """Limit task updates to the same validated shape used when tasks are created."""
+    changes = {}
+    if "title" in body:
+        changes["title"] = str(body.get("title") or "").strip()[:160]
+    if "category_id" in body:
+        canonical = domain.normalise_task({
+            "category_id": body.get("category_id"),
+            "goal_id": "check_bill",
+            "details": {},
+        })
+        changes["category_id"] = canonical["category_id"]
+        changes["category"] = canonical["category"]
+    if "goal_id" in body:
+        canonical = domain.normalise_task({
+            "category_id": "other_regular_payment",
+            "goal_id": body.get("goal_id"),
+            "details": {},
+        })
+        changes["goal_id"] = canonical["goal_id"]
+    if "details" in body:
+        details = body.get("details") if isinstance(body.get("details"), dict) else {}
+        changes["details"] = {
+            str(key)[:80]: str(value)[:500]
+            for key, value in details.items()
+            if value not in (None, "")
+        }
+    if "priority" in body:
+        priority = str(body.get("priority") or "Medium")
+        changes["priority"] = priority if priority in {"Low", "Medium", "High"} else "Medium"
+    if "due" in body:
+        changes["due"] = str(body.get("due") or "")[:100]
+    if "status" in body:
+        status = str(body.get("status") or "Open")
+        changes["status"] = status if status in {"Open", "Done"} else "Open"
+    if "notes" in body:
+        changes["notes"] = str(body.get("notes") or "").strip()[:4000]
+    return changes
+
+
 class AdminPilotHandler(SimpleHTTPRequestHandler):
     def __init__(self, *args, **kwargs):
         directory = WEB_DIR if os.path.isdir(WEB_DIR) else APP_DIR
@@ -1569,7 +1609,7 @@ class AdminPilotHandler(SimpleHTTPRequestHandler):
             return json_response(self, {"task": task}, 201)
         if path == "/api/tasks/update":
             task_id = body.get("id")
-            changes = {key: body[key] for key in ["title", "category", "category_id", "goal_id", "details", "priority", "due", "status", "notes"] if key in body}
+            changes = sanitize_task_changes(body)
             if user:
                 updated = storage.update_task(user_id, task_id, changes)
             else:
