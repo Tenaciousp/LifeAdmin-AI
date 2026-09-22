@@ -29,7 +29,6 @@ The source is now portable and does not require Replit Agent or a Replit runtime
 
 ## Automated validation
 
-- 40 automated tests passed, 0 failed
 - GitHub Actions clean-environment CI passed on 22 September 2026
 - 40 automated tests passed, 0 failed
 - TypeScript type checks passed
