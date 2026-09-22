@@ -30,8 +30,9 @@ The source is now portable and does not require Replit Agent or a Replit runtime
 ## Automated validation
 
 - GitHub Actions clean-environment CI passed on 22 September 2026
-- 40 automated tests passed, 0 failed
+- 42 automated tests passed, 0 failed
 - TypeScript type checks passed
+- API smoke test passes for health and the 12-category / seven-goal catalog
 - Production Vite frontend build passed
 - Python dependency installation and compile validation passed
 - API smoke and contract coverage includes health, task creation, structured plans and all nine approved household scenarios
