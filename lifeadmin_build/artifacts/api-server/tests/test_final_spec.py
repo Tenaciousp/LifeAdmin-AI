@@ -156,6 +156,12 @@ class OutputQualityRegressionTests(unittest.TestCase):
         self.assertIn("checklist = line.match", source)
         self.assertIn("dangerouslySetInnerHTML", source)
 
+    def test_provider_copy_uses_clean_email_body_and_unknown_payment_bank_query(self):
+        root = pathlib.Path(__file__).resolve().parents[2] / "adminpilot-ai" / "src" / "components" / "CustomerJourney.tsx"
+        source = root.read_text(encoding="utf-8")
+        self.assertIn('activeTab === "provider_message" && providerEmail?.body ? providerEmail.body', source)
+        self.assertIn("Copy bank query message", source)
+
 
 if __name__ == "__main__":
     unittest.main()
