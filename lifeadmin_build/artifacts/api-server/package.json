@@ -1,0 +1,12 @@
+{
+  "name": "@workspace/api-server",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "python app.py",
+    "build": "python -m py_compile app.py storage.py domain.py",
+    "start": "python app.py",
+    "typecheck": "python -m py_compile app.py storage.py domain.py",
+    "test": "PYTHONPATH=. python -m unittest discover -s tests -v"
+  }
+}

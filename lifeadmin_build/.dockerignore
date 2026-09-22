@@ -1,0 +1,8 @@
+.git
+node_modules
+**/node_modules
+**/__pycache__
+**/*.pyc
+artifacts/api-server/data/*.sqlite3*
+artifacts/api-server/data/.session_secret
+.env

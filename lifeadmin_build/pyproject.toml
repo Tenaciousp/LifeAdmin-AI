@@ -1,0 +1,9 @@
+[project]
+name = "lifeadmin-ai"
+version = "1.0.0"
+description = "Privacy-light household bills, renewals and subscriptions assistant"
+requires-python = ">=3.11"
+dependencies = []
+
+[project.optional-dependencies]
+postgres = ["psycopg[binary]>=3.3.6"]
