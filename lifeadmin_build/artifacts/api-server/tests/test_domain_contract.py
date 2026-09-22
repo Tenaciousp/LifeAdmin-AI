@@ -97,6 +97,18 @@ class ResultContractTests(unittest.TestCase):
         empty = app.result_contract("## Next steps\nCheck your bill.", task)
         self.assertIsNone(empty["provider_email"])
 
+    def test_energy_plan_has_practical_things_to_check(self):
+        task = {
+            "title": "Energy tariff ending",
+            "category_id": "energy_water",
+            "goal_id": "prepare_renewal",
+            "details": {"provider": "British Gas"},
+        }
+        result = app.result_contract(app.fallback_agent(task), task)
+        self.assertIn("unit rates", result["things_to_check"].lower())
+        self.assertIn("standing charges", result["things_to_check"].lower())
+        self.assertIn("exit fees", result["things_to_check"].lower())
+
 
 class SecurityDefaultsTests(unittest.TestCase):
     def test_demo_payments_are_disabled_by_default(self):
