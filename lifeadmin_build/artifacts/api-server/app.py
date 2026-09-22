@@ -1170,6 +1170,9 @@ THINGS_TO_CHECK_HEADINGS = {
     "affordability warning", "payment-risk warning", "cancellation risk check",
     "insurance checks", "compliance reminder", "conditional billing-route checks",
     "refund eligibility check", "things to check",
+    "tariff check", "switching checklist", "renewal date check",
+    "discount and support check", "payment-plan check", "statement check",
+    "contract end date", "cheaper alternative check",
 }
 
 OMITTED_RESULT_HEADINGS = {"output style", "information supplied"}
