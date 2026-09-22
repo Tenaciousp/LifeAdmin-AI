@@ -29,16 +29,16 @@ The source is now portable and does not require Replit Agent or a Replit runtime
 
 ## Automated validation
 
-- 37 automated tests passed, 0 failed
-- 72 TypeScript/TSX source files passed syntax transpilation
-- Frontend bare-import dependency audit passed
-- Python compile validation passed
-- API smoke test passed for health, task creation and Netflix plan generation
+- 40 automated tests passed, 0 failed
+- GitHub Actions clean-environment CI passed on 22 September 2026
+- 40 automated tests passed, 0 failed
+- TypeScript type checks passed
+- Production Vite frontend build passed
+- Python dependency installation and compile validation passed
+- API smoke and contract coverage includes health, task creation, structured plans and all nine approved household scenarios
 - Zero-configuration SQLite account/task/note/purchase lifecycle covered by tests
-
-## Validation limitation in this environment
-
-The full Vite production bundle was not executed because this isolated build environment has no network access and no cached npm dependency set. `npm install --offline` confirmed the dependencies are not locally cached. Source syntax and dependency declarations were checked instead. A normal internet-connected environment should run `npm install` followed by `npm run build` before deployment.
+- Live AI output is rejected unless it follows the exact four-section result contract
+- Result rendering formats headings, lists, numbered steps and checklists without exposing raw markdown markers
 
 ## External items still required for a public paid launch
 
