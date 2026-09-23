@@ -162,6 +162,24 @@ class OutputQualityRegressionTests(unittest.TestCase):
         self.assertIn('activeTab === "provider_message" && providerEmail?.body ? providerEmail.body', source)
         self.assertIn("Copy bank query message", source)
 
+    def test_savings_flow_uses_dropdowns_and_five_ai_assistants(self):
+        domain_path = pathlib.Path(__file__).resolve().parents[1] / "domain.py"
+        domain_source = domain_path.read_text(encoding="utf-8")
+        self.assertIn('"id": "desired_outcome", "label": "What would you like to achieve?", "type": "select"', domain_source)
+        self.assertIn('"id": "deal_priority"', domain_source)
+        self.assertIn('"id": "switch_willingness"', domain_source)
+        self.assertIn("Get a better deal / reduce cost", domain_source)
+
+        root = pathlib.Path(__file__).resolve().parents[2] / "adminpilot-ai" / "src" / "components" / "CustomerJourney.tsx"
+        source = root.read_text(encoding="utf-8")
+        self.assertIn("https://gemini.google.com/", source)
+        self.assertIn("https://copilot.microsoft.com/", source)
+        self.assertIn("https://chatgpt.com/", source)
+        self.assertIn("https://claude.ai/new", source)
+        self.assertIn("https://www.perplexity.ai/", source)
+        self.assertIn("Find at least five realistic alternatives", source)
+        self.assertIn("official provider page or another reliable source", source)
+
 
 if __name__ == "__main__":
     unittest.main()
