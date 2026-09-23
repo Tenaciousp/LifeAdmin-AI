@@ -530,6 +530,26 @@ Please use current web information where available. I want a practical compariso
               <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2">
                 <div>
                   <label className="block text-sm font-bold text-slate-800 mb-2">2. What do you want to do?</label>
+
+                  <div className="grid grid-cols-2 gap-2 mb-3">
+                    {goals.filter((g: any) => ["reduce_price", "prepare_renewal", "cancel_switch", "check_bill"].includes(g.id)).map((g: any) => (
+                      <button
+                        key={g.id}
+                        type="button"
+                        onClick={() => {
+                          setSelectedGoal(g.id);
+                          const category = categories.find((c: any) => c.id === selectedCategory);
+                          setTitle(`${g.label}: ${category?.label?.toLowerCase() || "household payment"}`);
+                          setActiveStep(3);
+                          trackEvent("goal_selected", { goal: g.id });
+                        }}
+                        className={`min-h-[50px] rounded-xl border px-3 py-2 text-left text-sm font-bold transition-colors ${selectedGoal === g.id ? "border-primary bg-blue-50 text-primary" : "border-slate-200 bg-white text-slate-700 hover:border-blue-300 hover:bg-blue-50"}`}
+                      >
+                        {g.label}
+                      </button>
+                    ))}
+                  </div>
+
                   <select 
                     value={selectedGoal || ""}
                     onChange={e => {
@@ -544,8 +564,9 @@ Please use current web information where available. I want a practical compariso
                       }
                     }}
                     className="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-slate-800 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+                    aria-label="More goals"
                   >
-                    <option value="">Choose a goal...</option>
+                    <option value="">More goals...</option>
                     {goals.map((g: any) => <option key={g.id} value={g.id}>{g.label}</option>)}
                   </select>
                   {currentGoalObj?.description && (
