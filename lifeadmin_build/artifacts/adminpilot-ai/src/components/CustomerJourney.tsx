@@ -941,20 +941,28 @@ Please use current web information where available. I want a practical compariso
             </p>
 
             {aiHandoffMode === "compare" && (
-              <div className="grid grid-cols-3 gap-2 mb-4 text-center">
-                <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-3">
-                  <strong className="block text-slate-900 text-sm">3+ alternatives</strong>
-                  <span className="text-xs text-slate-500">Like-for-like options</span>
+              <>
+                <div className="grid grid-cols-3 gap-2 mb-4 text-center">
+                  <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-3">
+                    <strong className="block text-slate-900 text-sm">5 alternatives</strong>
+                    <span className="text-xs text-slate-500">Like-for-like options</span>
+                  </div>
+                  <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-3">
+                    <strong className="block text-slate-900 text-sm">Current prices</strong>
+                    <span className="text-xs text-slate-500">Terms and total cost</span>
+                  </div>
+                  <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-3">
+                    <strong className="block text-slate-900 text-sm">Source links</strong>
+                    <span className="text-xs text-slate-500">Official pages where possible</span>
+                  </div>
                 </div>
-                <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-3">
-                  <strong className="block text-slate-900 text-sm">Current prices</strong>
-                  <span className="text-xs text-slate-500">Terms and total cost</span>
+                <div className="mb-4 rounded-xl border border-blue-200 bg-blue-50 p-4">
+                  <p className="text-xs font-black uppercase tracking-wider text-blue-700 mb-1">Key narrative for AI</p>
+                  <p className="text-sm leading-relaxed text-slate-700">
+                    {buildAiNarrative(tasks.find((t: any) => t.id === selectedTaskId), lastKnownDetails, goals)}
+                  </p>
                 </div>
-                <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-3">
-                  <strong className="block text-slate-900 text-sm">Source links</strong>
-                  <span className="text-xs text-slate-500">Official pages where possible</span>
-                </div>
-              </div>
+              </>
             )}
 
             <div className="mb-2 flex items-center justify-between gap-3">
@@ -995,6 +1003,22 @@ Please use current web information where available. I want a practical compariso
       )}
     </section>
   );
+}
+
+function buildAiNarrative(task: any, details: Record<string, unknown> | string[], goals: any[]): string {
+  if (!task) return "I want to compare current alternatives and reduce my overall cost without losing important features.";
+  const record = Array.isArray(details) ? {} : details || {};
+  const priority = String(
+    record.deal_priority ||
+    record.renewal_priority ||
+    record.desired_outcome ||
+    "Get a better deal / lower price"
+  );
+  const switching = String(record.switch_willingness || "Not sure");
+  const amount = record.amount ? ` Current price: ${String(record.amount)}.` : "";
+  const mustKeep = record.must_keep ? ` Must keep: ${String(record.must_keep)}.` : "";
+  const goal = goals.find((g: any) => g.id === task.goal_id)?.label || "Compare alternatives";
+  return `I want to ${goal.toLowerCase()} for ${task.category}. My priority is ${priority.toLowerCase()}. Switching preference: ${switching}.${amount}${mustKeep} I want current alternatives, source links, full-term costs and negotiation points before I decide.`;
 }
 
 function potentialAlternatives(task: any): string[] {
