@@ -344,15 +344,7 @@ ${planResult.next_steps || "None"}
 
 Please use current web information where available. I want a practical comparison I can use to negotiate or switch.
 
-1. Find at least five realistic alternatives where enough current information is available.
-2. Include current price, introductory period, standard price after the offer, contract length, setup fees, annual price-rise terms, important features and total minimum-term cost.
-3. Link to the official provider page or another reliable source for every option.
-4. Show which option is closest to my existing service and which offers the lowest total cost.
-5. Flag anything that depends on postcode/address availability or eligibility.
-6. Separate confirmed facts from anything still needing verification.
-7. Suggest the three strongest negotiation points I can take back to my current provider.
-8. Give me a short provider-ready negotiation message based on the best evidence.
-9. Do not make the final decision for me. Present the options clearly so I can choose.`;
+${buildComparisonRequirements(task)}`;
 
     setAiPrompt(prompt);
     setAiHandoffMode("compare");
@@ -1003,6 +995,32 @@ Please use current web information where available. I want a practical compariso
       )}
     </section>
   );
+}
+
+function buildComparisonRequirements(task: any): string {
+  if (task?.category_id === "energy_water") {
+    return `1. Find at least five realistic energy tariff options where enough current information is available.
+2. For each option include supplier, tariff name and type, unit rate(s), standing charge(s), tariff end date, exit fee, payment method and any smart-meter or eligibility requirement.
+3. Estimate annual cost using the annual usage I supplied. Compare every option using the same usage rather than the monthly direct-debit amount.
+4. Link to the official supplier page or another reliable source for every option and state when the price information was checked.
+5. Keep electricity, gas, dual-fuel and water comparisons separate. Do not compare a water tariff as though it were an energy tariff.
+6. Flag anything dependent on postcode or region, meter type, smart-meter status, payment method, EV ownership or other eligibility.
+7. Show the lowest estimated annual cost and the option closest to my current tariff, including any saving after exit fees.
+8. Separate confirmed facts from anything still needing verification.
+9. Suggest the three strongest negotiation points I can take back to my current supplier.
+10. Give me a short supplier-ready negotiation message based on the best evidence.
+11. Do not make the final decision for me. Present the options clearly so I can choose.`;
+  }
+
+  return `1. Find at least five realistic alternatives where enough current information is available.
+2. Include current price, introductory period, standard price after the offer, contract length, setup fees, annual price-rise terms, important features and total minimum-term cost.
+3. Link to the official provider page or another reliable source for every option.
+4. Show which option is closest to my existing service and which offers the lowest total cost.
+5. Flag anything that depends on postcode/address availability or eligibility.
+6. Separate confirmed facts from anything still needing verification.
+7. Suggest the three strongest negotiation points I can take back to my current provider.
+8. Give me a short provider-ready negotiation message based on the best evidence.
+9. Do not make the final decision for me. Present the options clearly so I can choose.`;
 }
 
 function buildAiNarrative(task: any, details: Record<string, unknown> | string[], goals: any[]): string {
