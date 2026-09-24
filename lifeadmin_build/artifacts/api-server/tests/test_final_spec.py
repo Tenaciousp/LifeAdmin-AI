@@ -179,6 +179,11 @@ class OutputQualityRegressionTests(unittest.TestCase):
         self.assertIn("https://www.perplexity.ai/", source)
         self.assertIn("Find at least five realistic alternatives", source)
         self.assertIn("official provider page or another reliable source", source)
+        self.assertIn("buildComparisonRequirements(task)", source)
+        self.assertIn('task?.category_id === "energy_water"', source)
+        self.assertIn("unit rate(s), standing charge(s)", source)
+        self.assertIn("Estimate annual cost using the annual usage I supplied", source)
+        self.assertIn("including any saving after exit fees", source)
 
 
 if __name__ == "__main__":
