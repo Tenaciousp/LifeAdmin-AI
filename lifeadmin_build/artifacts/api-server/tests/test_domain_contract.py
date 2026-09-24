@@ -22,6 +22,14 @@ class CatalogTests(unittest.TestCase):
             self.assertTrue(all({"id", "label", "type", "required"}.issubset(field) for field in category["fields"]))
             self.assertTrue(category["examples"])
 
+    def test_energy_renewal_fields_capture_comparison_inputs(self):
+        fields = {field["id"]: field for field in domain.fields_for("energy_water", "prepare_renewal")}
+        for field_id in ("utility_type", "tariff", "annual_usage", "unit_rate", "standing_charge", "exit_fee", "date", "amount", "new_quote"):
+            self.assertIn(field_id, fields)
+        self.assertEqual(fields["tariff"]["type"], "select")
+        self.assertIn("Fixed", fields["tariff"]["options"])
+        self.assertIn("Standard variable", fields["tariff"]["options"])
+
     def test_suggestion_routes_provider_and_goal(self):
         result = domain.suggest("Netflix cancel subscription")
         self.assertEqual(result["category_id"], "subscriptions_memberships")
