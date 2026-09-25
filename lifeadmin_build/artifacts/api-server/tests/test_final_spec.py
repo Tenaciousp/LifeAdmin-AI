@@ -184,6 +184,10 @@ class OutputQualityRegressionTests(unittest.TestCase):
         self.assertIn("unit rate(s), standing charge(s)", source)
         self.assertIn("Estimate annual cost using the annual usage I supplied", source)
         self.assertIn("including any saving after exit fees", source)
+        self.assertIn("Treat this as a water-bill review, not an energy supplier-switching search", source)
+        self.assertIn("Do not invent five supplier alternatives", source)
+        self.assertIn("Current water tariff review", source)
+        self.assertIn("Social tariff / support scheme", source)
 
 
 if __name__ == "__main__":

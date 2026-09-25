@@ -998,12 +998,29 @@ ${buildComparisonRequirements(task)}`;
 }
 
 function buildComparisonRequirements(task: any): string {
+  const utilityType = String(task?.details?.utility_type || "").toLowerCase();
+  const tariffType = String(task?.details?.tariff || "").toLowerCase();
+  const isWater = task?.category_id === "energy_water" && (utilityType === "water" || tariffType === "water tariff");
+
+  if (isWater) {
+    return `1. Treat this as a water-bill review, not an energy supplier-switching search.
+2. Check the current water provider, region, billing basis and whether the account is metered, unmetered or assessed.
+3. Explain the current tariff or charging basis, fixed charges, usage charges and any seasonal or wastewater elements using current official information.
+4. Identify practical bill-reduction routes relevant to my region, including meter eligibility, assessed charges, social tariffs or support schemes, water-efficiency schemes and correction of inaccurate household details where relevant.
+5. Do not invent five supplier alternatives or imply household water supplier switching is available when local rules do not support it.
+6. Link to the official water-company or regulator page for each route and state when the information was checked.
+7. Separate confirmed savings from estimates and show any eligibility, evidence or application requirements.
+8. Suggest the three strongest questions I should ask my current water provider.
+9. Give me a short provider-ready message based on the best evidence.
+10. Do not make the final decision for me. Present the options clearly so I can choose.`;
+  }
+
   if (task?.category_id === "energy_water") {
     return `1. Find at least five realistic energy tariff options where enough current information is available.
 2. For each option include supplier, tariff name and type, unit rate(s), standing charge(s), tariff end date, exit fee, payment method and any smart-meter or eligibility requirement.
 3. Estimate annual cost using the annual usage I supplied. Compare every option using the same usage rather than the monthly direct-debit amount.
 4. Link to the official supplier page or another reliable source for every option and state when the price information was checked.
-5. Keep electricity, gas, dual-fuel and water comparisons separate. Do not compare a water tariff as though it were an energy tariff.
+5. Compare electricity, gas or dual-fuel options matching the supply type I supplied. Do not include water tariffs.
 6. Flag anything dependent on postcode or region, meter type, smart-meter status, payment method, EV ownership or other eligibility.
 7. Show the lowest estimated annual cost and the option closest to my current tariff, including any saving after exit fees.
 8. Separate confirmed facts from anything still needing verification.
@@ -1046,6 +1063,11 @@ function potentialAlternatives(task: any): string[] {
     return ["Virgin Media", "BT / EE", "NOW", "Full-fibre broadband + separate streaming"];
   }
   if (category === "energy_water") {
+    const utilityType = String(task?.details?.utility_type || "").toLowerCase();
+    const tariffType = String(task?.details?.tariff || "").toLowerCase();
+    if (utilityType === "water" || tariffType === "water tariff") {
+      return ["Current water tariff review", "Meter or assessed-charge options", "Social tariff / support scheme", "Water-efficiency bill reduction"];
+    }
     return ["Current supplier retention tariff", "Alternative fixed tariff", "Flexible / standard tariff", "Accredited comparison-market options"];
   }
   if (category === "insurance") {
