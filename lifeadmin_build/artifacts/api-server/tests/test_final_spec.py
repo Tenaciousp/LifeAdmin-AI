@@ -147,6 +147,12 @@ class OutputQualityRegressionTests(unittest.TestCase):
         self.assertIn("Recent plans", source)
         self.assertIn("handleOpenSavedPlan", source)
 
+    def test_search_suggestion_details_are_preserved_into_task_fields(self):
+        root = pathlib.Path(__file__).resolve().parents[2] / "adminpilot-ai" / "src" / "components" / "CustomerJourney.tsx"
+        source = root.read_text(encoding="utf-8")
+        self.assertIn("suggestedMatch.prefill_details", source)
+        self.assertIn("setDynamicFields", source)
+
     def test_result_renderer_formats_headings_lists_and_checklists(self):
         root = pathlib.Path(__file__).resolve().parents[2] / "adminpilot-ai" / "src" / "components" / "CustomerJourney.tsx"
         source = root.read_text(encoding="utf-8")
