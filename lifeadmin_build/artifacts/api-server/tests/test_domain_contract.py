@@ -39,6 +39,22 @@ class CatalogTests(unittest.TestCase):
         unknown = domain.suggest("unknown Netflix card payment")
         self.assertEqual(unknown["goal_id"], "identify_payment")
 
+    def test_energy_and_water_suggestions_prefill_recognised_details(self):
+        water = domain.suggest("United Utilities bill")
+        self.assertEqual(water["category_id"], "energy_water")
+        self.assertEqual(water["prefill_details"]["provider"], "United Utilities")
+        self.assertEqual(water["prefill_details"]["utility_type"], "Water")
+        self.assertEqual(water["prefill_details"]["tariff"], "Water tariff")
+
+        dual_fuel = domain.suggest("Octopus dual fuel renewal")
+        self.assertEqual(dual_fuel["category_id"], "energy_water")
+        self.assertEqual(dual_fuel["prefill_details"]["provider"], "Octopus Energy")
+        self.assertEqual(dual_fuel["prefill_details"]["utility_type"], "Dual fuel")
+
+        generic_water = domain.suggest("water bill")
+        self.assertEqual(generic_water["prefill_details"]["utility_type"], "Water")
+        self.assertEqual(generic_water["prefill_details"]["tariff"], "Water tariff")
+
     def test_suggestion_routes_all_approved_examples(self):
         examples = [
             ("Sky broadband price", "tv_broadband_mobile", "reduce_price"),
