@@ -1018,15 +1018,16 @@ function buildComparisonRequirements(task: any): string {
   if (task?.category_id === "energy_water") {
     return `1. Find at least five realistic energy tariff options where enough current information is available.
 2. For each option include supplier, tariff name and type, unit rate(s), standing charge(s), tariff end date, exit fee, payment method and any smart-meter or eligibility requirement.
-3. Estimate annual cost using the annual usage I supplied. Compare every option using the same usage rather than the monthly direct-debit amount.
-4. Link to the official supplier page or another reliable source for every option and state when the price information was checked.
-5. Compare electricity, gas or dual-fuel options matching the supply type I supplied. Do not include water tariffs.
-6. Flag anything dependent on postcode or region, meter type, smart-meter status, payment method, EV ownership or other eligibility.
-7. Show the lowest estimated annual cost and the option closest to my current tariff, including any saving after exit fees.
-8. Separate confirmed facts from anything still needing verification.
-9. Suggest the three strongest negotiation points I can take back to my current supplier.
-10. Give me a short supplier-ready negotiation message based on the best evidence.
-11. Do not make the final decision for me. Present the options clearly so I can choose.`;
+3. Estimate annual cost using the annual usage I supplied. For dual fuel, calculate electricity and gas separately using their own usage, unit rate and standing charge. If either fuel is missing a required value, mark the comparison incomplete instead of guessing.
+4. Compare every option using the same supplied usage rather than the monthly direct-debit amount. Show current estimated annual cost, renewal annual cost when supplied, first-year switch cost after exit fees, ongoing annual cost, first-year saving and ongoing annual saving.
+5. Link to the official supplier page or another reliable source for every option and state when the price information was checked.
+6. Compare electricity, gas or dual-fuel options matching the supply type I supplied. Do not include water tariffs.
+7. Flag anything dependent on postcode or region, meter type, smart-meter status, payment method, EV ownership or other eligibility.
+8. Show the lowest estimated annual cost and the option closest to my current tariff.
+9. Separate confirmed facts from anything still needing verification.
+10. Suggest the three strongest negotiation points I can take back to my current supplier.
+11. Give me a short supplier-ready negotiation message based on the best evidence.
+12. Do not make the final decision for me. Present the options clearly so I can choose.`;
   }
 
   return `1. Find at least five realistic alternatives where enough current information is available.
