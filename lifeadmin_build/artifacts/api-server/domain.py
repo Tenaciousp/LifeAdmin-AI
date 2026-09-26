@@ -300,6 +300,37 @@ def suggest(query: str) -> dict[str, Any]:
         elif any(term in text for term in ("payment", "bill", "fees", "fee", "price", "cost", "charge")):
             goal_id = "check_bill"
 
+    prefill_details: dict[str, str] = {}
+    if category_id == "energy_water":
+        provider_matches = [
+            ("octopus", "Octopus Energy"),
+            ("british gas", "British Gas"),
+            ("e.on", "E.ON"),
+            ("eon", "E.ON"),
+            ("edf", "EDF"),
+            ("ovo", "OVO"),
+            ("scottishpower", "ScottishPower"),
+            ("utilita", "Utilita"),
+            ("united utilities", "United Utilities"),
+            ("thames water", "Thames Water"),
+            ("yorkshire water", "Yorkshire Water"),
+            ("severn trent", "Severn Trent"),
+        ]
+        provider = next((name for phrase, name in provider_matches if phrase_matches(phrase)), "")
+        if provider:
+            prefill_details["provider"] = provider
+
+        water_providers = {"United Utilities", "Thames Water", "Yorkshire Water", "Severn Trent"}
+        if provider in water_providers or phrase_matches("water"):
+            prefill_details["utility_type"] = "Water"
+            prefill_details["tariff"] = "Water tariff"
+        elif phrase_matches("dual fuel"):
+            prefill_details["utility_type"] = "Dual fuel"
+        elif phrase_matches("electricity"):
+            prefill_details["utility_type"] = "Electricity"
+        elif phrase_matches("gas") and provider != "British Gas":
+            prefill_details["utility_type"] = "Gas"
+
     reasons = []
     if category_id:
         reasons.append(f"Matched {_CATEGORY_MAP[category_id]['label'].lower()}.")
@@ -314,6 +345,7 @@ def suggest(query: str) -> dict[str, Any]:
         "goal": goal_id,
         "confidence": confidence,
         "reasons": reasons,
+        "prefill_details": prefill_details,
         "popular_categories": [x["id"] for x in CATEGORIES if x["popular"]],
     }
 
