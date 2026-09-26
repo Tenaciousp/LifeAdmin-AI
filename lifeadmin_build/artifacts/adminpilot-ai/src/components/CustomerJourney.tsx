@@ -97,7 +97,7 @@ export function CustomerJourney() {
     const cat = categories.find((c: any) => c.id === suggestedMatch.category_id);
     const gl = goals.find((g: any) => g.id === suggestedMatch.goal_id);
     setTitle(gl ? `${gl.label}: ${cat?.label.toLowerCase()}` : "");
-    setDynamicFields({});
+    setDynamicFields({ ...(suggestedMatch.prefill_details || {}) });
     setNotes("");
     setSuggestedMatch(null);
     setSearchQuery("");
