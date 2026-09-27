@@ -1,5 +1,10 @@
+import hashlib
+import hmac
+import io
+import json
 import os
 import pathlib
+import tempfile
 import unittest
 from unittest.mock import patch
 
@@ -62,6 +67,165 @@ class PaymentSafetyTests(unittest.TestCase):
             self.assertFalse(payload["payments_live"])
             self.assertEqual(payload["payment_provider"], "preview")
             self.assertNotIn("missing_price_env_vars", payload)
+
+
+
+class StripeWebhookRegressionTests(unittest.TestCase):
+    SECRET = "whsec_offline_test"
+    NOW = 1_800_000_000
+
+    class Handler:
+        def __init__(self, payload, signature):
+            self.rfile = io.BytesIO(payload)
+            self.wfile = io.BytesIO()
+            self.headers = {
+                "Content-Length": str(len(payload)),
+                "Stripe-Signature": signature,
+            }
+            self.status = None
+            self.response_headers = {}
+
+        def send_response(self, status):
+            self.status = status
+
+        def send_header(self, name, value):
+            self.response_headers[name] = value
+
+        def end_headers(self):
+            pass
+
+        def json_body(self):
+            return json.loads(self.wfile.getvalue().decode("utf-8"))
+
+    def setUp(self):
+        self.tempdir = tempfile.TemporaryDirectory()
+        self.purchases_file = os.path.join(self.tempdir.name, "purchases.json")
+        self.env = patch.dict(
+            os.environ,
+            {
+                "STRIPE_WEBHOOK_SECRET": self.SECRET,
+                "STRIPE_WEBHOOK_TOLERANCE": "300",
+            },
+            clear=False,
+        )
+        self.env.start()
+        self.file_patch = patch.object(app, "PURCHASES_FILE", self.purchases_file)
+        self.file_patch.start()
+        self.storage_patch = patch.object(app.storage, "available", return_value=False)
+        self.storage_patch.start()
+
+    def tearDown(self):
+        self.storage_patch.stop()
+        self.file_patch.stop()
+        self.env.stop()
+        self.tempdir.cleanup()
+
+    def signed_handler(self, event, timestamp=None, signature=None):
+        payload = json.dumps(event, separators=(",", ":")).encode("utf-8")
+        timestamp = self.NOW if timestamp is None else timestamp
+        digest = hmac.new(
+            self.SECRET.encode("utf-8"),
+            f"{timestamp}.".encode("utf-8") + payload,
+            hashlib.sha256,
+        ).hexdigest()
+        header = f"t={timestamp},v1={signature or digest}"
+        return self.Handler(payload, header)
+
+    def checkout_event(
+        self,
+        *,
+        event_type="checkout.session.completed",
+        payment_status="paid",
+        user_id="guest_123",
+        client_reference_id=None,
+        session_id="cs_test_123",
+    ):
+        metadata = {"product_id": "core_app"}
+        if user_id is not None:
+            metadata["user_id"] = user_id
+        obj = {
+            "id": session_id,
+            "payment_status": payment_status,
+            "metadata": metadata,
+        }
+        if client_reference_id is not None:
+            obj["client_reference_id"] = client_reference_id
+        return {"type": event_type, "data": {"object": obj}}
+
+    def test_valid_signature_grants_paid_entitlement(self):
+        handler = self.signed_handler(self.checkout_event())
+        with patch.object(app.time, "time", return_value=self.NOW):
+            app.handle_stripe_webhook(handler)
+        self.assertEqual(handler.status, 200)
+        self.assertTrue(app.get_user_purchases("guest_123").get("core_app"))
+
+    def test_invalid_signature_is_rejected_without_entitlement(self):
+        handler = self.signed_handler(self.checkout_event(), signature="0" * 64)
+        with patch.object(app.time, "time", return_value=self.NOW):
+            app.handle_stripe_webhook(handler)
+        self.assertEqual(handler.status, 400)
+        self.assertIn("Invalid Stripe webhook signature", handler.json_body()["error"])
+        self.assertFalse(app.get_user_purchases("guest_123").get("core_app", False))
+
+    def test_stale_timestamp_is_rejected_without_entitlement(self):
+        handler = self.signed_handler(self.checkout_event(), timestamp=self.NOW - 301)
+        with patch.object(app.time, "time", return_value=self.NOW):
+            app.handle_stripe_webhook(handler)
+        self.assertEqual(handler.status, 400)
+        self.assertIn("timestamp outside tolerance", handler.json_body()["error"])
+        self.assertFalse(app.get_user_purchases("guest_123").get("core_app", False))
+
+    def test_unpaid_completed_session_does_not_grant_entitlement(self):
+        handler = self.signed_handler(self.checkout_event(payment_status="unpaid"))
+        with patch.object(app.time, "time", return_value=self.NOW):
+            app.handle_stripe_webhook(handler)
+        self.assertEqual(handler.status, 200)
+        self.assertFalse(app.get_user_purchases("guest_123").get("core_app", False))
+
+    def test_async_payment_succeeded_grants_entitlement(self):
+        handler = self.signed_handler(
+            self.checkout_event(
+                event_type="checkout.session.async_payment_succeeded",
+                payment_status="unpaid",
+            )
+        )
+        with patch.object(app.time, "time", return_value=self.NOW):
+            app.handle_stripe_webhook(handler)
+        self.assertEqual(handler.status, 200)
+        self.assertTrue(app.get_user_purchases("guest_123").get("core_app"))
+
+    def test_repeated_delivery_is_idempotent_in_purchase_store(self):
+        event = self.checkout_event(session_id="cs_test_repeat")
+        first = self.signed_handler(event)
+        second = self.signed_handler(event)
+        with patch.object(app.time, "time", return_value=self.NOW):
+            app.handle_stripe_webhook(first)
+            app.handle_stripe_webhook(second)
+        store = app.load_purchase_store()
+        self.assertEqual(first.status, 200)
+        self.assertEqual(second.status, 200)
+        self.assertEqual(store["users"]["guest_123"], {"core_app": True})
+        self.assertEqual(list(store["stripe_sessions"]), ["cs_test_repeat"])
+        self.assertEqual(store["stripe_sessions"]["cs_test_repeat"]["user_id"], "guest_123")
+
+    def test_client_reference_id_is_accepted_when_metadata_user_id_is_missing(self):
+        handler = self.signed_handler(
+            self.checkout_event(user_id=None, client_reference_id="guest_from_reference")
+        )
+        with patch.object(app.time, "time", return_value=self.NOW):
+            app.handle_stripe_webhook(handler)
+        self.assertEqual(handler.status, 200)
+        self.assertTrue(app.get_user_purchases("guest_from_reference").get("core_app"))
+
+    def test_paid_session_without_owner_is_rejected_and_demo_is_not_unlocked(self):
+        handler = self.signed_handler(
+            self.checkout_event(user_id=None, client_reference_id=None)
+        )
+        with patch.object(app.time, "time", return_value=self.NOW):
+            app.handle_stripe_webhook(handler)
+        self.assertEqual(handler.status, 400)
+        self.assertIn("missing ownership metadata", handler.json_body()["error"])
+        self.assertFalse(app.get_user_purchases("demo").get("core_app", False))
 
 
 class FrontendFinalSpecTests(unittest.TestCase):
