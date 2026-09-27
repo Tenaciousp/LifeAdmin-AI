@@ -301,6 +301,18 @@ def suggest(query: str) -> dict[str, Any]:
             goal_id = "check_bill"
 
     prefill_details: dict[str, str] = {}
+    common_provider_matches = {
+        "tv_broadband_mobile": [("virgin media", "Virgin Media"), ("sky", "Sky"), ("bt", "BT"), ("ee", "EE"), ("vodafone", "Vodafone"), ("o2", "O2")],
+        "insurance": [("direct line", "Direct Line"), ("admiral", "Admiral"), ("aviva", "Aviva"), ("axa", "AXA")],
+        "subscriptions_memberships": [("netflix", "Netflix"), ("spotify", "Spotify"), ("disney+", "Disney+"), ("amazon prime", "Amazon Prime")],
+    }
+    common_provider = next(
+        (name for phrase, name in common_provider_matches.get(category_id, []) if phrase_matches(phrase)),
+        "",
+    )
+    if common_provider:
+        prefill_details["provider"] = common_provider
+
     if category_id == "energy_water":
         provider_matches = [
             ("octopus", "Octopus Energy"),
