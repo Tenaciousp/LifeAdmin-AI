@@ -32,9 +32,9 @@ def renewal_sections(task: dict[str, Any]) -> dict[str, str]:
         ),
         "things_to_check": (
             f"- Supply type: {utility_type}.\n"
-            f"- Unit rate(s): {unit_rate}. Standing charge(s): {standing_charge}.\n"
+            f"- Unit rates supplied: {unit_rate}. Standing charges supplied: {standing_charge}.\n"
             f"- Current price: {current_price}. Renewal quote: {renewal_quote}.\n"
-            f"- Renewal date: {renewal_date}. Exit fee: {exit_fee}.\n"
+            f"- Renewal date: {renewal_date}. Exit fees: {exit_fee}.\n"
             "- Electricity or gas annual tariff cost = annual kWh x unit rate + 365 x daily standing charge.\n"
             "- Dual fuel annual cost = electricity annual cost + gas annual cost.\n"
             "- First-year switch cost = alternative annual tariff cost + applicable exit fees.\n"
