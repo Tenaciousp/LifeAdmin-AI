@@ -598,10 +598,12 @@ def handle_stripe_webhook(handler):
     if event_type in {"checkout.session.completed", "checkout.session.async_payment_succeeded"}:
         metadata = obj.get("metadata") or {}
         product_id = metadata.get("product_id")
-        user_id = metadata.get("user_id") or obj.get("client_reference_id") or "demo"
+        user_id = metadata.get("user_id") or obj.get("client_reference_id")
         session_id = obj.get("id")
         paid = event_type == "checkout.session.async_payment_succeeded" or obj.get("payment_status") == "paid"
         if paid and product_id in VALID_PRODUCTS:
+            if not user_id:
+                return json_response(handler, {"error": "Stripe checkout session is missing ownership metadata"}, 400)
             unlock_purchase(user_id, product_id, "stripe_webhook", session_id)
     return json_response(handler, {"received": True})
 
