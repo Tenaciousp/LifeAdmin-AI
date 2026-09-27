@@ -40,8 +40,8 @@ _SPECIAL_FIELDS = {
         {"id": "tariff", "label": "Tariff or plan", "type": "select", "required": False, "options": ["Fixed", "Standard variable", "Tracker", "Time of use", "Prepayment", "Water tariff", "Not sure"]},
         {"id": "meter_reading", "label": "Latest meter reading", "type": "text", "required": False, "placeholder": "Optional"},
         {"id": "annual_usage", "label": "Annual usage", "type": "text", "required": False, "placeholder": "e.g. electricity 2,900 kWh; gas 11,500 kWh"},
-        {"id": "unit_rate", "label": "Unit rate", "type": "text", "required": False, "placeholder": "e.g. 24.5p/kWh"},
-        {"id": "standing_charge", "label": "Standing charge", "type": "text", "required": False, "placeholder": "e.g. 52p/day"},
+        {"id": "unit_rate", "label": "Unit rate(s)", "type": "text", "required": False, "placeholder": "e.g. electricity 24.5p/kWh; gas 6.2p/kWh"},
+        {"id": "standing_charge", "label": "Standing charge(s)", "type": "text", "required": False, "placeholder": "e.g. electricity 52p/day; gas 31p/day"},
         {"id": "exit_fee", "label": "Exit fee", "type": "text", "required": False, "placeholder": "e.g. £50 per fuel or £0"},
     ],
     "insurance": [
