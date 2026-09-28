@@ -11,6 +11,7 @@ from typing import Any
 
 _BASE_FIELDS = [
     {"id": "provider", "label": "Provider or organisation", "type": "text", "required": False, "placeholder": "e.g. Sky, Aviva or your local council"},
+    {"id": "account_reference", "label": "Account or customer reference", "type": "text", "required": False, "placeholder": "Optional reference only; do not enter passwords or payment card details"},
     {"id": "payment_description", "label": "Payment or bill description", "type": "text", "required": False, "placeholder": "What appears on your statement or bill?"},
     {"id": "amount", "label": "Amount", "type": "text", "required": False, "placeholder": "e.g. £42.99 per month"},
     {"id": "date", "label": "Relevant date", "type": "date", "required": False, "placeholder": "Renewal, payment or deadline date"},
