@@ -379,6 +379,10 @@ ${buildComparisonRequirements(task)}`;
   };
   const openAiAssistant = (url: string, name: string) => {
     window.open(url, "_blank", "noopener,noreferrer");
+    if (!navigator.clipboard?.writeText) {
+      toast.info(`Open ${name}, then copy the prompt from this window.`);
+      return;
+    }
     void navigator.clipboard.writeText(aiPrompt)
       .then(() => {
         toast.success(`Comparison prompt copied. Paste it into ${name}.`);

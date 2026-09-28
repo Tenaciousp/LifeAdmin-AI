@@ -175,6 +175,8 @@ class OutputQualityRegressionTests(unittest.TestCase):
         end = source.index("\n\n  const tabRefs", start)
         block = source[start:end]
         self.assertLess(block.index("window.open"), block.index("navigator.clipboard.writeText"))
+        self.assertIn("if (!navigator.clipboard?.writeText)", block)
+        self.assertLess(block.index("if (!navigator.clipboard?.writeText)"), block.index("void navigator.clipboard.writeText"))
         self.assertNotIn("await navigator.clipboard.writeText", block)
 
     def test_savings_flow_uses_dropdowns_and_five_ai_assistants(self):
