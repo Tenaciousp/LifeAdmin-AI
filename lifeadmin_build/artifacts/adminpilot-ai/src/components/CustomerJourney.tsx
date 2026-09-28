@@ -377,15 +377,16 @@ ${buildComparisonRequirements(task)}`;
       setActiveStep(6);
     }
   };
-  const openAiAssistant = async (url: string, name: string) => {
-    try {
-      await navigator.clipboard.writeText(aiPrompt);
-      toast.success(`Comparison prompt copied. Paste it into ${name}.`);
-      trackEvent("ai_prompt_copied");
-    } catch {
-      toast.info(`Open ${name}, then copy the prompt from this window.`);
-    }
+  const openAiAssistant = (url: string, name: string) => {
     window.open(url, "_blank", "noopener,noreferrer");
+    void navigator.clipboard.writeText(aiPrompt)
+      .then(() => {
+        toast.success(`Comparison prompt copied. Paste it into ${name}.`);
+        trackEvent("ai_prompt_copied");
+      })
+      .catch(() => {
+        toast.info(`Open ${name}, then copy the prompt from this window.`);
+      });
   };
 
 
