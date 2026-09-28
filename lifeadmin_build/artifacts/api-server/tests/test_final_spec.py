@@ -168,6 +168,15 @@ class OutputQualityRegressionTests(unittest.TestCase):
         self.assertIn('activeTab === "provider_message" && providerEmail?.body ? providerEmail.body', source)
         self.assertIn("Copy bank query message", source)
 
+    def test_ai_assistant_opens_before_clipboard_copy(self):
+        root = pathlib.Path(__file__).resolve().parents[2] / "adminpilot-ai" / "src" / "components" / "CustomerJourney.tsx"
+        source = root.read_text(encoding="utf-8")
+        start = source.index("const openAiAssistant")
+        end = source.index("\n\n  const tabRefs", start)
+        block = source[start:end]
+        self.assertLess(block.index("window.open"), block.index("navigator.clipboard.writeText"))
+        self.assertNotIn("await navigator.clipboard.writeText", block)
+
     def test_savings_flow_uses_dropdowns_and_five_ai_assistants(self):
         domain_path = pathlib.Path(__file__).resolve().parents[1] / "domain.py"
         domain_source = domain_path.read_text(encoding="utf-8")
