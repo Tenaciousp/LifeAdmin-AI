@@ -1,5 +1,8 @@
+import io
+import json
 import os
 import pathlib
+import tempfile
 import unittest
 from unittest.mock import patch
 
@@ -210,6 +213,64 @@ class OutputQualityRegressionTests(unittest.TestCase):
         self.assertIn("Do not invent five supplier alternatives", source)
         self.assertIn("Current water tariff review", source)
         self.assertIn("Social tariff / support scheme", source)
+
+
+class _RouteHandler:
+    def __init__(self, path, body=None):
+        raw = json.dumps(body or {}).encode("utf-8")
+        self.path = path
+        self.headers = {"Content-Length": str(len(raw))}
+        self.rfile = io.BytesIO(raw)
+        self.wfile = io.BytesIO()
+        self.client_address = ("test-client", 1)
+        self.status = None
+        self._guest_cookie = None
+
+    def send_response(self, status):
+        self.status = status
+
+    def send_header(self, name, value):
+        pass
+
+    def end_headers(self):
+        pass
+
+    def payload(self):
+        return json.loads(self.wfile.getvalue().decode("utf-8"))
+
+
+class TaskRouteRegressionTests(unittest.TestCase):
+    def test_guest_task_route_preserves_provider_reference_and_amount(self):
+        with tempfile.TemporaryDirectory() as tmpdir, \
+             patch.object(app, "TASKS_FILE", os.path.join(tmpdir, "tasks.json")), \
+             patch.object(app, "current_user", return_value=None), \
+             patch.object(app, "guest_session", return_value="guest-test"):
+
+            create = _RouteHandler("/api/tasks", {
+                "category_id": "tv_broadband_mobile",
+                "goal_id": "reduce_price",
+                "details": {
+                    "provider": "Sky",
+                    "account_reference": "ACC-12345",
+                    "amount": "GBP 82.50",
+                },
+            })
+            app.AdminPilotHandler.do_POST(create)
+
+            self.assertEqual(create.status, 201)
+            created = create.payload()["task"]
+            self.assertEqual(created["details"]["provider"], "Sky")
+            self.assertEqual(created["details"]["account_reference"], "ACC-12345")
+            self.assertEqual(created["details"]["amount"], "GBP 82.50")
+
+            retrieve = _RouteHandler("/api/tasks")
+            app.AdminPilotHandler.do_GET(retrieve)
+
+            self.assertEqual(retrieve.status, 200)
+            stored = retrieve.payload()["tasks"][0]
+            self.assertEqual(stored["details"]["provider"], "Sky")
+            self.assertEqual(stored["details"]["account_reference"], "ACC-12345")
+            self.assertEqual(stored["details"]["amount"], "GBP 82.50")
 
 
 if __name__ == "__main__":
