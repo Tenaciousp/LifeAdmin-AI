@@ -8,6 +8,7 @@ from typing import Any
 def renewal_sections(task: dict[str, Any]) -> dict[str, str]:
     details = task.get("details") if isinstance(task.get("details"), dict) else {}
     provider = str(details.get("provider") or "the supplier").strip()
+    account_reference = str(details.get("account_reference") or "").strip()
     utility_type = str(details.get("utility_type") or "not supplied").strip()
     annual_usage = str(details.get("annual_usage") or "not supplied").strip()
     unit_rate = str(details.get("unit_rate") or "not supplied").strip()
@@ -26,9 +27,10 @@ def renewal_sections(task: dict[str, Any]) -> dict[str, str]:
             "5. Mark the comparison incomplete when usage, rates, standing charges or price frequency are missing."
         ),
         "provider_message": (
-            f"Hello {provider}, I am reviewing my upcoming renewal. Please confirm my annual usage, current unit rate(s), "
-            "standing charge(s), tariff end or renewal date, renewal tariff and any exit fee in writing. "
-            "Please also confirm whether the renewal quote is monthly or annual."
+            f"Hello {provider}, I am reviewing my upcoming renewal."
+            + (f" My account/customer reference is {account_reference}." if account_reference else "")
+            + " Please confirm my annual usage, current unit rate(s), standing charge(s), tariff end or renewal date, "
+            "renewal tariff and any exit fee in writing. Please also confirm whether the renewal quote is monthly or annual."
         ),
         "things_to_check": (
             f"- Supply type: {utility_type}.\n"
