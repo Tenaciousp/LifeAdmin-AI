@@ -65,7 +65,7 @@ export function CustomerJourney() {
       el.blur();
     }, 0);
     return () => window.clearTimeout(timer);
-  }, [aiHandoffOpen, aiHandoffMode, aiPrompt]);
+  }, [aiHandoffOpen, aiHandoffMode]);
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
