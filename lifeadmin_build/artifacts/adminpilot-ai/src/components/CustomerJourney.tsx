@@ -54,18 +54,64 @@ export function CustomerJourney() {
   const [aiPrompt, setAiPrompt] = useState("");
   const [aiHandoffMode, setAiHandoffMode] = useState<"review" | "compare">("review");
   const aiPromptRef = useRef<HTMLTextAreaElement | null>(null);
+  const aiHandoffDialogRef = useRef<HTMLDivElement | null>(null);
+  const aiHandoffReturnFocusRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
     if (!aiHandoffOpen) return;
+    const dialog = aiHandoffDialogRef.current;
+    if (!dialog) return;
+
+    const returnFocusTo = aiHandoffReturnFocusRef.current;
     const timer = window.setTimeout(() => {
-      const el = aiPromptRef.current;
-      if (!el) return;
-      el.scrollTop = 0;
-      el.setSelectionRange(0, 0);
-      el.blur();
+      const prompt = aiPromptRef.current;
+      if (prompt) {
+        prompt.scrollTop = 0;
+        prompt.setSelectionRange(0, 0);
+      }
+      dialog.focus();
     }, 0);
-    return () => window.clearTimeout(timer);
-  }, [aiHandoffOpen, aiHandoffMode]);
+
+    const handleDialogKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        setAiHandoffOpen(false);
+        return;
+      }
+      if (event.key !== "Tab") return;
+
+      const focusable = Array.from(
+        dialog.querySelectorAll<HTMLElement>(
+          'button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), a[href], [tabindex]:not([tabindex="-1"])'
+        )
+      ).filter((element) => element.getAttribute("aria-hidden") !== "true");
+
+      if (focusable.length === 0) {
+        event.preventDefault();
+        dialog.focus();
+        return;
+      }
+
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      const active = document.activeElement;
+
+      if (event.shiftKey && (active === first || active === dialog)) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && active === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+
+    dialog.addEventListener("keydown", handleDialogKeyDown);
+    return () => {
+      window.clearTimeout(timer);
+      dialog.removeEventListener("keydown", handleDialogKeyDown);
+      if (returnFocusTo?.isConnected) returnFocusTo.focus();
+    };
+  }, [aiHandoffOpen]);
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -308,6 +354,7 @@ Do not make the final decision for me. Tell me what I should consider next.`;
 
     setAiPrompt(prompt);
     setAiHandoffMode("review");
+    aiHandoffReturnFocusRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     setAiHandoffOpen(true);
     trackEvent("ai_handoff_opened");
     setActiveStep(6);
@@ -348,6 +395,7 @@ ${buildComparisonRequirements(task)}`;
 
     setAiPrompt(prompt);
     setAiHandoffMode("compare");
+    aiHandoffReturnFocusRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     setAiHandoffOpen(true);
     trackEvent("ai_comparison_opened");
     setActiveStep(6);
@@ -956,18 +1004,23 @@ ${buildComparisonRequirements(task)}`;
       )}
 
       {aiHandoffOpen && (
-        <div 
-          className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
-          onKeyDown={e => e.key === 'Escape' && setAiHandoffOpen(false)}
-        >
-          <div className="bg-white rounded-2xl max-w-2xl w-full p-6 shadow-2xl animate-in fade-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto flex flex-col" role="dialog" aria-modal="true" aria-labelledby="aiHandoffTitle">
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div
+            ref={aiHandoffDialogRef}
+            tabIndex={-1}
+            className="bg-white rounded-2xl max-w-2xl w-full p-6 shadow-2xl animate-in fade-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto flex flex-col focus:outline-none"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="aiHandoffTitle"
+            aria-describedby="aiHandoffDescription"
+          >
             <h3 id="aiHandoffTitle" className="text-xl font-extrabold text-slate-900 mb-2">{aiHandoffMode === "compare" ? "Find current alternatives with AI" : "Continue with an AI assistant"}</h3>
             
             <div className="bg-orange-50 border border-orange-200 text-orange-900 p-3 rounded-xl text-sm font-medium mb-4">
               <strong>Check before copying:</strong> remove account numbers, payment-card details, passwords and any sensitive information you do not want to share.
             </div>
             
-            <p className="text-slate-600 text-sm mb-4">
+            <p id="aiHandoffDescription" className="text-slate-600 text-sm mb-4">
               {aiHandoffMode === "compare"
                 ? "This prompt asks a web-enabled AI assistant to research current alternatives, prices and source links. Nothing is sent automatically."
                 : "The text below is not sent anywhere automatically. Review it, then choose how you want to copy it or open an assistant separately."}
