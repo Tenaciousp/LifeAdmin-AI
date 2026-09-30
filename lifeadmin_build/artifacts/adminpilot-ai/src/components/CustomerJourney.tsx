@@ -977,14 +977,14 @@ ${buildComparisonRequirements(task)}`;
 
             <div className="mb-3">
               <p className="text-xs font-black uppercase tracking-wider text-slate-500 mb-2">Recommended free options</p>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <button onClick={() => openAiAssistant("https://gemini.google.com/", "Google Gemini")} className="min-h-[48px] px-4 py-2 bg-blue-600 hover:bg-blue-500 rounded-xl text-sm font-extrabold text-white text-center flex items-center justify-center gap-2">Copy & open Gemini <ExternalLink className="w-4 h-4" /></button>
                 <button onClick={() => openAiAssistant("https://copilot.microsoft.com/", "Microsoft Copilot")} className="min-h-[48px] px-4 py-2 bg-slate-900 hover:bg-slate-800 rounded-xl text-sm font-extrabold text-white text-center flex items-center justify-center gap-2">Copy & open Copilot <ExternalLink className="w-4 h-4" /></button>
               </div>
             </div>
 
             <p className="text-xs font-black uppercase tracking-wider text-slate-500 mb-2">Other popular AI assistants</p>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-3">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mb-3">
               <button onClick={() => openAiAssistant("https://chatgpt.com/", "ChatGPT")} className="min-h-[44px] px-3 py-2 bg-[#10a37f] hover:bg-[#0e906f] rounded-lg text-sm font-bold text-white flex items-center justify-center gap-2">ChatGPT <ExternalLink className="w-4 h-4" /></button>
               <button onClick={() => openAiAssistant("https://claude.ai/new", "Claude")} className="min-h-[44px] px-3 py-2 bg-[#d97757] hover:bg-[#c4684a] rounded-lg text-sm font-bold text-white flex items-center justify-center gap-2">Claude <ExternalLink className="w-4 h-4" /></button>
               <button onClick={() => openAiAssistant("https://www.perplexity.ai/", "Perplexity")} className="min-h-[44px] px-3 py-2 bg-slate-100 hover:bg-slate-200 rounded-lg text-sm font-bold text-slate-800 flex items-center justify-center gap-2">Perplexity <ExternalLink className="w-4 h-4" /></button>
