@@ -377,10 +377,44 @@ ${buildComparisonRequirements(task)}`;
       setActiveStep(6);
     }
   };
+  const selectAiPromptForManualCopy = () => {
+    const el = aiPromptRef.current;
+    if (!el) return false;
+    el.focus();
+    el.setSelectionRange(0, el.value.length);
+    el.scrollTop = 0;
+    return true;
+  };
+
+  const copyAiPrompt = async () => {
+    if (!aiPrompt.trim()) {
+      toast.error("There is no AI prompt to copy yet.");
+      return;
+    }
+    try {
+      if (!navigator.clipboard?.writeText) throw new Error("Clipboard API unavailable");
+      await navigator.clipboard.writeText(aiPrompt);
+      toast.success("Prompt copied to clipboard");
+      trackEvent("ai_prompt_copied");
+    } catch {
+      const selected = selectAiPromptForManualCopy();
+      toast.info(selected
+        ? "Prompt selected. Use your device's Copy command, then paste it into your AI assistant."
+        : "Copy did not work. Select the prompt manually and copy it from your device.");
+    }
+  };
+
   const openAiAssistant = (url: string, name: string) => {
-    window.open(url, "_blank", "noopener,noreferrer");
+    const promptSelected = selectAiPromptForManualCopy();
+    const assistantWindow = window.open(url, "_blank", "noopener,noreferrer");
+    if (!assistantWindow) {
+      toast.error(`Could not open ${name}. Allow pop-ups for LifeAdmin and try again.`);
+      return;
+    }
     if (!navigator.clipboard?.writeText) {
-      toast.info(`Open ${name}, then copy the prompt from this window.`);
+      toast.info(promptSelected
+        ? `Prompt selected in LifeAdmin. Copy it when you return, then paste it into ${name}.`
+        : `Open ${name}, then copy the prompt from this window.`);
       return;
     }
     void navigator.clipboard.writeText(aiPrompt)
@@ -389,7 +423,9 @@ ${buildComparisonRequirements(task)}`;
         trackEvent("ai_prompt_copied");
       })
       .catch(() => {
-        toast.info(`Open ${name}, then copy the prompt from this window.`);
+        toast.info(promptSelected
+          ? `Prompt selected in LifeAdmin. Copy it when you return, then paste it into ${name}.`
+          : `Open ${name}, then copy the prompt from this window.`);
       });
   };
 
@@ -991,7 +1027,7 @@ ${buildComparisonRequirements(task)}`;
             </div>
 
             <div className="grid grid-cols-2 gap-2">
-              <button onClick={() => copyToClipboard(aiPrompt, "ai_prompt_copied")} className="min-h-[44px] px-3 py-2 bg-slate-100 hover:bg-slate-200 rounded-lg text-sm font-bold text-slate-700">Copy prompt only</button>
+              <button onClick={copyAiPrompt} className="min-h-[44px] px-3 py-2 bg-slate-100 hover:bg-slate-200 rounded-lg text-sm font-bold text-slate-700">Copy prompt only</button>
               <button onClick={() => setAiHandoffOpen(false)} className="min-h-[44px] px-3 py-2 border border-slate-200 hover:bg-slate-50 rounded-lg text-sm font-bold text-slate-700">Close</button>
             </div>
 
