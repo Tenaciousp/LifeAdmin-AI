@@ -22,6 +22,18 @@ class CatalogTests(unittest.TestCase):
             self.assertTrue(all({"id", "label", "type", "required"}.issubset(field) for field in category["fields"]))
             self.assertTrue(category["examples"])
 
+    def test_base_and_composed_fields_have_unique_ids(self):
+        base_ids = [field["id"] for field in domain._BASE_FIELDS]
+        self.assertEqual(len(base_ids), len(set(base_ids)), "Base field IDs must be unique")
+
+        payload = domain.catalog()
+        for category in payload["categories"]:
+            for goal in payload["goals"]:
+                fields = domain.fields_for(category["id"], goal["id"])
+                field_ids = [field["id"] for field in fields]
+                with self.subTest(category=category["id"], goal=goal["id"]):
+                    self.assertEqual(len(field_ids), len(set(field_ids)))
+
     def test_energy_renewal_fields_capture_comparison_inputs(self):
         fields = {field["id"]: field for field in domain.fields_for("energy_water", "prepare_renewal")}
         for field_id in ("utility_type", "tariff", "annual_usage", "unit_rate", "standing_charge", "exit_fee", "date", "amount", "new_quote"):
