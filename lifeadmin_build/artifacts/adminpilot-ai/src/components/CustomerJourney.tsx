@@ -113,6 +113,17 @@ export function CustomerJourney() {
     };
   }, [aiHandoffOpen]);
 
+  useEffect(() => {
+    if (!aiHandoffOpen) return;
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [aiHandoffOpen]);
+
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!searchQuery.trim()) return;
