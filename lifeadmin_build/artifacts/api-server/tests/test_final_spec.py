@@ -178,6 +178,10 @@ class OutputQualityRegressionTests(unittest.TestCase):
         end = source.index("\n\n  const tabRefs", start)
         block = source[start:end]
         self.assertLess(block.index("window.open"), block.index("navigator.clipboard.writeText"))
+        self.assertIn('window.open("", "_blank")', block)
+        self.assertIn("assistantWindow.opener = null", block)
+        self.assertIn("assistantWindow.location.href = url", block)
+        self.assertLess(block.index("assistantWindow.location.href = url"), block.index("navigator.clipboard.writeText"))
         self.assertIn("if (!navigator.clipboard?.writeText)", block)
         self.assertLess(block.index("if (!navigator.clipboard?.writeText)"), block.index("void navigator.clipboard.writeText"))
         self.assertNotIn("await navigator.clipboard.writeText", block)
