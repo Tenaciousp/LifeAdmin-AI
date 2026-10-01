@@ -75,6 +75,35 @@ class EnergyRenewalFieldTests(unittest.TestCase):
             sections["provider_message"],
         )
 
+    def test_renewal_specific_price_and_date_take_precedence(self):
+        sections = renewal_sections({
+            "details": {
+                "provider": "Example Energy",
+                "amount": "GBP 95 per month",
+                "current_price": "GBP 120 per month",
+                "date": "01 January 2027",
+                "renewal_date": "15 January 2027",
+                "new_quote": "GBP 132 per month",
+            }
+        })
+
+        self.assertIn("My current price is GBP 120 per month.", sections["provider_message"])
+        self.assertNotIn("GBP 95 per month", sections["provider_message"])
+        self.assertIn("Renewal date: 15 January 2027.", sections["things_to_check"])
+        self.assertNotIn("Renewal date: 01 January 2027.", sections["things_to_check"])
+
+    def test_legacy_amount_and_date_still_feed_renewal_plan(self):
+        sections = renewal_sections({
+            "details": {
+                "provider": "Example Energy",
+                "amount": "GBP 95 per month",
+                "date": "01 January 2027",
+            }
+        })
+
+        self.assertIn("My current price is GBP 95 per month.", sections["provider_message"])
+        self.assertIn("Renewal date: 01 January 2027.", sections["things_to_check"])
+
     def test_renewal_provider_message_omits_unsupplied_preferences(self):
         sections = renewal_sections({
             "details": {
