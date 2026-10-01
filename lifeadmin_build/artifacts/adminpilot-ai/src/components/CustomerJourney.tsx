@@ -866,9 +866,7 @@ ${buildComparisonRequirements(task)}`;
                     ? "Copy bank query message"
                     : `Copy ${activeTab.replace(/_/g, " ")}`}
                 </button>
-                {(tasks.find((t: any) => t.id === selectedTaskId)?.category_id === "tv_broadband_mobile" ||
-                  tasks.find((t: any) => t.id === selectedTaskId)?.goal_id === "reduce_price" ||
-                  tasks.find((t: any) => t.id === selectedTaskId)?.goal_id === "prepare_renewal") && (
+                {shouldOfferAlternativeComparison(tasks.find((t: any) => t.id === selectedTaskId)) && (
                   <button
                     onClick={handleCompareWithAi}
                     className="min-h-[44px] flex-1 xl:flex-none px-4 py-2 bg-cyan-400 hover:bg-cyan-300 text-slate-950 rounded-xl text-sm font-extrabold transition-colors shadow-lg flex items-center justify-center gap-2"
@@ -1162,8 +1160,14 @@ function buildAiNarrative(task: any, details: Record<string, unknown> | string[]
   return `I want to ${goal.toLowerCase()} for ${task.category}. My priority is ${priority.toLowerCase()}. Switching preference: ${switching}.${amount}${mustKeep} I want current alternatives, source links, full-term costs and negotiation points before I decide.`;
 }
 
+function shouldOfferAlternativeComparison(task: any): boolean {
+  if (!task) return false;
+  if (task.goal_id === "reduce_price" || task.goal_id === "prepare_renewal") return true;
+  return task.goal_id === "cancel_switch" && task?.details?.desired_outcome === "Switch provider";
+}
+
 function potentialAlternatives(task: any): string[] {
-  if (!task) return [];
+  if (!shouldOfferAlternativeComparison(task)) return [];
   const category = task.category_id;
   if (category === "tv_broadband_mobile") {
     return ["Virgin Media", "BT / EE", "NOW", "Full-fibre broadband + separate streaming"];
