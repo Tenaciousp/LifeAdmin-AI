@@ -1039,7 +1039,7 @@ ${buildComparisonRequirements(task)}`;
 
             {aiHandoffMode === "compare" && (
               <>
-                <div className="grid grid-cols-3 gap-2 mb-4 text-center">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mb-4 text-center">
                   <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-3">
                     <strong className="block text-slate-900 text-sm">5 alternatives</strong>
                     <span className="text-xs text-slate-500">Like-for-like options</span>
