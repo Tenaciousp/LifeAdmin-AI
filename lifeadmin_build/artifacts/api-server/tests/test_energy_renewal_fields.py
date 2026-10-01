@@ -89,6 +89,8 @@ class EnergyRenewalFieldTests(unittest.TestCase):
 
         self.assertIn("My current price is GBP 120 per month.", sections["provider_message"])
         self.assertNotIn("GBP 95 per month", sections["provider_message"])
+        self.assertIn("My renewal date is 15 January 2027.", sections["provider_message"])
+        self.assertNotIn("My renewal date is 01 January 2027.", sections["provider_message"])
         self.assertIn("Renewal date: 15 January 2027.", sections["things_to_check"])
         self.assertNotIn("Renewal date: 01 January 2027.", sections["things_to_check"])
 
@@ -102,6 +104,7 @@ class EnergyRenewalFieldTests(unittest.TestCase):
         })
 
         self.assertIn("My current price is GBP 95 per month.", sections["provider_message"])
+        self.assertIn("My renewal date is 01 January 2027.", sections["provider_message"])
         self.assertIn("Renewal date: 01 January 2027.", sections["things_to_check"])
 
     def test_renewal_provider_message_omits_unsupplied_preferences(self):
