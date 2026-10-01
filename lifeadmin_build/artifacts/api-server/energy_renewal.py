@@ -36,6 +36,8 @@ def renewal_sections(task: dict[str, Any]) -> dict[str, str]:
             + (f" My account/customer reference is {account_reference}." if account_reference else "")
             + (f" My main priority is {renewal_priority}." if renewal_priority != "not supplied" else "")
             + (f" My switching preference is {switch_willingness}." if switch_willingness != "not supplied" else "")
+            + (f" My current price is {current_price}." if current_price != "not supplied" else "")
+            + (f" My renewal quote is {renewal_quote}." if renewal_quote != "not supplied" else "")
             + " Please confirm my current tariff name and type, annual usage, current unit rate(s), standing charge(s), tariff end or renewal date, "
             "renewal tariff and any exit fee in writing. Please also confirm whether the renewal quote is monthly or annual."
         ),
