@@ -66,6 +66,25 @@ class EnergyRenewalFieldTests(unittest.TestCase):
             "stated renewal priority and switching preference",
             sections["approval_checklist"],
         )
+        self.assertIn(
+            "My main priority is Lowest total cost.",
+            sections["provider_message"],
+        )
+        self.assertIn(
+            "My switching preference is Prefer to stay if the price is competitive.",
+            sections["provider_message"],
+        )
+
+    def test_renewal_provider_message_omits_unsupplied_preferences(self):
+        sections = renewal_sections({
+            "details": {
+                "provider": "Example Energy",
+            }
+        })
+
+        self.assertNotIn("not supplied", sections["provider_message"])
+        self.assertNotIn("My main priority is", sections["provider_message"])
+        self.assertNotIn("My switching preference is", sections["provider_message"])
 
 
 if __name__ == "__main__":
