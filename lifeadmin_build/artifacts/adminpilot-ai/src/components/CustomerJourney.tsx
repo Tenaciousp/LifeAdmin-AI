@@ -465,11 +465,13 @@ ${buildComparisonRequirements(task)}`;
 
   const openAiAssistant = (url: string, name: string) => {
     const promptSelected = selectAiPromptForManualCopy();
-    const assistantWindow = window.open(url, "_blank", "noopener,noreferrer");
+    const assistantWindow = window.open("", "_blank");
     if (!assistantWindow) {
       toast.error(`Could not open ${name}. Allow pop-ups for LifeAdmin and try again.`);
       return;
     }
+    assistantWindow.opener = null;
+    assistantWindow.location.href = url;
     if (!navigator.clipboard?.writeText) {
       toast.info(promptSelected
         ? `Prompt selected in LifeAdmin. Copy it when you return, then paste it into ${name}.`
