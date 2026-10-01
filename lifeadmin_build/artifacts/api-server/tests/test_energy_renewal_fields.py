@@ -36,5 +36,37 @@ class EnergyRenewalFieldTests(unittest.TestCase):
         self.assertIn("current tariff name and type", sections["provider_message"])
 
 
+    def test_renewal_preferences_survive_normalisation_and_shape_plan(self):
+        task = domain.normalise_task({
+            "category_id": "energy_water",
+            "goal_id": "prepare_renewal",
+            "details": {
+                "provider": "Example Energy",
+                "renewal_priority": "Lowest total cost",
+                "switch_willingness": "Prefer to stay if the price is competitive",
+            },
+        })
+
+        sections = renewal_sections(task)
+
+        self.assertIn("Lowest total cost", sections["next_steps"])
+        self.assertIn(
+            "Prefer to stay if the price is competitive",
+            sections["next_steps"],
+        )
+        self.assertIn(
+            "Renewal priority: Lowest total cost.",
+            sections["things_to_check"],
+        )
+        self.assertIn(
+            "Switching preference: Prefer to stay if the price is competitive.",
+            sections["things_to_check"],
+        )
+        self.assertIn(
+            "stated renewal priority and switching preference",
+            sections["approval_checklist"],
+        )
+
+
 if __name__ == "__main__":
     unittest.main()
