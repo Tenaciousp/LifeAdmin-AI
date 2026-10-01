@@ -87,5 +87,27 @@ class EnergyRenewalFieldTests(unittest.TestCase):
         self.assertNotIn("My switching preference is", sections["provider_message"])
 
 
+    def test_renewal_provider_message_includes_supplied_prices_and_omits_missing_prices(self):
+        sections = renewal_sections({
+            "details": {
+                "provider": "Example Energy",
+                "current_price": "GBP 120 per month",
+                "new_quote": "GBP 132 per month",
+            }
+        })
+
+        self.assertIn("My current price is GBP 120 per month.", sections["provider_message"])
+        self.assertIn("My renewal quote is GBP 132 per month.", sections["provider_message"])
+
+        without_prices = renewal_sections({
+            "details": {
+                "provider": "Example Energy",
+            }
+        })
+        self.assertNotIn("My current price is", without_prices["provider_message"])
+        self.assertNotIn("My renewal quote is", without_prices["provider_message"])
+
+
+
 if __name__ == "__main__":
     unittest.main()
