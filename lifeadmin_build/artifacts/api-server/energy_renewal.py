@@ -18,14 +18,18 @@ def renewal_sections(task: dict[str, Any]) -> dict[str, str]:
     renewal_quote = str(details.get("new_quote") or "not supplied").strip()
     renewal_date = str(details.get("date") or "not supplied").strip()
     exit_fee = str(details.get("exit_fee") or "not supplied").strip()
+    renewal_priority = str(details.get("renewal_priority") or "not supplied").strip()
+    switch_willingness = str(details.get("switch_willingness") or "not supplied").strip()
 
     return {
         "next_steps": (
             f"1. Confirm {provider}'s renewal date, price frequency and tariff terms.\n"
-            f"2. Use the supplied annual usage for each like-for-like comparison: {annual_usage}.\n"
-            "3. For dual fuel, calculate electricity and gas separately before adding annual costs.\n"
-            "4. Compare first-year cost after applicable exit fees with ongoing annual cost.\n"
-            "5. Mark the comparison incomplete when usage, rates, standing charges or price frequency are missing."
+            f"2. Rank options against the stated renewal priority: {renewal_priority}.\n"
+            f"3. Apply the switching preference when comparing stay, retention and switch options: {switch_willingness}.\n"
+            f"4. Use the supplied annual usage for each like-for-like comparison: {annual_usage}.\n"
+            "5. For dual fuel, calculate electricity and gas separately before adding annual costs.\n"
+            "6. Compare first-year cost after applicable exit fees with ongoing annual cost.\n"
+            "7. Mark the comparison incomplete when usage, rates, standing charges or price frequency are missing."
         ),
         "provider_message": (
             f"Hello {provider}, I am reviewing my upcoming renewal."
@@ -38,6 +42,7 @@ def renewal_sections(task: dict[str, Any]) -> dict[str, str]:
             f"- Unit rates supplied: {unit_rate}. Standing charges supplied: {standing_charge}.\n"
             f"- Current price: {current_price}. Renewal quote: {renewal_quote}.\n"
             f"- Renewal date: {renewal_date}. Exit fees: {exit_fee}.\n"
+            f"- Renewal priority: {renewal_priority}. Switching preference: {switch_willingness}.\n"
             "- Electricity or gas annual tariff cost = annual kWh x unit rate + 365 x daily standing charge.\n"
             "- Dual fuel annual cost = electricity annual cost + gas annual cost.\n"
             "- First-year switch cost = alternative annual tariff cost + applicable exit fees.\n"
@@ -49,6 +54,7 @@ def renewal_sections(task: dict[str, Any]) -> dict[str, str]:
             "- Current and renewal price frequency confirmed.\n"
             "- First-year saving checked after exit fees.\n"
             "- Ongoing annual saving checked without one-off exit fees.\n"
-            "- Supplier, dates and tariff terms reviewed before any switch or renewal is approved."
+            "- Supplier, dates and tariff terms reviewed before any switch or renewal is approved.\n"
+            "- Final choice reflects the stated renewal priority and switching preference."
         ),
     }
