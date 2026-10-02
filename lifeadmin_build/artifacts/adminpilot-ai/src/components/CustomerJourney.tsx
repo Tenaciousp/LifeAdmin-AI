@@ -213,6 +213,9 @@ export function CustomerJourney() {
           toast.success("Task details updated");
           setEditingId(null);
           setActiveStep(4);
+        },
+        onError: () => {
+          toast.error("Task update failed. Your changes are still on screen. Try again.");
         }
       });
     } else {
@@ -225,6 +228,9 @@ export function CustomerJourney() {
           setSelectedCategory(null);
           trackEvent("task_saved", { category: payload.category });
           setActiveStep(4);
+        },
+        onError: () => {
+          toast.error("Task save failed. Your details are still on screen. Try again.");
         }
       });
     }
@@ -265,6 +271,9 @@ export function CustomerJourney() {
             setSelectedTaskId(null);
             setPlanResult(null);
           }
+        },
+        onError: () => {
+          toast.error("Task removal failed. Try again.");
         }
       });
     }
@@ -272,7 +281,8 @@ export function CustomerJourney() {
 
   const handleMarkDone = (t: any) => {
     updateTask.mutate({ id: t.id, status: "Done", user_id: buyerId }, {
-      onSuccess: () => toast.success("Task marked as done")
+      onSuccess: () => toast.success("Task marked as done"),
+      onError: () => toast.error("Status update failed. Try again.")
     });
   };
 
@@ -320,8 +330,9 @@ export function CustomerJourney() {
         setActiveStep(5);
         document.getElementById("output-panel")?.scrollIntoView({ behavior: "smooth" });
       },
-      onError: (err) => {
-        toast.error(`Generation failed: ${err.message}`);
+      onError: () => {
+        setActiveStep(4);
+        toast.error("Plan generation failed. Your task is still saved. Try again.");
       }
     });
   };
