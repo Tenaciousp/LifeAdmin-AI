@@ -107,8 +107,10 @@ _GOAL_FIELDS = {
     ],
     "prepare_renewal": [
         {"id": "date", "label": "Renewal date", "type": "date", "required": False, "recommended": True, "placeholder": "When does it renew?"},
-        {"id": "amount", "label": "Current price", "type": "text", "required": False, "recommended": True, "placeholder": "Current monthly or annual price"},
+        {"id": "amount", "label": "Current price", "type": "text", "required": False, "recommended": True, "placeholder": "Current price"},
+        {"id": "current_price_frequency", "label": "Current price frequency", "type": "select", "required": False, "recommended": True, "options": ["Monthly", "Annual", "Quarterly", "Weekly", "Other", "Not sure"]},
         {"id": "new_quote", "label": "Renewal quote", "type": "text", "required": False, "recommended": True, "placeholder": "New price if supplied"},
+        {"id": "renewal_quote_frequency", "label": "Renewal quote frequency", "type": "select", "required": False, "recommended": True, "options": ["Monthly", "Annual", "Quarterly", "Weekly", "Other", "Not sure"]},
         {"id": "renewal_priority", "label": "What matters most?", "type": "select", "required": False, "recommended": False, "options": [
             "Lower price",
             "Lowest total cost",
