@@ -829,18 +829,18 @@ ${buildComparisonRequirements(task)}`;
                   </div>
                   
                   <div className="flex flex-wrap gap-2 mt-4">
-                    <button onClick={() => handleGenerate(t)} className="min-h-[44px] px-4 py-1.5 bg-primary hover:bg-blue-600 text-white rounded-lg text-sm font-bold transition-colors">
+                    <button onClick={() => handleGenerate(t)} disabled={generatePlan.isPending} aria-busy={generatePlan.isPending} className="min-h-[44px] px-4 py-1.5 bg-primary hover:bg-blue-600 text-white rounded-lg text-sm font-bold transition-colors disabled:opacity-50">
                       Generate plan
                     </button>
                     <button onClick={() => handleEditTask(t)} className="min-h-[44px] px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-sm font-bold transition-colors">
                       Edit
                     </button>
                     {t.status !== 'Done' && (
-                      <button onClick={() => handleMarkDone(t)} className="min-h-[40px] px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-sm font-bold transition-colors">
+                      <button onClick={() => handleMarkDone(t)} disabled={updateTask.isPending} aria-busy={updateTask.isPending} className="min-h-[40px] px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-sm font-bold transition-colors disabled:opacity-50">
                         Mark done
                       </button>
                     )}
-                    <button onClick={() => handleDeleteTask(t)} aria-label={`Delete ${t.title}`} className="min-h-[44px] px-3 py-1.5 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg text-sm font-bold transition-colors ml-auto">
+                    <button onClick={() => handleDeleteTask(t)} disabled={deleteTask.isPending} aria-busy={deleteTask.isPending} aria-label={`Delete ${t.title}`} className="min-h-[44px] px-3 py-1.5 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg text-sm font-bold transition-colors disabled:opacity-50 ml-auto">
                       <Trash2 className="w-4 h-4" />
                     </button>
                   </div>
