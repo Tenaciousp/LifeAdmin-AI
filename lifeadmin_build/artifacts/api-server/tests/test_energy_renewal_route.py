@@ -42,8 +42,10 @@ class EnergyRenewalRouteBehaviourTests(unittest.TestCase):
             "details": {
                 "provider": "Example Energy",
                 "utility_type": "Dual fuel",
-                "current_price": "GBP 118 per month",
-                "new_quote": "GBP 131 per month",
+                "current_price": "GBP 118",
+                "current_price_frequency": "Monthly",
+                "new_quote": "GBP 1,572",
+                "renewal_quote_frequency": "Annual",
                 "renewal_date": "15 November 2026",
                 "renewal_priority": "Lowest total cost",
                 "switch_willingness": "Happy to switch",
@@ -64,9 +66,11 @@ class EnergyRenewalRouteBehaviourTests(unittest.TestCase):
         note = handler.payload()["note"]
         message = note["sections"]["provider_message"]
         self.assertIn("Example Energy", message)
-        self.assertIn("GBP 118 per month", message)
-        self.assertIn("GBP 131 per month", message)
+        self.assertIn("GBP 118 (Monthly)", message)
+        self.assertIn("GBP 1,572 (Annual)", message)
         self.assertIn("15 November 2026", message)
+        self.assertEqual(note["known_details"]["current_price_frequency"], "Monthly")
+        self.assertEqual(note["known_details"]["renewal_quote_frequency"], "Annual")
         self.assertIn("Lowest total cost", message)
         self.assertIn("Happy to switch", message)
 
