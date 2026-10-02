@@ -519,19 +519,26 @@ ${buildComparisonRequirements(task)}`;
           <div className="space-y-6">
             {!selectedCategory ? (
               <div className="space-y-4">
-                <label className="block text-sm font-bold text-slate-800">1. What are you managing?</label>
+                <label htmlFor="bill-search" className="block text-sm font-bold text-slate-800">1. What are you managing?</label>
                 
                 <form onSubmit={handleSearchSubmit} className="relative">
                   <input 
+                    id="bill-search"
                     type="text"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     placeholder="E.g. Renew car insurance"
                     className="w-full bg-white border border-slate-300 rounded-xl pl-11 pr-4 py-3 text-slate-900 focus:ring-2 focus:ring-primary/20 focus:border-primary placeholder:text-slate-400"
                   />
-                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-                  <button type="submit" disabled={suggestMatch.isPending} className="absolute right-2 top-1/2 -translate-y-1/2 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg text-sm font-bold transition-colors disabled:opacity-50">
-                    {suggestMatch.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : "Match"}
+                  <Search aria-hidden="true" className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                  <button
+                    type="submit"
+                    disabled={suggestMatch.isPending}
+                    aria-busy={suggestMatch.isPending}
+                    aria-label={suggestMatch.isPending ? "Matching bill or payment" : "Match bill or payment"}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg text-sm font-bold transition-colors disabled:opacity-50"
+                  >
+                    {suggestMatch.isPending ? <Loader2 aria-hidden="true" className="w-4 h-4 animate-spin" /> : "Match"}
                   </button>
                 </form>
 
