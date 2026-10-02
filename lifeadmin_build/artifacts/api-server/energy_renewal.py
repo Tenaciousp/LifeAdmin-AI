@@ -18,6 +18,10 @@ def renewal_sections(task: dict[str, Any]) -> dict[str, str]:
     current_price_frequency = str(details.get("current_price_frequency") or "not supplied").strip()
     renewal_quote = str(details.get("new_quote") or "not supplied").strip()
     renewal_quote_frequency = str(details.get("renewal_quote_frequency") or "not supplied").strip()
+    price_frequency_incomplete = any(
+        value.lower() in {"not supplied", "not sure"}
+        for value in (current_price_frequency, renewal_quote_frequency)
+    )
     renewal_date = str(details.get("renewal_date") or details.get("date") or "not supplied").strip()
     exit_fee = str(details.get("exit_fee") or "not supplied").strip()
     renewal_priority = str(details.get("renewal_priority") or "not supplied").strip()
@@ -53,14 +57,19 @@ def renewal_sections(task: dict[str, Any]) -> dict[str, str]:
             )
             + (f" My renewal date is {renewal_date}." if renewal_date != "not supplied" else "")
             + " Please confirm my current tariff name and type, annual usage, current unit rate(s), standing charge(s), tariff end or renewal date, "
-            "renewal tariff and any exit fee in writing. Please also confirm whether the renewal quote is monthly or annual."
+            "renewal tariff and any exit fee in writing. Please also confirm the billing period for both my current price and renewal quote."
         ),
         "things_to_check": (
             f"- Supply type: {utility_type}. Current tariff: {tariff}.\n"
             f"- Unit rates supplied: {unit_rate}. Standing charges supplied: {standing_charge}.\n"
             f"- Current price: {current_price}. Current price frequency: {current_price_frequency}.\n"
             f"- Renewal quote: {renewal_quote}. Renewal quote frequency: {renewal_quote_frequency}.\n"
-            f"- Renewal date: {renewal_date}. Exit fees: {exit_fee}.\n"
+            + (
+                "- Price-period comparison: incomplete until both current and renewal price frequencies are confirmed.\n"
+                if price_frequency_incomplete
+                else "- Price-period comparison: ready for same-period annualisation.\n"
+            )
+            + f"- Renewal date: {renewal_date}. Exit fees: {exit_fee}.\n"
             f"- Renewal priority: {renewal_priority}. Switching preference: {switch_willingness}.\n"
             "- Electricity or gas annual tariff cost = annual kWh x unit rate + 365 x daily standing charge.\n"
             "- Dual fuel annual cost = electricity annual cost + gas annual cost.\n"
