@@ -630,9 +630,9 @@ ${buildComparisonRequirements(task)}`;
             {selectedCategory && (
               <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2">
                 <div>
-                  <label className="block text-sm font-bold text-slate-800 mb-2">2. What do you want to do?</label>
+                  <p id="goal-choice-label" className="block text-sm font-bold text-slate-800 mb-2">2. What do you want to do?</p>
 
-                  <div className="grid grid-cols-2 gap-2 mb-3">
+                  <div className="grid grid-cols-2 gap-2 mb-3" role="group" aria-labelledby="goal-choice-label">
                     {goals.filter((g: any) => ["reduce_price", "prepare_renewal", "cancel_switch", "check_bill"].includes(g.id)).map((g: any) => (
                       <button
                         key={g.id}
@@ -644,6 +644,7 @@ ${buildComparisonRequirements(task)}`;
                           setActiveStep(3);
                           trackEvent("goal_selected", { goal: g.id });
                         }}
+                        aria-pressed={selectedGoal === g.id}
                         className={`min-h-[50px] rounded-xl border px-3 py-2 text-left text-sm font-bold transition-colors ${selectedGoal === g.id ? "border-primary bg-blue-50 text-primary" : "border-slate-200 bg-white text-slate-700 hover:border-blue-300 hover:bg-blue-50"}`}
                       >
                         {g.label}
@@ -696,12 +697,15 @@ ${buildComparisonRequirements(task)}`;
                   </div>
                   {formFields.map((f: any) => (
                     <div key={f.id}>
-                      <label className="block text-sm font-semibold text-slate-700 mb-1.5">
-                        {f.label} {f.required && <span className="text-red-500">*</span>}
+                      <label htmlFor={`task-field-${f.id}`} className="block text-sm font-semibold text-slate-700 mb-1.5">
+                        {f.label} {f.required && <span className="text-red-500" aria-hidden="true">*</span>}
                       </label>
                       {f.type === 'select' ? (
                         <select
+                          id={`task-field-${f.id}`}
                           value={dynamicFields[f.id] || ""}
+                          aria-required={f.required || undefined}
+                          aria-describedby={f.recommended && !f.required ? `task-field-${f.id}-hint` : undefined}
                           onChange={e => setDynamicFields(prev => ({...prev, [f.id]: e.target.value}))}
                           className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-slate-800 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
                         >
@@ -710,7 +714,10 @@ ${buildComparisonRequirements(task)}`;
                         </select>
                       ) : f.type === 'textarea' ? (
                         <textarea
+                          id={`task-field-${f.id}`}
                           value={dynamicFields[f.id] || ""}
+                          aria-required={f.required || undefined}
+                          aria-describedby={f.recommended && !f.required ? `task-field-${f.id}-hint` : undefined}
                           onChange={e => setDynamicFields(prev => ({...prev, [f.id]: e.target.value}))}
                           placeholder={f.placeholder || f.label}
                           rows={3}
@@ -718,19 +725,23 @@ ${buildComparisonRequirements(task)}`;
                         />
                       ) : (
                         <input
+                          id={`task-field-${f.id}`}
                           type={f.type === 'date' ? 'date' : f.type === 'email' ? 'email' : 'text'}
                           value={dynamicFields[f.id] || ""}
+                          aria-required={f.required || undefined}
+                          aria-describedby={f.recommended && !f.required ? `task-field-${f.id}-hint` : undefined}
                           onChange={e => setDynamicFields(prev => ({...prev, [f.id]: e.target.value}))}
                           placeholder={f.placeholder || f.label}
                           className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-slate-800 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
                         />
                       )}
-                      {f.recommended && !f.required && <p className="text-[11px] text-slate-400 mt-1">Useful if you know it</p>}
+                      {f.recommended && !f.required && <p id={`task-field-${f.id}-hint`} className="text-[11px] text-slate-400 mt-1">Useful if you know it</p>}
                     </div>
                   ))}
                   <div>
-                    <label className="block text-sm font-semibold text-slate-700 mb-1.5">Additional notes (optional)</label>
+                    <label htmlFor="task-additional-notes" className="block text-sm font-semibold text-slate-700 mb-1.5">Additional notes (optional)</label>
                     <textarea 
+                      id="task-additional-notes"
                       value={notes}
                       onChange={e => setNotes(e.target.value)}
                       placeholder="Anything else?"
@@ -746,9 +757,10 @@ ${buildComparisonRequirements(task)}`;
                 {selectedGoal && <button 
                   onClick={handleSaveTask}
                   disabled={createTask.isPending || updateTask.isPending}
+                  aria-busy={createTask.isPending || updateTask.isPending}
                   className="w-full min-h-[44px] bg-slate-900 hover:bg-slate-800 text-white rounded-xl py-3.5 font-bold transition-colors disabled:opacity-50 flex justify-center items-center gap-2"
                 >
-                  {(createTask.isPending || updateTask.isPending) && <Loader2 className="w-4 h-4 animate-spin" />}
+                  {(createTask.isPending || updateTask.isPending) && <Loader2 aria-hidden="true" className="w-4 h-4 animate-spin" />}
                   {editingId ? "Update task" : "Review details"}
                 </button>}
               </div>
