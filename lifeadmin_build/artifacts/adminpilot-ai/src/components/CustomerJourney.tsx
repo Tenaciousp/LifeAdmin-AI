@@ -772,7 +772,7 @@ ${buildComparisonRequirements(task)}`;
                   className="w-full min-h-[44px] bg-slate-900 hover:bg-slate-800 text-white rounded-xl py-3.5 font-bold transition-colors disabled:opacity-50 flex justify-center items-center gap-2"
                 >
                   {(createTask.isPending || updateTask.isPending) && <Loader2 aria-hidden="true" className="w-4 h-4 animate-spin" />}
-                  {editingId ? "Update task" : "Review details"}
+                  {createTask.isPending ? "Saving task..." : updateTask.isPending ? "Updating task..." : editingId ? "Update task" : "Review details"}
                 </button>}
               </div>
             )}
@@ -828,20 +828,22 @@ ${buildComparisonRequirements(task)}`;
                     </div>
                   </div>
                   
-                  <div className="flex flex-wrap gap-2 mt-4">
-                    <button onClick={() => handleGenerate(t)} disabled={generatePlan.isPending} aria-busy={generatePlan.isPending} className="min-h-[44px] px-4 py-1.5 bg-primary hover:bg-blue-600 text-white rounded-lg text-sm font-bold transition-colors disabled:opacity-50">
-                      Generate plan
+                  <div className="flex flex-wrap gap-2 mt-4" aria-live="polite">
+                    <button onClick={() => handleGenerate(t)} disabled={generatePlan.isPending} aria-busy={generatePlan.isPending} className="min-h-[44px] px-4 py-1.5 bg-primary hover:bg-blue-600 text-white rounded-lg text-sm font-bold transition-colors disabled:opacity-50 flex items-center gap-2">
+                      {generatePlan.isPending && <Loader2 aria-hidden="true" className="w-4 h-4 animate-spin" />}
+                      {generatePlan.isPending ? "Generating..." : "Generate plan"}
                     </button>
                     <button onClick={() => handleEditTask(t)} className="min-h-[44px] px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-sm font-bold transition-colors">
                       Edit
                     </button>
                     {t.status !== 'Done' && (
-                      <button onClick={() => handleMarkDone(t)} disabled={updateTask.isPending} aria-busy={updateTask.isPending} className="min-h-[40px] px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-sm font-bold transition-colors disabled:opacity-50">
-                        Mark done
+                      <button onClick={() => handleMarkDone(t)} disabled={updateTask.isPending} aria-busy={updateTask.isPending} className="min-h-[44px] px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-sm font-bold transition-colors disabled:opacity-50 flex items-center gap-2">
+                        {updateTask.isPending && <Loader2 aria-hidden="true" className="w-4 h-4 animate-spin" />}
+                        {updateTask.isPending ? "Updating..." : "Mark done"}
                       </button>
                     )}
-                    <button onClick={() => handleDeleteTask(t)} disabled={deleteTask.isPending} aria-busy={deleteTask.isPending} aria-label={`Delete ${t.title}`} className="min-h-[44px] px-3 py-1.5 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg text-sm font-bold transition-colors disabled:opacity-50 ml-auto">
-                      <Trash2 className="w-4 h-4" />
+                    <button onClick={() => handleDeleteTask(t)} disabled={deleteTask.isPending} aria-busy={deleteTask.isPending} aria-label={deleteTask.isPending ? `Deleting ${t.title}` : `Delete ${t.title}`} className="min-h-[44px] px-3 py-1.5 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg text-sm font-bold transition-colors disabled:opacity-50 ml-auto">
+                      {deleteTask.isPending ? <Loader2 aria-hidden="true" className="w-4 h-4 animate-spin" /> : <Trash2 aria-hidden="true" className="w-4 h-4" />}
                     </button>
                   </div>
                 </div>

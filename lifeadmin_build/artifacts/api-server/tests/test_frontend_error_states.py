@@ -34,6 +34,24 @@ class FrontendErrorStateRegressionTests(unittest.TestCase):
         ):
             self.assertIn(phrase, SOURCE)
 
+    def test_pending_task_actions_show_clear_mobile_feedback(self):
+        for phrase in (
+            'createTask.isPending ? "Saving task..."',
+            'updateTask.isPending ? "Updating task..."',
+            'generatePlan.isPending ? "Generating..."',
+            'updateTask.isPending ? "Updating..."',
+            'deleteTask.isPending ? `Deleting ${t.title}` : `Delete ${t.title}`',
+            'aria-live="polite"',
+        ):
+            self.assertIn(phrase, SOURCE)
+
+        actions_start = SOURCE.index('<div className="flex flex-wrap gap-2 mt-4" aria-live="polite">')
+        actions_end = SOURCE.index("\n                  </div>", actions_start)
+        actions = SOURCE[actions_start:actions_end]
+        self.assertIn('handleMarkDone(t)} disabled={updateTask.isPending}', actions)
+        self.assertIn('className="min-h-[44px]', actions)
+        self.assertNotIn('min-h-[40px]', actions)
+
 
 if __name__ == "__main__":
     unittest.main()
