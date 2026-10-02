@@ -158,6 +158,14 @@ class EnergyRenewalFieldTests(unittest.TestCase):
         self.assertIn("Renewal quote frequency: Annual.", sections["things_to_check"])
         self.assertIn("same annual basis", sections["next_steps"])
         self.assertIn("same comparison period", sections["approval_checklist"])
+        self.assertIn(
+            "Price-period comparison: ready for same-period annualisation.",
+            sections["things_to_check"],
+        )
+        self.assertIn(
+            "billing period for both my current price and renewal quote",
+            sections["provider_message"],
+        )
 
     def test_missing_price_frequencies_keep_legacy_price_wording(self):
         sections = renewal_sections({
@@ -171,6 +179,25 @@ class EnergyRenewalFieldTests(unittest.TestCase):
         self.assertIn("My current price is GBP 118 per month.", sections["provider_message"])
         self.assertIn("My renewal quote is GBP 131 per month.", sections["provider_message"])
         self.assertNotIn("(not supplied)", sections["provider_message"])
+        self.assertIn(
+            "Price-period comparison: incomplete until both current and renewal price frequencies are confirmed.",
+            sections["things_to_check"],
+        )
+
+    def test_not_sure_price_frequency_keeps_comparison_incomplete(self):
+        sections = renewal_sections({
+            "details": {
+                "current_price": "GBP 118",
+                "current_price_frequency": "Not sure",
+                "new_quote": "GBP 1,410",
+                "renewal_quote_frequency": "Annual",
+            }
+        })
+
+        self.assertIn(
+            "Price-period comparison: incomplete until both current and renewal price frequencies are confirmed.",
+            sections["things_to_check"],
+        )
 
 
 class EnergyRenewalFrequencyContractTests(unittest.TestCase):
