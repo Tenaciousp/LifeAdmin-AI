@@ -177,6 +177,19 @@ class EnergyRenewalFrequencyContractTests(unittest.TestCase):
         self.assertIn("Current price frequency", missing)
         self.assertIn("Renewal quote frequency", missing)
 
+    def test_supplied_price_frequency_is_not_reported_missing(self):
+        missing = domain.missing_details({
+            "category_id": "energy_water",
+            "goal_id": "prepare_renewal",
+            "details": {
+                "current_price_frequency": "Monthly",
+                "renewal_quote_frequency": "Annual",
+            },
+        })
+
+        self.assertNotIn("Current price frequency", missing)
+        self.assertNotIn("Renewal quote frequency", missing)
+
 
 if __name__ == "__main__":
     unittest.main()
