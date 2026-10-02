@@ -141,6 +141,38 @@ class EnergyRenewalFieldTests(unittest.TestCase):
 
 
 
+    def test_supplied_price_frequencies_shape_plan_output(self):
+        sections = renewal_sections({
+            "details": {
+                "provider": "Example Energy",
+                "current_price": "GBP 118",
+                "current_price_frequency": "Monthly",
+                "new_quote": "GBP 1,410",
+                "renewal_quote_frequency": "Annual",
+            }
+        })
+
+        self.assertIn("My current price is GBP 118 (Monthly).", sections["provider_message"])
+        self.assertIn("My renewal quote is GBP 1,410 (Annual).", sections["provider_message"])
+        self.assertIn("Current price frequency: Monthly.", sections["things_to_check"])
+        self.assertIn("Renewal quote frequency: Annual.", sections["things_to_check"])
+        self.assertIn("same annual basis", sections["next_steps"])
+        self.assertIn("same comparison period", sections["approval_checklist"])
+
+    def test_missing_price_frequencies_keep_legacy_price_wording(self):
+        sections = renewal_sections({
+            "details": {
+                "provider": "Example Energy",
+                "current_price": "GBP 118 per month",
+                "new_quote": "GBP 131 per month",
+            }
+        })
+
+        self.assertIn("My current price is GBP 118 per month.", sections["provider_message"])
+        self.assertIn("My renewal quote is GBP 131 per month.", sections["provider_message"])
+        self.assertNotIn("(not supplied)", sections["provider_message"])
+
+
 class EnergyRenewalFrequencyContractTests(unittest.TestCase):
     def test_price_frequency_fields_offer_reviewed_periods(self):
         fields = {
