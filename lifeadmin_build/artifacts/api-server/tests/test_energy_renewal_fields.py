@@ -141,5 +141,42 @@ class EnergyRenewalFieldTests(unittest.TestCase):
 
 
 
+class EnergyRenewalFrequencyContractTests(unittest.TestCase):
+    def test_price_frequency_fields_offer_reviewed_periods(self):
+        fields = {
+            field["id"]: field
+            for field in domain.fields_for("energy_water", "prepare_renewal")
+        }
+        expected = ["Monthly", "Annual", "Quarterly", "Weekly", "Other", "Not sure"]
+
+        self.assertEqual(fields["current_price_frequency"]["options"], expected)
+        self.assertEqual(fields["renewal_quote_frequency"]["options"], expected)
+        self.assertTrue(fields["current_price_frequency"]["recommended"])
+        self.assertTrue(fields["renewal_quote_frequency"]["recommended"])
+
+    def test_price_frequency_values_survive_task_normalisation(self):
+        task = domain.normalise_task({
+            "category_id": "energy_water",
+            "goal_id": "prepare_renewal",
+            "details": {
+                "current_price_frequency": "Monthly",
+                "renewal_quote_frequency": "Annual",
+            },
+        })
+
+        self.assertEqual(task["details"]["current_price_frequency"], "Monthly")
+        self.assertEqual(task["details"]["renewal_quote_frequency"], "Annual")
+
+    def test_missing_details_calls_out_price_frequency(self):
+        missing = domain.missing_details({
+            "category_id": "energy_water",
+            "goal_id": "prepare_renewal",
+            "details": {},
+        })
+
+        self.assertIn("Current price frequency", missing)
+        self.assertIn("Renewal quote frequency", missing)
+
+
 if __name__ == "__main__":
     unittest.main()
