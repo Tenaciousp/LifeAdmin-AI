@@ -56,6 +56,8 @@ export function CustomerJourney() {
   const aiPromptRef = useRef<HTMLTextAreaElement | null>(null);
   const aiHandoffDialogRef = useRef<HTMLDivElement | null>(null);
   const aiHandoffReturnFocusRef = useRef<HTMLElement | null>(null);
+  const gapDialogRef = useRef<HTMLDivElement | null>(null);
+  const gapReturnFocusRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
     if (!aiHandoffOpen) return;
@@ -123,6 +125,58 @@ export function CustomerJourney() {
       document.body.style.overflow = previousOverflow;
     };
   }, [aiHandoffOpen]);
+
+  useEffect(() => {
+    if (!gapModalOpen) return;
+    const dialog = gapDialogRef.current;
+    if (!dialog) return;
+
+    const returnFocusTo = gapReturnFocusRef.current;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    const timer = window.setTimeout(() => dialog.focus(), 0);
+    const handleGapKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        setGapModalOpen(false);
+        return;
+      }
+      if (event.key !== "Tab") return;
+
+      const focusable = Array.from(
+        dialog.querySelectorAll<HTMLElement>(
+          'button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), a[href], [tabindex]:not([tabindex="-1"])'
+        )
+      ).filter((element) => element.getAttribute("aria-hidden") !== "true");
+
+      if (focusable.length === 0) {
+        event.preventDefault();
+        dialog.focus();
+        return;
+      }
+
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      const active = document.activeElement;
+      if (event.shiftKey && (active === first || active === dialog)) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && active === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+
+    dialog.addEventListener("keydown", handleGapKeyDown);
+    return () => {
+      window.clearTimeout(timer);
+      dialog.removeEventListener("keydown", handleGapKeyDown);
+      document.body.style.overflow = previousOverflow;
+      if (returnFocusTo?.isConnected) returnFocusTo.focus();
+    };
+  }, [gapModalOpen]);
+
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -305,6 +359,7 @@ export function CustomerJourney() {
     if (gaps.length > 0) {
       setDetectedGaps(gaps);
       setPendingGenerationTask(task);
+      gapReturnFocusRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
       setGapModalOpen(true);
       setActiveStep(4);
       return;
@@ -1016,13 +1071,18 @@ ${buildComparisonRequirements(task)}`;
 
       {/* Modals */}
       {gapModalOpen && (
-        <div 
-          className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
-          onKeyDown={e => e.key === 'Escape' && setGapModalOpen(false)}
-        >
-          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl animate-in fade-in zoom-in-95 duration-200" role="dialog" aria-modal="true" aria-labelledby="gapTitle">
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div
+            ref={gapDialogRef}
+            tabIndex={-1}
+            className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl animate-in fade-in zoom-in-95 duration-200 focus:outline-none"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="gapTitle"
+            aria-describedby="gapDescription"
+          >
             <h3 id="gapTitle" className="text-xl font-extrabold text-slate-900 mb-2">Missing key details</h3>
-            <p className="text-slate-600 mb-4">Your task is missing some details that help the AI generate a precise plan. You can proceed without them, but the output may be less specific.</p>
+            <p id="gapDescription" className="text-slate-600 mb-4">Your task is missing some details that help the AI generate a precise plan. You can proceed without them, but the output may be less specific.</p>
             
             <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-6">
               <ul className="space-y-2">
