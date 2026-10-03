@@ -1111,11 +1111,12 @@ ${buildComparisonRequirements(task)}`;
 
       {/* Modals */}
       {gapModalOpen && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-2 sm:p-4">
           <div
             ref={gapDialogRef}
             tabIndex={-1}
-            className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl animate-in fade-in zoom-in-95 duration-200 focus:outline-none"
+            style={{ maxHeight: "calc(100dvh - 1rem)" }}
+            className="bg-white rounded-2xl max-w-md w-full p-4 sm:p-6 shadow-2xl animate-in fade-in zoom-in-95 duration-200 overflow-y-auto focus:outline-none"
             role="dialog"
             aria-modal="true"
             aria-labelledby="gapTitle"
@@ -1128,7 +1129,7 @@ ${buildComparisonRequirements(task)}`;
               <ul className="space-y-2">
                 {detectedGaps.map(g => (
                   <li key={g} className="flex gap-2 text-amber-900 font-semibold text-sm">
-                    <Info className="w-4 h-4 shrink-0 mt-0.5 text-amber-600" /> {g}
+                    <Info aria-hidden="true" className="w-4 h-4 shrink-0 mt-0.5 text-amber-600" /> {g}
                   </li>
                 ))}
               </ul>
