@@ -1168,6 +1168,33 @@ function buildComparisonRequirements(task: any): string {
 12. Do not make the final decision for me. Present the options clearly so I can choose.`;
   }
 
+  if (task?.category_id === "insurance") {
+    return `1. Find at least five realistic policy alternatives where enough current information is available.
+2. Compare them on the same cover basis. Include annual premium, monthly-payment interest or fees, compulsory and voluntary excess, cover limits, major exclusions, add-ons, policy term and renewal terms.
+3. Use the cover details and priorities I supplied. If a like-for-like comparison is not possible, state what is missing instead of guessing.
+4. Show the current and renewal premium when supplied, the first-year total cost for each option, and any material cover trade-offs.
+5. Link to the insurer's official policy or product information where available and state when the information was checked.
+6. Separate confirmed facts from estimates, assumptions or details that still need verification.
+7. Flag eligibility, postcode, claims-history, vehicle/property, occupation or other factors that might change the quoted price.
+8. Identify the closest like-for-like option and the lowest total-cost option without treating price alone as better cover.
+9. Suggest the three strongest negotiation points I can take back to my current insurer.
+10. Give me a short insurer-ready negotiation message based on the evidence.
+11. Do not make the final decision for me. Present the options clearly so I can choose.`;
+  }
+
+  if (task?.category_id === "subscriptions_memberships") {
+    return `1. Find at least five realistic ways to reduce or replace this subscription where enough current information is available.
+2. Include the plan or tier, monthly and annual price, introductory and standard price, minimum term, cancellation route, important features and any bundle or add-on requirements.
+3. Compare staying on a cheaper tier, annual billing, removing unused extras, eligible bundles and a lower-cost replacement where those routes exist.
+4. Show the total cost over the relevant minimum term and flag any cancellation fee, notice period, renewal rule or price-rise term.
+5. Link to the official provider page or another reliable source for every option and state when the information was checked.
+6. Separate confirmed facts from anything still needing verification.
+7. Show which option preserves the features I said I must keep and which has the lowest total cost.
+8. Suggest the three strongest retention or cancellation points I can take back to my current provider.
+9. Give me a short provider-ready negotiation or cancellation message based on the best evidence.
+10. Do not make the final decision for me. Present the options clearly so I can choose.`;
+  }
+
   return `1. Find at least five realistic alternatives where enough current information is available.
 2. Include current price, introductory period, standard price after the offer, contract length, setup fees, annual price-rise terms, important features and total minimum-term cost.
 3. Link to the official provider page or another reliable source for every option.
@@ -1195,8 +1222,16 @@ function buildAiNarrative(task: any, details: Record<string, unknown> | string[]
   return `I want to ${goal.toLowerCase()} for ${task.category}. My priority is ${priority.toLowerCase()}. Switching preference: ${switching}.${amount}${mustKeep} I want current alternatives, source links, full-term costs and negotiation points before I decide.`;
 }
 
+const ALTERNATIVE_COMPARISON_CATEGORIES = new Set([
+  "tv_broadband_mobile",
+  "energy_water",
+  "insurance",
+  "subscriptions_memberships",
+  "home_security_maintenance",
+]);
+
 function shouldOfferAlternativeComparison(task: any): boolean {
-  if (!task) return false;
+  if (!task || !ALTERNATIVE_COMPARISON_CATEGORIES.has(task.category_id)) return false;
   if (task.goal_id === "reduce_price" || task.goal_id === "prepare_renewal") return true;
   return task.goal_id === "cancel_switch" && task?.details?.desired_outcome === "Switch provider";
 }
