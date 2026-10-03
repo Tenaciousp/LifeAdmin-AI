@@ -1,5 +1,8 @@
+import io
+import json
 import os
 import pathlib
+import tempfile
 import unittest
 from unittest.mock import patch
 
@@ -147,6 +150,12 @@ class OutputQualityRegressionTests(unittest.TestCase):
         self.assertIn("Recent plans", source)
         self.assertIn("handleOpenSavedPlan", source)
 
+    def test_search_suggestion_details_are_preserved_into_task_fields(self):
+        root = pathlib.Path(__file__).resolve().parents[2] / "adminpilot-ai" / "src" / "components" / "CustomerJourney.tsx"
+        source = root.read_text(encoding="utf-8")
+        self.assertIn("suggestedMatch.prefill_details", source)
+        self.assertIn("setDynamicFields", source)
+
     def test_result_renderer_formats_headings_lists_and_checklists(self):
         root = pathlib.Path(__file__).resolve().parents[2] / "adminpilot-ai" / "src" / "components" / "CustomerJourney.tsx"
         source = root.read_text(encoding="utf-8")
@@ -161,6 +170,21 @@ class OutputQualityRegressionTests(unittest.TestCase):
         source = root.read_text(encoding="utf-8")
         self.assertIn('activeTab === "provider_message" && providerEmail?.body ? providerEmail.body', source)
         self.assertIn("Copy bank query message", source)
+
+    def test_ai_assistant_opens_before_clipboard_copy(self):
+        root = pathlib.Path(__file__).resolve().parents[2] / "adminpilot-ai" / "src" / "components" / "CustomerJourney.tsx"
+        source = root.read_text(encoding="utf-8")
+        start = source.index("const openAiAssistant")
+        end = source.index("\n\n  const tabRefs", start)
+        block = source[start:end]
+        self.assertLess(block.index("window.open"), block.index("navigator.clipboard.writeText"))
+        self.assertIn('window.open("", "_blank")', block)
+        self.assertIn("assistantWindow.opener = null", block)
+        self.assertIn("assistantWindow.location.href = url", block)
+        self.assertLess(block.index("assistantWindow.location.href = url"), block.index("navigator.clipboard.writeText"))
+        self.assertIn("if (!navigator.clipboard?.writeText)", block)
+        self.assertLess(block.index("if (!navigator.clipboard?.writeText)"), block.index("void navigator.clipboard.writeText"))
+        self.assertNotIn("await navigator.clipboard.writeText", block)
 
     def test_savings_flow_uses_dropdowns_and_five_ai_assistants(self):
         domain_path = pathlib.Path(__file__).resolve().parents[1] / "domain.py"
@@ -179,6 +203,78 @@ class OutputQualityRegressionTests(unittest.TestCase):
         self.assertIn("https://www.perplexity.ai/", source)
         self.assertIn("Find at least five realistic alternatives", source)
         self.assertIn("official provider page or another reliable source", source)
+        self.assertIn("buildComparisonRequirements(task)", source)
+        self.assertIn('task?.category_id === "energy_water"', source)
+        self.assertIn("unit rate(s), standing charge(s)", source)
+        self.assertIn("Estimate annual cost using the annual usage I supplied", source)
+        self.assertIn("first-year switch cost after exit fees", source)
+        self.assertIn("For dual fuel, calculate electricity and gas separately", source)
+        self.assertIn("mark the comparison incomplete instead of guessing", source)
+        self.assertIn("ongoing annual cost", source)
+        self.assertIn("first-year saving", source)
+        self.assertIn("ongoing annual saving", source)
+        self.assertIn("Treat this as a water-bill review, not an energy supplier-switching search", source)
+        self.assertIn("Do not invent five supplier alternatives", source)
+        self.assertIn("Current water tariff review", source)
+        self.assertIn("Social tariff / support scheme", source)
+
+
+class _RouteHandler:
+    def __init__(self, path, body=None):
+        raw = json.dumps(body or {}).encode("utf-8")
+        self.path = path
+        self.headers = {"Content-Length": str(len(raw))}
+        self.rfile = io.BytesIO(raw)
+        self.wfile = io.BytesIO()
+        self.client_address = ("test-client", 1)
+        self.status = None
+        self._guest_cookie = None
+
+    def send_response(self, status):
+        self.status = status
+
+    def send_header(self, name, value):
+        pass
+
+    def end_headers(self):
+        pass
+
+    def payload(self):
+        return json.loads(self.wfile.getvalue().decode("utf-8"))
+
+
+class TaskRouteRegressionTests(unittest.TestCase):
+    def test_guest_task_route_preserves_provider_reference_and_amount(self):
+        with tempfile.TemporaryDirectory() as tmpdir, \
+             patch.object(app, "TASKS_FILE", os.path.join(tmpdir, "tasks.json")), \
+             patch.object(app, "current_user", return_value=None), \
+             patch.object(app, "guest_session", return_value="guest-test"):
+
+            create = _RouteHandler("/api/tasks", {
+                "category_id": "tv_broadband_mobile",
+                "goal_id": "reduce_price",
+                "details": {
+                    "provider": "Sky",
+                    "account_reference": "ACC-12345",
+                    "amount": "GBP 82.50",
+                },
+            })
+            app.AdminPilotHandler.do_POST(create)
+
+            self.assertEqual(create.status, 201)
+            created = create.payload()["task"]
+            self.assertEqual(created["details"]["provider"], "Sky")
+            self.assertEqual(created["details"]["account_reference"], "ACC-12345")
+            self.assertEqual(created["details"]["amount"], "GBP 82.50")
+
+            retrieve = _RouteHandler("/api/tasks")
+            app.AdminPilotHandler.do_GET(retrieve)
+
+            self.assertEqual(retrieve.status, 200)
+            stored = retrieve.payload()["tasks"][0]
+            self.assertEqual(stored["details"]["provider"], "Sky")
+            self.assertEqual(stored["details"]["account_reference"], "ACC-12345")
+            self.assertEqual(stored["details"]["amount"], "GBP 82.50")
 
 
 if __name__ == "__main__":

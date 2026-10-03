@@ -11,6 +11,7 @@ from typing import Any
 
 _BASE_FIELDS = [
     {"id": "provider", "label": "Provider or organisation", "type": "text", "required": False, "placeholder": "e.g. Sky, Aviva or your local council"},
+    {"id": "account_reference", "label": "Account or customer reference", "type": "text", "required": False, "placeholder": "Optional reference only; do not enter passwords or payment card details"},
     {"id": "payment_description", "label": "Payment or bill description", "type": "text", "required": False, "placeholder": "What appears on your statement or bill?"},
     {"id": "amount", "label": "Amount", "type": "text", "required": False, "placeholder": "e.g. £42.99 per month"},
     {"id": "date", "label": "Relevant date", "type": "date", "required": False, "placeholder": "Renewal, payment or deadline date"},
@@ -36,9 +37,13 @@ _SPECIAL_FIELDS = {
         {"id": "package", "label": "Package or plan", "type": "text", "required": False, "placeholder": "e.g. broadband 150 Mbps, SIM-only, TV + sports"},
     ],
     "energy_water": [
-        {"id": "tariff", "label": "Tariff or plan", "type": "text", "required": False, "placeholder": "e.g. fixed, variable or dual fuel"},
+        {"id": "utility_type", "label": "Supply type", "type": "select", "required": False, "options": ["Electricity", "Gas", "Dual fuel", "Water"]},
+        {"id": "tariff", "label": "Tariff or plan", "type": "select", "required": False, "options": ["Fixed", "Standard variable", "Tracker", "Time of use", "Prepayment", "Water tariff", "Not sure"]},
         {"id": "meter_reading", "label": "Latest meter reading", "type": "text", "required": False, "placeholder": "Optional"},
-        {"id": "annual_usage", "label": "Annual usage", "type": "text", "required": False, "placeholder": "Optional kWh from a recent bill"},
+        {"id": "annual_usage", "label": "Annual usage", "type": "text", "required": False, "placeholder": "e.g. electricity 2,900 kWh; gas 11,500 kWh"},
+        {"id": "unit_rate", "label": "Unit rate(s)", "type": "text", "required": False, "placeholder": "e.g. electricity 24.5p/kWh; gas 6.2p/kWh"},
+        {"id": "standing_charge", "label": "Standing charge(s)", "type": "text", "required": False, "placeholder": "e.g. electricity 52p/day; gas 31p/day"},
+        {"id": "exit_fee", "label": "Exit fee", "type": "text", "required": False, "placeholder": "e.g. £50 per fuel or £0"},
     ],
     "insurance": [
         {"id": "policy_type", "label": "Policy type", "type": "select", "required": False, "options": ["Car", "Home", "Contents", "Pet", "Travel", "Life", "Health", "Other"]},
@@ -102,8 +107,10 @@ _GOAL_FIELDS = {
     ],
     "prepare_renewal": [
         {"id": "date", "label": "Renewal date", "type": "date", "required": False, "recommended": True, "placeholder": "When does it renew?"},
-        {"id": "amount", "label": "Current price", "type": "text", "required": False, "recommended": True, "placeholder": "Current monthly or annual price"},
+        {"id": "amount", "label": "Current price", "type": "text", "required": False, "recommended": True, "placeholder": "Current price"},
+        {"id": "current_price_frequency", "label": "Current price frequency", "type": "select", "required": False, "recommended": True, "options": ["Monthly", "Annual", "Quarterly", "Weekly", "Other", "Not sure"]},
         {"id": "new_quote", "label": "Renewal quote", "type": "text", "required": False, "recommended": True, "placeholder": "New price if supplied"},
+        {"id": "renewal_quote_frequency", "label": "Renewal quote frequency", "type": "select", "required": False, "recommended": True, "options": ["Monthly", "Annual", "Quarterly", "Weekly", "Other", "Not sure"]},
         {"id": "renewal_priority", "label": "What matters most?", "type": "select", "required": False, "recommended": False, "options": [
             "Lower price",
             "Lowest total cost",
@@ -296,6 +303,49 @@ def suggest(query: str) -> dict[str, Any]:
         elif any(term in text for term in ("payment", "bill", "fees", "fee", "price", "cost", "charge")):
             goal_id = "check_bill"
 
+    prefill_details: dict[str, str] = {}
+    common_provider_matches = {
+        "tv_broadband_mobile": [("virgin media", "Virgin Media"), ("sky", "Sky"), ("bt", "BT"), ("ee", "EE"), ("vodafone", "Vodafone"), ("o2", "O2")],
+        "insurance": [("direct line", "Direct Line"), ("admiral", "Admiral"), ("aviva", "Aviva"), ("axa", "AXA")],
+        "subscriptions_memberships": [("netflix", "Netflix"), ("spotify", "Spotify"), ("disney+", "Disney+"), ("amazon prime", "Amazon Prime")],
+    }
+    common_provider = next(
+        (name for phrase, name in common_provider_matches.get(category_id, []) if phrase_matches(phrase)),
+        "",
+    )
+    if common_provider:
+        prefill_details["provider"] = common_provider
+
+    if category_id == "energy_water":
+        provider_matches = [
+            ("octopus", "Octopus Energy"),
+            ("british gas", "British Gas"),
+            ("e.on", "E.ON"),
+            ("eon", "E.ON"),
+            ("edf", "EDF"),
+            ("ovo", "OVO"),
+            ("scottishpower", "ScottishPower"),
+            ("utilita", "Utilita"),
+            ("united utilities", "United Utilities"),
+            ("thames water", "Thames Water"),
+            ("yorkshire water", "Yorkshire Water"),
+            ("severn trent", "Severn Trent"),
+        ]
+        provider = next((name for phrase, name in provider_matches if phrase_matches(phrase)), "")
+        if provider:
+            prefill_details["provider"] = provider
+
+        water_providers = {"United Utilities", "Thames Water", "Yorkshire Water", "Severn Trent"}
+        if provider in water_providers or phrase_matches("water"):
+            prefill_details["utility_type"] = "Water"
+            prefill_details["tariff"] = "Water tariff"
+        elif phrase_matches("dual fuel"):
+            prefill_details["utility_type"] = "Dual fuel"
+        elif phrase_matches("electricity"):
+            prefill_details["utility_type"] = "Electricity"
+        elif phrase_matches("gas") and provider != "British Gas":
+            prefill_details["utility_type"] = "Gas"
+
     reasons = []
     if category_id:
         reasons.append(f"Matched {_CATEGORY_MAP[category_id]['label'].lower()}.")
@@ -310,6 +360,7 @@ def suggest(query: str) -> dict[str, Any]:
         "goal": goal_id,
         "confidence": confidence,
         "reasons": reasons,
+        "prefill_details": prefill_details,
         "popular_categories": [x["id"] for x in CATEGORIES if x["popular"]],
     }
 

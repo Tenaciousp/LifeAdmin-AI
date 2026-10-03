@@ -54,18 +54,129 @@ export function CustomerJourney() {
   const [aiPrompt, setAiPrompt] = useState("");
   const [aiHandoffMode, setAiHandoffMode] = useState<"review" | "compare">("review");
   const aiPromptRef = useRef<HTMLTextAreaElement | null>(null);
+  const aiHandoffDialogRef = useRef<HTMLDivElement | null>(null);
+  const aiHandoffReturnFocusRef = useRef<HTMLElement | null>(null);
+  const gapDialogRef = useRef<HTMLDivElement | null>(null);
+  const gapReturnFocusRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
     if (!aiHandoffOpen) return;
+    const dialog = aiHandoffDialogRef.current;
+    if (!dialog) return;
+
+    const returnFocusTo = aiHandoffReturnFocusRef.current;
     const timer = window.setTimeout(() => {
-      const el = aiPromptRef.current;
-      if (!el) return;
-      el.scrollTop = 0;
-      el.setSelectionRange(0, 0);
-      el.blur();
+      const prompt = aiPromptRef.current;
+      if (prompt) {
+        prompt.scrollTop = 0;
+        prompt.setSelectionRange(0, 0);
+      }
+      dialog.focus();
     }, 0);
-    return () => window.clearTimeout(timer);
-  }, [aiHandoffOpen, aiHandoffMode, aiPrompt]);
+
+    const handleDialogKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        setAiHandoffOpen(false);
+        return;
+      }
+      if (event.key !== "Tab") return;
+
+      const focusable = Array.from(
+        dialog.querySelectorAll<HTMLElement>(
+          'button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), a[href], [tabindex]:not([tabindex="-1"])'
+        )
+      ).filter((element) => element.getAttribute("aria-hidden") !== "true");
+
+      if (focusable.length === 0) {
+        event.preventDefault();
+        dialog.focus();
+        return;
+      }
+
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      const active = document.activeElement;
+
+      if (event.shiftKey && (active === first || active === dialog)) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && active === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+
+    dialog.addEventListener("keydown", handleDialogKeyDown);
+    return () => {
+      window.clearTimeout(timer);
+      dialog.removeEventListener("keydown", handleDialogKeyDown);
+      if (returnFocusTo?.isConnected) returnFocusTo.focus();
+    };
+  }, [aiHandoffOpen]);
+
+  useEffect(() => {
+    if (!aiHandoffOpen) return;
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [aiHandoffOpen]);
+
+  useEffect(() => {
+    if (!gapModalOpen) return;
+    const dialog = gapDialogRef.current;
+    if (!dialog) return;
+
+    const returnFocusTo = gapReturnFocusRef.current;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    const timer = window.setTimeout(() => dialog.focus(), 0);
+    const handleGapKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        setGapModalOpen(false);
+        return;
+      }
+      if (event.key !== "Tab") return;
+
+      const focusable = Array.from(
+        dialog.querySelectorAll<HTMLElement>(
+          'button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), a[href], [tabindex]:not([tabindex="-1"])'
+        )
+      ).filter((element) => element.getAttribute("aria-hidden") !== "true");
+
+      if (focusable.length === 0) {
+        event.preventDefault();
+        dialog.focus();
+        return;
+      }
+
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      const active = document.activeElement;
+      if (event.shiftKey && (active === first || active === dialog)) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && active === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+
+    dialog.addEventListener("keydown", handleGapKeyDown);
+    return () => {
+      window.clearTimeout(timer);
+      dialog.removeEventListener("keydown", handleGapKeyDown);
+      document.body.style.overflow = previousOverflow;
+      if (returnFocusTo?.isConnected) returnFocusTo.focus();
+    };
+  }, [gapModalOpen]);
+
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -97,7 +208,7 @@ export function CustomerJourney() {
     const cat = categories.find((c: any) => c.id === suggestedMatch.category_id);
     const gl = goals.find((g: any) => g.id === suggestedMatch.goal_id);
     setTitle(gl ? `${gl.label}: ${cat?.label.toLowerCase()}` : "");
-    setDynamicFields({});
+    setDynamicFields({ ...(suggestedMatch.prefill_details || {}) });
     setNotes("");
     setSuggestedMatch(null);
     setSearchQuery("");
@@ -156,6 +267,9 @@ export function CustomerJourney() {
           toast.success("Task details updated");
           setEditingId(null);
           setActiveStep(4);
+        },
+        onError: () => {
+          toast.error("Task update failed. Your changes are still on screen. Try again.");
         }
       });
     } else {
@@ -168,6 +282,9 @@ export function CustomerJourney() {
           setSelectedCategory(null);
           trackEvent("task_saved", { category: payload.category });
           setActiveStep(4);
+        },
+        onError: () => {
+          toast.error("Task save failed. Your details are still on screen. Try again.");
         }
       });
     }
@@ -208,6 +325,9 @@ export function CustomerJourney() {
             setSelectedTaskId(null);
             setPlanResult(null);
           }
+        },
+        onError: () => {
+          toast.error("Task removal failed. Try again.");
         }
       });
     }
@@ -215,7 +335,8 @@ export function CustomerJourney() {
 
   const handleMarkDone = (t: any) => {
     updateTask.mutate({ id: t.id, status: "Done", user_id: buyerId }, {
-      onSuccess: () => toast.success("Task marked as done")
+      onSuccess: () => toast.success("Task marked as done"),
+      onError: () => toast.error("Status update failed. Try again.")
     });
   };
 
@@ -238,6 +359,7 @@ export function CustomerJourney() {
     if (gaps.length > 0) {
       setDetectedGaps(gaps);
       setPendingGenerationTask(task);
+      gapReturnFocusRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
       setGapModalOpen(true);
       setActiveStep(4);
       return;
@@ -263,8 +385,9 @@ export function CustomerJourney() {
         setActiveStep(5);
         document.getElementById("output-panel")?.scrollIntoView({ behavior: "smooth" });
       },
-      onError: (err) => {
-        toast.error(`Generation failed: ${err.message}`);
+      onError: () => {
+        setActiveStep(4);
+        toast.error("Plan generation failed. Your task is still saved. Try again.");
       }
     });
   };
@@ -308,6 +431,7 @@ Do not make the final decision for me. Tell me what I should consider next.`;
 
     setAiPrompt(prompt);
     setAiHandoffMode("review");
+    aiHandoffReturnFocusRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     setAiHandoffOpen(true);
     trackEvent("ai_handoff_opened");
     setActiveStep(6);
@@ -344,18 +468,11 @@ ${planResult.next_steps || "None"}
 
 Please use current web information where available. I want a practical comparison I can use to negotiate or switch.
 
-1. Find at least five realistic alternatives where enough current information is available.
-2. Include current price, introductory period, standard price after the offer, contract length, setup fees, annual price-rise terms, important features and total minimum-term cost.
-3. Link to the official provider page or another reliable source for every option.
-4. Show which option is closest to my existing service and which offers the lowest total cost.
-5. Flag anything that depends on postcode/address availability or eligibility.
-6. Separate confirmed facts from anything still needing verification.
-7. Suggest the three strongest negotiation points I can take back to my current provider.
-8. Give me a short provider-ready negotiation message based on the best evidence.
-9. Do not make the final decision for me. Present the options clearly so I can choose.`;
+${buildComparisonRequirements(task)}`;
 
     setAiPrompt(prompt);
     setAiHandoffMode("compare");
+    aiHandoffReturnFocusRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     setAiHandoffOpen(true);
     trackEvent("ai_comparison_opened");
     setActiveStep(6);
@@ -385,15 +502,59 @@ Please use current web information where available. I want a practical compariso
       setActiveStep(6);
     }
   };
-  const openAiAssistant = async (url: string, name: string) => {
+  const selectAiPromptForManualCopy = () => {
+    const el = aiPromptRef.current;
+    if (!el) return false;
+    el.focus();
+    el.setSelectionRange(0, el.value.length);
+    el.scrollTop = 0;
+    return true;
+  };
+
+  const copyAiPrompt = async () => {
+    if (!aiPrompt.trim()) {
+      toast.error("There is no AI prompt to copy yet.");
+      return;
+    }
     try {
+      if (!navigator.clipboard?.writeText) throw new Error("Clipboard API unavailable");
       await navigator.clipboard.writeText(aiPrompt);
-      toast.success(`Comparison prompt copied. Paste it into ${name}.`);
+      toast.success("Prompt copied to clipboard");
       trackEvent("ai_prompt_copied");
     } catch {
-      toast.info(`Open ${name}, then copy the prompt from this window.`);
+      const selected = selectAiPromptForManualCopy();
+      toast.info(selected
+        ? "Prompt selected. Use your device's Copy command, then paste it into your AI assistant."
+        : "Copy did not work. Select the prompt manually and copy it from your device.");
     }
-    window.open(url, "_blank", "noopener,noreferrer");
+  };
+
+  const openAiAssistant = (url: string, name: string) => {
+    const assistantWindow = window.open("", "_blank");
+    if (!assistantWindow) {
+      toast.error(`Could not open ${name}. Allow pop-ups for LifeAdmin and try again.`);
+      return;
+    }
+    assistantWindow.opener = null;
+    assistantWindow.location.href = url;
+    if (!navigator.clipboard?.writeText) {
+      const promptSelected = selectAiPromptForManualCopy();
+      toast.info(promptSelected
+        ? `Prompt selected in LifeAdmin. Copy it when you return, then paste it into ${name}.`
+        : `Open ${name}, then copy the prompt from this window.`);
+      return;
+    }
+    void navigator.clipboard.writeText(aiPrompt)
+      .then(() => {
+        toast.success(`Comparison prompt copied. Paste it into ${name}.`);
+        trackEvent("ai_prompt_copied");
+      })
+      .catch(() => {
+        const promptSelected = selectAiPromptForManualCopy();
+        toast.info(promptSelected
+          ? `Prompt selected in LifeAdmin. Copy it when you return, then paste it into ${name}.`
+          : `Open ${name}, then copy the prompt from this window.`);
+      });
   };
 
 
@@ -425,19 +586,26 @@ Please use current web information where available. I want a practical compariso
           <div className="space-y-6">
             {!selectedCategory ? (
               <div className="space-y-4">
-                <label className="block text-sm font-bold text-slate-800">1. What are you managing?</label>
+                <label htmlFor="bill-search" className="block text-sm font-bold text-slate-800">1. What are you managing?</label>
                 
                 <form onSubmit={handleSearchSubmit} className="relative">
                   <input 
+                    id="bill-search"
                     type="text"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     placeholder="E.g. Renew car insurance"
                     className="w-full bg-white border border-slate-300 rounded-xl pl-11 pr-4 py-3 text-slate-900 focus:ring-2 focus:ring-primary/20 focus:border-primary placeholder:text-slate-400"
                   />
-                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-                  <button type="submit" disabled={suggestMatch.isPending} className="absolute right-2 top-1/2 -translate-y-1/2 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg text-sm font-bold transition-colors disabled:opacity-50">
-                    {suggestMatch.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : "Match"}
+                  <Search aria-hidden="true" className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                  <button
+                    type="submit"
+                    disabled={suggestMatch.isPending}
+                    aria-busy={suggestMatch.isPending}
+                    aria-label={suggestMatch.isPending ? "Matching bill or payment" : "Match bill or payment"}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg text-sm font-bold transition-colors disabled:opacity-50"
+                  >
+                    {suggestMatch.isPending ? <Loader2 aria-hidden="true" className="w-4 h-4 animate-spin" /> : "Match"}
                   </button>
                 </form>
 
@@ -529,9 +697,9 @@ Please use current web information where available. I want a practical compariso
             {selectedCategory && (
               <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2">
                 <div>
-                  <label className="block text-sm font-bold text-slate-800 mb-2">2. What do you want to do?</label>
+                  <p id="goal-choice-label" className="block text-sm font-bold text-slate-800 mb-2">2. What do you want to do?</p>
 
-                  <div className="grid grid-cols-2 gap-2 mb-3">
+                  <div className="grid grid-cols-2 gap-2 mb-3" role="group" aria-labelledby="goal-choice-label">
                     {goals.filter((g: any) => ["reduce_price", "prepare_renewal", "cancel_switch", "check_bill"].includes(g.id)).map((g: any) => (
                       <button
                         key={g.id}
@@ -543,6 +711,7 @@ Please use current web information where available. I want a practical compariso
                           setActiveStep(3);
                           trackEvent("goal_selected", { goal: g.id });
                         }}
+                        aria-pressed={selectedGoal === g.id}
                         className={`min-h-[50px] rounded-xl border px-3 py-2 text-left text-sm font-bold transition-colors ${selectedGoal === g.id ? "border-primary bg-blue-50 text-primary" : "border-slate-200 bg-white text-slate-700 hover:border-blue-300 hover:bg-blue-50"}`}
                       >
                         {g.label}
@@ -595,12 +764,15 @@ Please use current web information where available. I want a practical compariso
                   </div>
                   {formFields.map((f: any) => (
                     <div key={f.id}>
-                      <label className="block text-sm font-semibold text-slate-700 mb-1.5">
-                        {f.label} {f.required && <span className="text-red-500">*</span>}
+                      <label htmlFor={`task-field-${f.id}`} className="block text-sm font-semibold text-slate-700 mb-1.5">
+                        {f.label} {f.required && <span className="text-red-500" aria-hidden="true">*</span>}
                       </label>
                       {f.type === 'select' ? (
                         <select
+                          id={`task-field-${f.id}`}
                           value={dynamicFields[f.id] || ""}
+                          aria-required={f.required || undefined}
+                          aria-describedby={f.recommended && !f.required ? `task-field-${f.id}-hint` : undefined}
                           onChange={e => setDynamicFields(prev => ({...prev, [f.id]: e.target.value}))}
                           className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-slate-800 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
                         >
@@ -609,7 +781,10 @@ Please use current web information where available. I want a practical compariso
                         </select>
                       ) : f.type === 'textarea' ? (
                         <textarea
+                          id={`task-field-${f.id}`}
                           value={dynamicFields[f.id] || ""}
+                          aria-required={f.required || undefined}
+                          aria-describedby={f.recommended && !f.required ? `task-field-${f.id}-hint` : undefined}
                           onChange={e => setDynamicFields(prev => ({...prev, [f.id]: e.target.value}))}
                           placeholder={f.placeholder || f.label}
                           rows={3}
@@ -617,19 +792,23 @@ Please use current web information where available. I want a practical compariso
                         />
                       ) : (
                         <input
+                          id={`task-field-${f.id}`}
                           type={f.type === 'date' ? 'date' : f.type === 'email' ? 'email' : 'text'}
                           value={dynamicFields[f.id] || ""}
+                          aria-required={f.required || undefined}
+                          aria-describedby={f.recommended && !f.required ? `task-field-${f.id}-hint` : undefined}
                           onChange={e => setDynamicFields(prev => ({...prev, [f.id]: e.target.value}))}
                           placeholder={f.placeholder || f.label}
                           className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-slate-800 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
                         />
                       )}
-                      {f.recommended && !f.required && <p className="text-[11px] text-slate-400 mt-1">Useful if you know it</p>}
+                      {f.recommended && !f.required && <p id={`task-field-${f.id}-hint`} className="text-[11px] text-slate-400 mt-1">Useful if you know it</p>}
                     </div>
                   ))}
                   <div>
-                    <label className="block text-sm font-semibold text-slate-700 mb-1.5">Additional notes (optional)</label>
+                    <label htmlFor="task-additional-notes" className="block text-sm font-semibold text-slate-700 mb-1.5">Additional notes (optional)</label>
                     <textarea 
+                      id="task-additional-notes"
                       value={notes}
                       onChange={e => setNotes(e.target.value)}
                       placeholder="Anything else?"
@@ -645,10 +824,11 @@ Please use current web information where available. I want a practical compariso
                 {selectedGoal && <button 
                   onClick={handleSaveTask}
                   disabled={createTask.isPending || updateTask.isPending}
+                  aria-busy={createTask.isPending || updateTask.isPending}
                   className="w-full min-h-[44px] bg-slate-900 hover:bg-slate-800 text-white rounded-xl py-3.5 font-bold transition-colors disabled:opacity-50 flex justify-center items-center gap-2"
                 >
-                  {(createTask.isPending || updateTask.isPending) && <Loader2 className="w-4 h-4 animate-spin" />}
-                  {editingId ? "Update task" : "Review details"}
+                  {(createTask.isPending || updateTask.isPending) && <Loader2 aria-hidden="true" className="w-4 h-4 animate-spin" />}
+                  {createTask.isPending ? "Saving task..." : updateTask.isPending ? "Updating task..." : editingId ? "Update task" : "Review details"}
                 </button>}
               </div>
             )}
@@ -704,20 +884,22 @@ Please use current web information where available. I want a practical compariso
                     </div>
                   </div>
                   
-                  <div className="flex flex-wrap gap-2 mt-4">
-                    <button onClick={() => handleGenerate(t)} className="min-h-[44px] px-4 py-1.5 bg-primary hover:bg-blue-600 text-white rounded-lg text-sm font-bold transition-colors">
-                      Generate plan
+                  <div className="flex flex-wrap gap-2 mt-4" aria-live="polite">
+                    <button onClick={() => handleGenerate(t)} disabled={generatePlan.isPending} aria-busy={generatePlan.isPending} className="min-h-[44px] px-4 py-1.5 bg-primary hover:bg-blue-600 text-white rounded-lg text-sm font-bold transition-colors disabled:opacity-50 flex items-center gap-2">
+                      {generatePlan.isPending && <Loader2 aria-hidden="true" className="w-4 h-4 animate-spin" />}
+                      {generatePlan.isPending ? "Generating..." : "Generate plan"}
                     </button>
                     <button onClick={() => handleEditTask(t)} className="min-h-[44px] px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-sm font-bold transition-colors">
                       Edit
                     </button>
                     {t.status !== 'Done' && (
-                      <button onClick={() => handleMarkDone(t)} className="min-h-[40px] px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-sm font-bold transition-colors">
-                        Mark done
+                      <button onClick={() => handleMarkDone(t)} disabled={updateTask.isPending} aria-busy={updateTask.isPending} className="min-h-[44px] px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-sm font-bold transition-colors disabled:opacity-50 flex items-center gap-2">
+                        {updateTask.isPending && <Loader2 aria-hidden="true" className="w-4 h-4 animate-spin" />}
+                        {updateTask.isPending ? "Updating..." : "Mark done"}
                       </button>
                     )}
-                    <button onClick={() => handleDeleteTask(t)} aria-label={`Delete ${t.title}`} className="min-h-[44px] px-3 py-1.5 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg text-sm font-bold transition-colors ml-auto">
-                      <Trash2 className="w-4 h-4" />
+                    <button onClick={() => handleDeleteTask(t)} disabled={deleteTask.isPending} aria-busy={deleteTask.isPending} aria-label={deleteTask.isPending ? `Deleting ${t.title}` : `Delete ${t.title}`} className="min-h-[44px] px-3 py-1.5 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg text-sm font-bold transition-colors disabled:opacity-50 ml-auto">
+                      {deleteTask.isPending ? <Loader2 aria-hidden="true" className="w-4 h-4 animate-spin" /> : <Trash2 aria-hidden="true" className="w-4 h-4" />}
                     </button>
                   </div>
                 </div>
@@ -774,9 +956,7 @@ Please use current web information where available. I want a practical compariso
                     ? "Copy bank query message"
                     : `Copy ${activeTab.replace(/_/g, " ")}`}
                 </button>
-                {(tasks.find((t: any) => t.id === selectedTaskId)?.category_id === "tv_broadband_mobile" ||
-                  tasks.find((t: any) => t.id === selectedTaskId)?.goal_id === "reduce_price" ||
-                  tasks.find((t: any) => t.id === selectedTaskId)?.goal_id === "prepare_renewal") && (
+                {shouldOfferAlternativeComparison(tasks.find((t: any) => t.id === selectedTaskId)) && (
                   <button
                     onClick={handleCompareWithAi}
                     className="min-h-[44px] flex-1 xl:flex-none px-4 py-2 bg-cyan-400 hover:bg-cyan-300 text-slate-950 rounded-xl text-sm font-extrabold transition-colors shadow-lg flex items-center justify-center gap-2"
@@ -892,13 +1072,18 @@ Please use current web information where available. I want a practical compariso
 
       {/* Modals */}
       {gapModalOpen && (
-        <div 
-          className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
-          onKeyDown={e => e.key === 'Escape' && setGapModalOpen(false)}
-        >
-          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl animate-in fade-in zoom-in-95 duration-200" role="dialog" aria-modal="true" aria-labelledby="gapTitle">
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div
+            ref={gapDialogRef}
+            tabIndex={-1}
+            className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl animate-in fade-in zoom-in-95 duration-200 focus:outline-none"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="gapTitle"
+            aria-describedby="gapDescription"
+          >
             <h3 id="gapTitle" className="text-xl font-extrabold text-slate-900 mb-2">Missing key details</h3>
-            <p className="text-slate-600 mb-4">Your task is missing some details that help the AI generate a precise plan. You can proceed without them, but the output may be less specific.</p>
+            <p id="gapDescription" className="text-slate-600 mb-4">Your task is missing some details that help the AI generate a precise plan. You can proceed without them, but the output may be less specific.</p>
             
             <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-6">
               <ul className="space-y-2">
@@ -923,18 +1108,24 @@ Please use current web information where available. I want a practical compariso
       )}
 
       {aiHandoffOpen && (
-        <div 
-          className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
-          onKeyDown={e => e.key === 'Escape' && setAiHandoffOpen(false)}
-        >
-          <div className="bg-white rounded-2xl max-w-2xl w-full p-6 shadow-2xl animate-in fade-in zoom-in-95 duration-200 max-h-[90vh] flex flex-col" role="dialog" aria-modal="true" aria-labelledby="aiHandoffTitle">
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-2 sm:p-4">
+          <div
+            ref={aiHandoffDialogRef}
+            tabIndex={-1}
+            style={{ maxHeight: "calc(100dvh - 1rem)" }}
+            className="bg-white rounded-2xl max-w-2xl w-full p-4 sm:p-6 shadow-2xl animate-in fade-in zoom-in-95 duration-200 overflow-y-auto flex flex-col focus:outline-none"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="aiHandoffTitle"
+            aria-describedby="aiHandoffDescription"
+          >
             <h3 id="aiHandoffTitle" className="text-xl font-extrabold text-slate-900 mb-2">{aiHandoffMode === "compare" ? "Find current alternatives with AI" : "Continue with an AI assistant"}</h3>
             
             <div className="bg-orange-50 border border-orange-200 text-orange-900 p-3 rounded-xl text-sm font-medium mb-4">
               <strong>Check before copying:</strong> remove account numbers, payment-card details, passwords and any sensitive information you do not want to share.
             </div>
             
-            <p className="text-slate-600 text-sm mb-4">
+            <p id="aiHandoffDescription" className="text-slate-600 text-sm mb-4">
               {aiHandoffMode === "compare"
                 ? "This prompt asks a web-enabled AI assistant to research current alternatives, prices and source links. Nothing is sent automatically."
                 : "The text below is not sent anywhere automatically. Review it, then choose how you want to copy it or open an assistant separately."}
@@ -942,7 +1133,7 @@ Please use current web information where available. I want a practical compariso
 
             {aiHandoffMode === "compare" && (
               <>
-                <div className="grid grid-cols-3 gap-2 mb-4 text-center">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mb-4 text-center">
                   <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-3">
                     <strong className="block text-slate-900 text-sm">5 alternatives</strong>
                     <span className="text-xs text-slate-500">Like-for-like options</span>
@@ -980,21 +1171,21 @@ Please use current web information where available. I want a practical compariso
 
             <div className="mb-3">
               <p className="text-xs font-black uppercase tracking-wider text-slate-500 mb-2">Recommended free options</p>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <button onClick={() => openAiAssistant("https://gemini.google.com/", "Google Gemini")} className="min-h-[48px] px-4 py-2 bg-blue-600 hover:bg-blue-500 rounded-xl text-sm font-extrabold text-white text-center flex items-center justify-center gap-2">Copy & open Gemini <ExternalLink className="w-4 h-4" /></button>
                 <button onClick={() => openAiAssistant("https://copilot.microsoft.com/", "Microsoft Copilot")} className="min-h-[48px] px-4 py-2 bg-slate-900 hover:bg-slate-800 rounded-xl text-sm font-extrabold text-white text-center flex items-center justify-center gap-2">Copy & open Copilot <ExternalLink className="w-4 h-4" /></button>
               </div>
             </div>
 
             <p className="text-xs font-black uppercase tracking-wider text-slate-500 mb-2">Other popular AI assistants</p>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-3">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mb-3">
               <button onClick={() => openAiAssistant("https://chatgpt.com/", "ChatGPT")} className="min-h-[44px] px-3 py-2 bg-[#10a37f] hover:bg-[#0e906f] rounded-lg text-sm font-bold text-white flex items-center justify-center gap-2">ChatGPT <ExternalLink className="w-4 h-4" /></button>
               <button onClick={() => openAiAssistant("https://claude.ai/new", "Claude")} className="min-h-[44px] px-3 py-2 bg-[#d97757] hover:bg-[#c4684a] rounded-lg text-sm font-bold text-white flex items-center justify-center gap-2">Claude <ExternalLink className="w-4 h-4" /></button>
               <button onClick={() => openAiAssistant("https://www.perplexity.ai/", "Perplexity")} className="min-h-[44px] px-3 py-2 bg-slate-100 hover:bg-slate-200 rounded-lg text-sm font-bold text-slate-800 flex items-center justify-center gap-2">Perplexity <ExternalLink className="w-4 h-4" /></button>
             </div>
 
             <div className="grid grid-cols-2 gap-2">
-              <button onClick={() => copyToClipboard(aiPrompt, "ai_prompt_copied")} className="min-h-[44px] px-3 py-2 bg-slate-100 hover:bg-slate-200 rounded-lg text-sm font-bold text-slate-700">Copy prompt only</button>
+              <button onClick={copyAiPrompt} className="min-h-[44px] px-3 py-2 bg-slate-100 hover:bg-slate-200 rounded-lg text-sm font-bold text-slate-700">Copy prompt only</button>
               <button onClick={() => setAiHandoffOpen(false)} className="min-h-[44px] px-3 py-2 border border-slate-200 hover:bg-slate-50 rounded-lg text-sm font-bold text-slate-700">Close</button>
             </div>
 
@@ -1003,6 +1194,77 @@ Please use current web information where available. I want a practical compariso
       )}
     </section>
   );
+}
+
+function buildComparisonRequirements(task: any): string {
+  const utilityType = String(task?.details?.utility_type || "").toLowerCase();
+  const tariffType = String(task?.details?.tariff || "").toLowerCase();
+  const isWater = task?.category_id === "energy_water" && (utilityType === "water" || tariffType === "water tariff");
+
+  if (isWater) {
+    return `1. Treat this as a water-bill review, not an energy supplier-switching search.
+2. Check the current water provider, region, billing basis and whether the account is metered, unmetered or assessed.
+3. Explain the current tariff or charging basis, fixed charges, usage charges and any seasonal or wastewater elements using current official information.
+4. Identify practical bill-reduction routes relevant to my region, including meter eligibility, assessed charges, social tariffs or support schemes, water-efficiency schemes and correction of inaccurate household details where relevant.
+5. Do not invent five supplier alternatives or imply household water supplier switching is available when local rules do not support it.
+6. Link to the official water-company or regulator page for each route and state when the information was checked.
+7. Separate confirmed savings from estimates and show any eligibility, evidence or application requirements.
+8. Suggest the three strongest questions I should ask my current water provider.
+9. Give me a short provider-ready message based on the best evidence.
+10. Do not make the final decision for me. Present the options clearly so I can choose.`;
+  }
+
+  if (task?.category_id === "energy_water") {
+    return `1. Find at least five realistic energy tariff options where enough current information is available.
+2. For each option include supplier, tariff name and type, unit rate(s), standing charge(s), tariff end date, exit fee, payment method and any smart-meter or eligibility requirement.
+3. Estimate annual cost using the annual usage I supplied. For dual fuel, calculate electricity and gas separately using their own usage, unit rate and standing charge. If either fuel is missing a required value, mark the comparison incomplete instead of guessing.
+4. Compare every option using the same supplied usage rather than the monthly direct-debit amount. Show current estimated annual cost, renewal annual cost when supplied, first-year switch cost after exit fees, ongoing annual cost, first-year saving and ongoing annual saving.
+5. Link to the official supplier page or another reliable source for every option and state when the price information was checked.
+6. Compare electricity, gas or dual-fuel options matching the supply type I supplied. Do not include water tariffs.
+7. Flag anything dependent on postcode or region, meter type, smart-meter status, payment method, EV ownership or other eligibility.
+8. Show the lowest estimated annual cost and the option closest to my current tariff.
+9. Separate confirmed facts from anything still needing verification.
+10. Suggest the three strongest negotiation points I can take back to my current supplier.
+11. Give me a short supplier-ready negotiation message based on the best evidence.
+12. Do not make the final decision for me. Present the options clearly so I can choose.`;
+  }
+
+  if (task?.category_id === "insurance") {
+    return `1. Find at least five realistic policy alternatives where enough current information is available.
+2. Compare them on the same cover basis. Include annual premium, monthly-payment interest or fees, compulsory and voluntary excess, cover limits, major exclusions, add-ons, policy term and renewal terms.
+3. Use the cover details and priorities I supplied. If a like-for-like comparison is not possible, state what is missing instead of guessing.
+4. Show the current and renewal premium when supplied, the first-year total cost for each option, and any material cover trade-offs.
+5. Link to the insurer's official policy or product information where available and state when the information was checked.
+6. Separate confirmed facts from estimates, assumptions or details that still need verification.
+7. Flag eligibility, postcode, claims-history, vehicle/property, occupation or other factors that might change the quoted price.
+8. Identify the closest like-for-like option and the lowest total-cost option without treating price alone as better cover.
+9. Suggest the three strongest negotiation points I can take back to my current insurer.
+10. Give me a short insurer-ready negotiation message based on the evidence.
+11. Do not make the final decision for me. Present the options clearly so I can choose.`;
+  }
+
+  if (task?.category_id === "subscriptions_memberships") {
+    return `1. Find at least five realistic ways to reduce or replace this subscription where enough current information is available.
+2. Include the plan or tier, monthly and annual price, introductory and standard price, minimum term, cancellation route, important features and any bundle or add-on requirements.
+3. Compare staying on a cheaper tier, annual billing, removing unused extras, eligible bundles and a lower-cost replacement where those routes exist.
+4. Show the total cost over the relevant minimum term and flag any cancellation fee, notice period, renewal rule or price-rise term.
+5. Link to the official provider page or another reliable source for every option and state when the information was checked.
+6. Separate confirmed facts from anything still needing verification.
+7. Show which option preserves the features I said I must keep and which has the lowest total cost.
+8. Suggest the three strongest retention or cancellation points I can take back to my current provider.
+9. Give me a short provider-ready negotiation or cancellation message based on the best evidence.
+10. Do not make the final decision for me. Present the options clearly so I can choose.`;
+  }
+
+  return `1. Find at least five realistic alternatives where enough current information is available.
+2. Include current price, introductory period, standard price after the offer, contract length, setup fees, annual price-rise terms, important features and total minimum-term cost.
+3. Link to the official provider page or another reliable source for every option.
+4. Show which option is closest to my existing service and which offers the lowest total cost.
+5. Flag anything that depends on postcode/address availability or eligibility.
+6. Separate confirmed facts from anything still needing verification.
+7. Suggest the three strongest negotiation points I can take back to my current provider.
+8. Give me a short provider-ready negotiation message based on the best evidence.
+9. Do not make the final decision for me. Present the options clearly so I can choose.`;
 }
 
 function buildAiNarrative(task: any, details: Record<string, unknown> | string[], goals: any[]): string {
@@ -1021,13 +1283,32 @@ function buildAiNarrative(task: any, details: Record<string, unknown> | string[]
   return `I want to ${goal.toLowerCase()} for ${task.category}. My priority is ${priority.toLowerCase()}. Switching preference: ${switching}.${amount}${mustKeep} I want current alternatives, source links, full-term costs and negotiation points before I decide.`;
 }
 
+const ALTERNATIVE_COMPARISON_CATEGORIES = new Set([
+  "tv_broadband_mobile",
+  "energy_water",
+  "insurance",
+  "subscriptions_memberships",
+  "home_security_maintenance",
+]);
+
+function shouldOfferAlternativeComparison(task: any): boolean {
+  if (!task || !ALTERNATIVE_COMPARISON_CATEGORIES.has(task.category_id)) return false;
+  if (task.goal_id === "reduce_price" || task.goal_id === "prepare_renewal") return true;
+  return task.goal_id === "cancel_switch" && task?.details?.desired_outcome === "Switch provider";
+}
+
 function potentialAlternatives(task: any): string[] {
-  if (!task) return [];
+  if (!shouldOfferAlternativeComparison(task)) return [];
   const category = task.category_id;
   if (category === "tv_broadband_mobile") {
     return ["Virgin Media", "BT / EE", "NOW", "Full-fibre broadband + separate streaming"];
   }
   if (category === "energy_water") {
+    const utilityType = String(task?.details?.utility_type || "").toLowerCase();
+    const tariffType = String(task?.details?.tariff || "").toLowerCase();
+    if (utilityType === "water" || tariffType === "water tariff") {
+      return ["Current water tariff review", "Meter or assessed-charge options", "Social tariff / support scheme", "Water-efficiency bill reduction"];
+    }
     return ["Current supplier retention tariff", "Alternative fixed tariff", "Flexible / standard tariff", "Accredited comparison-market options"];
   }
   if (category === "insurance") {

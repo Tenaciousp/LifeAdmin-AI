@@ -24,6 +24,7 @@ import urllib.error
 
 import storage
 import domain
+import energy_renewal
 
 APP_DIR = os.path.dirname(os.path.abspath(__file__))
 DATA_DIR = os.path.join(APP_DIR, "data")
@@ -1098,6 +1099,25 @@ def fallback_agent(task, mode="full"):
         lines = [f"# Admin plan: {task.get('title', 'Unknown payment')}"]
         lines.extend([f"## Next steps\n{sections['next_steps']}", f"## Things to check\n{sections['things_to_check']}", f"## Approval checklist\n{sections['approval_checklist']}"])
         return "\n\n".join(lines)
+
+    canonical = domain.normalise_task(task)
+    details = canonical.get("details") or {}
+    utility_type = str(details.get("utility_type") or "").strip().lower()
+    tariff = str(details.get("tariff") or "").strip().lower()
+    if (
+        canonical.get("category_id") == "energy_water"
+        and canonical.get("goal_id") == "prepare_renewal"
+        and utility_type != "water"
+        and tariff != "water tariff"
+    ):
+        sections = energy_renewal.renewal_sections(canonical)
+        return "\n\n".join([
+            f"## Next steps\n{sections['next_steps']}",
+            f"## Provider message\n{sections['provider_message']}",
+            f"## Things to check\n{sections['things_to_check']}",
+            f"## Approval checklist\n{sections['approval_checklist']}",
+        ])
+
     title = task.get("title", "Admin task")
     category = task.get("category", "General")
     notes = task.get("notes", "")
