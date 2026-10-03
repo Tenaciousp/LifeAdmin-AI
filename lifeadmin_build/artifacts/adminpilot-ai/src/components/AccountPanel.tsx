@@ -5,6 +5,13 @@ import { trackEvent } from "@/lib/analytics";
 import { useQueryClient } from "@tanstack/react-query";
 import { ShieldCheck, Trash2 } from "lucide-react";
 
+const ACCOUNT_SCOPED_QUERY_KEYS = [
+  ["/api/tasks"],
+  ["/api/notes"],
+  ["/api/products"],
+  ["/api/admin/overview"],
+] as const;
+
 export function AccountPanel() {
   const { data: auth, isLoading } = useAuthMe();
   const queryClient = useQueryClient();
@@ -14,10 +21,18 @@ export function AccountPanel() {
   const [showDelete, setShowDelete] = useState(false);
   const [isBusy, setIsBusy] = useState(false);
 
+  const clearCredentialState = () => {
+    setEmail("");
+    setPassword("");
+    setDeleteConfirm("");
+    setShowDelete(false);
+  };
+
   const refreshAccountQueries = () => {
-    queryClient.removeQueries({ queryKey: ["/api/tasks"] });
-    queryClient.removeQueries({ queryKey: ["/api/products"] });
-    queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
+    for (const queryKey of ACCOUNT_SCOPED_QUERY_KEYS) {
+      queryClient.removeQueries({ queryKey: [...queryKey] });
+    }
+    void queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
   };
 
   const handleAction = async (path: string) => {
@@ -35,7 +50,7 @@ export function AccountPanel() {
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || "Authentication failed");
       toast.success(path === "/api/auth/register" ? "Account created" : "Signed in");
-      setPassword("");
+      clearCredentialState();
       if (path === "/api/auth/register") trackEvent("account_created");
       refreshAccountQueries();
     } catch (err: any) {
@@ -51,6 +66,7 @@ export function AccountPanel() {
       const res = await fetch("/api/auth/logout", { method: "POST", body: "{}" });
       if (!res.ok) throw new Error("Could not sign out");
       toast.success("Signed out");
+      clearCredentialState();
       refreshAccountQueries();
     } catch (err: any) {
       toast.error(err.message || "Could not sign out");
@@ -78,9 +94,7 @@ export function AccountPanel() {
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || "Could not delete account");
       toast.success("Account deleted");
-      setPassword("");
-      setDeleteConfirm("");
-      setShowDelete(false);
+      clearCredentialState();
       refreshAccountQueries();
     } catch (err: any) {
       toast.error(err.message || "Could not delete account");
