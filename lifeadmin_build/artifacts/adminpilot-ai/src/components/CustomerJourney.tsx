@@ -9,9 +9,9 @@ import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 
 export function CustomerJourney() {
   const buyerId = getBuyerId();
-  const { data: tasksData, isLoading: tasksLoading } = useTasks(buyerId);
-  const { data: notesData, isLoading: notesLoading } = useNotes(buyerId);
-  const { data: catalog, isLoading: catalogLoading } = useCatalog();
+  const { data: tasksData, isLoading: tasksLoading, isError: tasksError, refetch: retryTasks } = useTasks(buyerId);
+  const { data: notesData, isLoading: notesLoading, isError: notesError, refetch: retryNotes } = useNotes(buyerId);
+  const { data: catalog, isLoading: catalogLoading, isError: catalogError, refetch: retryCatalog } = useCatalog();
   const suggestMatch = useSuggestMatch();
   
   const createTask = useCreateTask();
@@ -659,6 +659,16 @@ ${buildComparisonRequirements(task)}`;
                   </div>
                 )}
 
+                {catalogError && (
+                  <div role="alert" className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">
+                    <p className="font-bold">Categories could not be loaded.</p>
+                    <p className="mt-1">Check your connection, then try again.</p>
+                    <button type="button" onClick={() => void retryCatalog()} aria-label="Retry category loading" className="mt-3 min-h-[44px] px-4 rounded-lg bg-white border border-amber-300 font-bold hover:bg-amber-100">
+                      Try again
+                    </button>
+                  </div>
+                )}
+
                 {popular.length > 0 && !suggestedMatch && (
                   <div className="space-y-2">
                     <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Popular choices</label>
@@ -682,8 +692,8 @@ ${buildComparisonRequirements(task)}`;
                   </Collapsible.Trigger>
                   <Collapsible.Content className="pt-3 space-y-2">
                     {catalogLoading ? (
-                      <div className="text-center py-4"><Loader2 className="w-5 h-5 animate-spin text-slate-400 mx-auto" /></div>
-                    ) : (
+                      <div role="status" className="text-center py-4"><Loader2 aria-hidden="true" className="w-5 h-5 animate-spin text-slate-400 mx-auto" /><span className="sr-only">Loading categories...</span></div>
+                    ) : catalogError ? null : (
                       categories.map((c: any) => (
                         <button 
                           key={c.id}
@@ -889,9 +899,17 @@ ${buildComparisonRequirements(task)}`;
           
           <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2" aria-live="polite">
             {tasksLoading ? (
-              <div className="py-8 text-center text-slate-500 flex flex-col items-center gap-2">
-                <Loader2 className="w-6 h-6 animate-spin text-slate-300" />
+              <div role="status" className="py-8 text-center text-slate-500 flex flex-col items-center gap-2">
+                <Loader2 aria-hidden="true" className="w-6 h-6 animate-spin text-slate-300" />
                 Loading tasks...
+              </div>
+            ) : tasksError ? (
+              <div role="alert" className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-center text-sm text-amber-950">
+                <p className="font-bold">Tasks could not be loaded.</p>
+                <p className="mt-1">Your saved tasks have not been removed. Check your connection and try again.</p>
+                <button type="button" onClick={() => void retryTasks()} aria-label="Retry task loading" className="mt-3 min-h-[44px] px-4 rounded-lg bg-white border border-amber-300 font-bold hover:bg-amber-100">
+                  Try again
+                </button>
               </div>
             ) : tasks.length === 0 ? (
               <div className="py-10 text-center border-2 border-dashed border-slate-200 rounded-xl bg-slate-50">
@@ -942,7 +960,15 @@ ${buildComparisonRequirements(task)}`;
             {savedPlans.length > 0 && <span className="text-xs font-bold text-slate-400">{savedPlans.length} saved</span>}
           </div>
           {notesLoading ? (
-            <div className="py-6 text-center text-slate-500"><Loader2 className="w-5 h-5 animate-spin mx-auto" /></div>
+            <div role="status" className="py-6 text-center text-slate-500"><Loader2 aria-hidden="true" className="w-5 h-5 animate-spin mx-auto" /><span className="sr-only">Loading saved plans...</span></div>
+          ) : notesError ? (
+            <div role="alert" className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-center text-sm text-amber-950">
+              <p className="font-bold">Saved plans could not be loaded.</p>
+              <p className="mt-1">Your plans have not been removed. Check your connection and try again.</p>
+              <button type="button" onClick={() => void retryNotes()} aria-label="Retry saved plan loading" className="mt-3 min-h-[44px] px-4 rounded-lg bg-white border border-amber-300 font-bold hover:bg-amber-100">
+                Try again
+              </button>
+            </div>
           ) : savedPlans.length === 0 ? (
             <p className="text-sm text-slate-500 bg-slate-50 border border-dashed border-slate-200 rounded-xl p-4">Plans you generate will appear here so you can reopen them without starting again.</p>
           ) : (

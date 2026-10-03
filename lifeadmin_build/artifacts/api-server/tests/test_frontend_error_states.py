@@ -52,6 +52,46 @@ class FrontendErrorStateRegressionTests(unittest.TestCase):
         self.assertIn('className="min-h-[44px]', actions)
         self.assertNotIn('min-h-[40px]', actions)
 
+    def test_collection_fetch_failures_do_not_look_like_empty_data(self):
+        for phrase in (
+            "isError: tasksError, refetch: retryTasks",
+            "isError: notesError, refetch: retryNotes",
+            "isError: catalogError, refetch: retryCatalog",
+            "Categories could not be loaded.",
+            "Tasks could not be loaded.",
+            "Saved plans could not be loaded.",
+            "Your saved tasks have not been removed.",
+            "Your plans have not been removed.",
+        ):
+            self.assertIn(phrase, SOURCE)
+
+        tasks_start = SOURCE.index("{tasksLoading ? (")
+        tasks_empty = SOURCE.index("tasks.length === 0", tasks_start)
+        self.assertLess(SOURCE.index("tasksError ? (", tasks_start), tasks_empty)
+
+        notes_start = SOURCE.index("{notesLoading ? (")
+        notes_empty = SOURCE.index("savedPlans.length === 0", notes_start)
+        self.assertLess(SOURCE.index("notesError ? (", notes_start), notes_empty)
+
+    def test_collection_errors_offer_accessible_retry_controls(self):
+        for phrase in (
+            'onClick={() => void retryCatalog()}',
+            'aria-label="Retry category loading"',
+            'onClick={() => void retryTasks()}',
+            'aria-label="Retry task loading"',
+            'onClick={() => void retryNotes()}',
+            'aria-label="Retry saved plan loading"',
+        ):
+            self.assertIn(phrase, SOURCE)
+        self.assertGreaterEqual(SOURCE.count('role="alert"'), 3)
+
+    def test_collection_loading_states_are_announced(self):
+        self.assertIn('<span className="sr-only">Loading categories...</span>', SOURCE)
+        self.assertIn("Loading tasks...", SOURCE)
+        self.assertIn('<span className="sr-only">Loading saved plans...</span>', SOURCE)
+        self.assertGreaterEqual(SOURCE.count('role="status"'), 3)
+        self.assertGreaterEqual(SOURCE.count('<Loader2 aria-hidden="true"'), 3)
+
 
 if __name__ == "__main__":
     unittest.main()
