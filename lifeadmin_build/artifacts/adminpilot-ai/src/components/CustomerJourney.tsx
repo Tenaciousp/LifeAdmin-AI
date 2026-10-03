@@ -536,9 +536,9 @@ ${buildComparisonRequirements(task)}`;
       return;
     }
     assistantWindow.opener = null;
-    const promptSelected = selectAiPromptForManualCopy();
     assistantWindow.location.href = url;
     if (!navigator.clipboard?.writeText) {
+      const promptSelected = selectAiPromptForManualCopy();
       toast.info(promptSelected
         ? `Prompt selected in LifeAdmin. Copy it when you return, then paste it into ${name}.`
         : `Open ${name}, then copy the prompt from this window.`);
@@ -550,6 +550,7 @@ ${buildComparisonRequirements(task)}`;
         trackEvent("ai_prompt_copied");
       })
       .catch(() => {
+        const promptSelected = selectAiPromptForManualCopy();
         toast.info(promptSelected
           ? `Prompt selected in LifeAdmin. Copy it when you return, then paste it into ${name}.`
           : `Open ${name}, then copy the prompt from this window.`);
@@ -1112,7 +1113,7 @@ ${buildComparisonRequirements(task)}`;
             ref={aiHandoffDialogRef}
             tabIndex={-1}
             style={{ maxHeight: "calc(100dvh - 1rem)" }}
-            className="bg-white rounded-2xl max-w-2xl w-full p-4 sm:p-6 shadow-2xl animate-in fade-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto flex flex-col focus:outline-none"
+            className="bg-white rounded-2xl max-w-2xl w-full p-4 sm:p-6 shadow-2xl animate-in fade-in zoom-in-95 duration-200 overflow-y-auto flex flex-col focus:outline-none"
             role="dialog"
             aria-modal="true"
             aria-labelledby="aiHandoffTitle"
