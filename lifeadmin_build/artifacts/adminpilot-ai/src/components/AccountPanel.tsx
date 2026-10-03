@@ -19,7 +19,8 @@ export function AccountPanel() {
   const [password, setPassword] = useState("");
   const [deleteConfirm, setDeleteConfirm] = useState("");
   const [showDelete, setShowDelete] = useState(false);
-  const [isBusy, setIsBusy] = useState(false);
+  const [busyAction, setBusyAction] = useState<"register" | "login" | "logout" | "delete" | null>(null);
+  const isBusy = busyAction !== null;
 
   const clearCredentialState = () => {
     setEmail("");
@@ -40,7 +41,7 @@ export function AccountPanel() {
       toast.error("Enter your email and password.");
       return;
     }
-    setIsBusy(true);
+    setBusyAction(path === "/api/auth/register" ? "register" : "login");
     try {
       const res = await fetch(path, {
         method: "POST",
@@ -56,12 +57,12 @@ export function AccountPanel() {
     } catch (err: any) {
       toast.error(err.message || "Authentication failed");
     } finally {
-      setIsBusy(false);
+      setBusyAction(null);
     }
   };
 
   const handleLogout = async () => {
-    setIsBusy(true);
+    setBusyAction("logout");
     try {
       const res = await fetch("/api/auth/logout", { method: "POST", body: "{}" });
       if (!res.ok) throw new Error("Could not sign out");
@@ -71,7 +72,7 @@ export function AccountPanel() {
     } catch (err: any) {
       toast.error(err.message || "Could not sign out");
     } finally {
-      setIsBusy(false);
+      setBusyAction(null);
     }
   };
 
@@ -84,7 +85,7 @@ export function AccountPanel() {
       toast.error("Type DELETE exactly to confirm.");
       return;
     }
-    setIsBusy(true);
+    setBusyAction("delete");
     try {
       const res = await fetch("/api/auth/delete", {
         method: "POST",
@@ -99,7 +100,7 @@ export function AccountPanel() {
     } catch (err: any) {
       toast.error(err.message || "Could not delete account");
     } finally {
-      setIsBusy(false);
+      setBusyAction(null);
     }
   };
 
@@ -112,7 +113,7 @@ export function AccountPanel() {
         <h2 className="text-3xl md:text-4xl font-extrabold text-slate-900 mb-4">Try first. Create an account only when you want to save.</h2>
         <p className="text-lg text-slate-600 mb-6">The planning flow works without an account. Sign in later to keep tasks, plans and purchases available across sessions.</p>
         <div className="bg-blue-50 border border-blue-200 rounded-2xl p-5 flex gap-3 text-blue-950">
-          <ShieldCheck className="w-6 h-6 shrink-0 text-primary" />
+          <ShieldCheck aria-hidden="true" className="w-6 h-6 shrink-0 text-primary" />
           <p className="text-sm leading-relaxed"><strong className="block mb-1">Your saved work stays separated by account.</strong>Guest work is isolated from other visitors, and signed-in work is stored against your account.</p>
         </div>
       </div>
@@ -126,28 +127,36 @@ export function AccountPanel() {
               <p className="text-xs mt-2 text-emerald-800 break-all">{auth.user?.email}</p>
             </div>
 
-            <button onClick={handleLogout} disabled={isBusy} className="w-full min-h-[46px] py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl transition-colors disabled:opacity-50">
-              Sign out
+            <button onClick={handleLogout} disabled={isBusy} aria-busy={busyAction === "logout"} className="w-full min-h-[46px] py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl transition-colors disabled:opacity-50">
+              {busyAction === "logout" ? "Signing out..." : "Sign out"}
             </button>
 
             <div className="pt-6 mt-6 border-t border-slate-100">
-              {!showDelete ? (
-                <button onClick={() => setShowDelete(true)} className="w-full min-h-[44px] py-2.5 bg-red-50 text-red-700 hover:bg-red-100 font-bold rounded-xl transition-colors flex items-center justify-center gap-2">
-                  <Trash2 className="w-4 h-4" /> Account settings & deletion
-                </button>
-              ) : (
-                <div className="space-y-3 rounded-xl border border-red-200 bg-red-50/50 p-4">
+              <button
+                type="button"
+                onClick={() => setShowDelete((visible) => !visible)}
+                aria-expanded={showDelete}
+                aria-controls="account-deletion-panel"
+                className="w-full min-h-[44px] py-2.5 bg-red-50 text-red-700 hover:bg-red-100 font-bold rounded-xl transition-colors flex items-center justify-center gap-2"
+              >
+                <Trash2 aria-hidden="true" className="w-4 h-4" />
+                {showDelete ? "Hide account settings" : "Account settings & deletion"}
+              </button>
+              {showDelete && (
+                <div id="account-deletion-panel" className="space-y-3 rounded-xl border border-red-200 bg-red-50/50 p-4 mt-3">
                   <div>
                     <strong className="text-red-900 block">Permanently delete this account?</strong>
                     <p className="text-sm text-red-800 mt-1">This deletes saved tasks, plans, sessions and purchase records. It cannot be undone.</p>
                   </div>
-                  <label className="block text-sm font-bold text-slate-700">Password</label>
-                  <input type="password" autoComplete="current-password" value={password} onChange={(event) => setPassword(event.target.value)} className="w-full bg-white border border-red-200 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-red-300" />
-                  <label className="block text-sm font-bold text-slate-700">Type DELETE to confirm</label>
-                  <input value={deleteConfirm} onChange={(event) => setDeleteConfirm(event.target.value)} placeholder="DELETE" className="w-full bg-white border border-red-200 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-red-300" />
+                  <label htmlFor="account-delete-password" className="block text-sm font-bold text-slate-700">Password</label>
+                  <input id="account-delete-password" type="password" autoComplete="current-password" value={password} onChange={(event) => setPassword(event.target.value)} className="w-full bg-white border border-red-200 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-red-300" />
+                  <label htmlFor="account-delete-confirm" className="block text-sm font-bold text-slate-700">Type DELETE to confirm</label>
+                  <input id="account-delete-confirm" value={deleteConfirm} onChange={(event) => setDeleteConfirm(event.target.value)} placeholder="DELETE" className="w-full bg-white border border-red-200 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-red-300" />
                   <div className="grid grid-cols-2 gap-3 pt-1">
-                    <button onClick={() => { setShowDelete(false); setDeleteConfirm(""); setPassword(""); }} className="min-h-[44px] py-2.5 bg-white border border-slate-200 text-slate-700 font-bold rounded-xl">Cancel</button>
-                    <button onClick={handleDelete} disabled={isBusy || deleteConfirm !== "DELETE"} className="min-h-[44px] py-2.5 bg-red-600 text-white hover:bg-red-700 font-bold rounded-xl disabled:opacity-50">Delete my account</button>
+                    <button type="button" onClick={() => { setShowDelete(false); setDeleteConfirm(""); setPassword(""); }} className="min-h-[44px] py-2.5 bg-white border border-slate-200 text-slate-700 font-bold rounded-xl">Cancel</button>
+                    <button type="button" onClick={handleDelete} disabled={isBusy || deleteConfirm !== "DELETE"} aria-busy={busyAction === "delete"} className="min-h-[44px] py-2.5 bg-red-600 text-white hover:bg-red-700 font-bold rounded-xl disabled:opacity-50">
+                      {busyAction === "delete" ? "Deleting account..." : "Delete my account"}
+                    </button>
                   </div>
                 </div>
               )}
@@ -156,16 +165,20 @@ export function AccountPanel() {
         ) : (
           <form className="space-y-4" onSubmit={(event) => { event.preventDefault(); handleAction("/api/auth/register"); }}>
             <div>
-              <label className="block text-sm font-bold text-slate-700 mb-1.5">Email</label>
-              <input type="email" autoComplete="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="you@example.com" className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary" />
+              <label htmlFor="account-email" className="block text-sm font-bold text-slate-700 mb-1.5">Email</label>
+              <input id="account-email" type="email" autoComplete="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="you@example.com" className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary" />
             </div>
             <div>
-              <label className="block text-sm font-bold text-slate-700 mb-1.5">Password</label>
-              <input type="password" autoComplete="current-password" value={password} onChange={(event) => setPassword(event.target.value)} placeholder="At least 10 characters" className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary" />
+              <label htmlFor="account-password" className="block text-sm font-bold text-slate-700 mb-1.5">Password</label>
+              <input id="account-password" type="password" autoComplete="current-password" value={password} onChange={(event) => setPassword(event.target.value)} placeholder="At least 10 characters" className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary" />
             </div>
             <div className="grid grid-cols-2 gap-3 pt-2">
-              <button type="submit" disabled={isBusy} className="min-h-[46px] py-3 bg-primary hover:bg-blue-600 text-white font-bold rounded-xl transition-colors disabled:opacity-50">Create account</button>
-              <button type="button" onClick={() => handleAction("/api/auth/login")} disabled={isBusy} className="min-h-[46px] py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl transition-colors disabled:opacity-50">Sign in</button>
+              <button type="submit" disabled={isBusy} aria-busy={busyAction === "register"} className="min-h-[46px] py-3 bg-primary hover:bg-blue-600 text-white font-bold rounded-xl transition-colors disabled:opacity-50">
+                {busyAction === "register" ? "Creating account..." : "Create account"}
+              </button>
+              <button type="button" onClick={() => handleAction("/api/auth/login")} disabled={isBusy} aria-busy={busyAction === "login"} className="min-h-[46px] py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl transition-colors disabled:opacity-50">
+                {busyAction === "login" ? "Signing in..." : "Sign in"}
+              </button>
             </div>
             <p className="text-center text-sm text-slate-500 mt-4">No account is required to create your first plan.</p>
           </form>
