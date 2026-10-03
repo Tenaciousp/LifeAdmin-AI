@@ -1771,6 +1771,19 @@ class AdminPilotHandler(SimpleHTTPRequestHandler):
             if not deleted:
                 return json_response(self, {"error": "Task not found"}, 404)
             return json_response(self, {"deleted": True, "id": task_id})
+        if path == "/api/notes/delete":
+            note_id = body.get("id")
+            if user:
+                deleted = storage.delete_note(user_id, note_id)
+            else:
+                notes = anonymous_items(NOTES_FILE, user_id)
+                remaining = [note for note in notes if note.get("id") != note_id]
+                deleted = len(remaining) != len(notes)
+                if deleted:
+                    save_anonymous_items(NOTES_FILE, user_id, remaining)
+            if not deleted:
+                return json_response(self, {"error": "Saved plan not found"}, 404)
+            return json_response(self, {"deleted": True, "id": note_id})
         if path == "/api/purchases":
             return demo_purchase(self, body)
         if path == "/api/agent":

@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from "react";
-import { useTasks, useNotes, useCreateTask, useGeneratePlan, useUpdateTask, useDeleteTask, useSuggestMatch, useCatalog } from "@/hooks/use-api";
+import { useTasks, useNotes, useCreateTask, useGeneratePlan, useUpdateTask, useDeleteTask, useDeleteNote, useSuggestMatch, useCatalog } from "@/hooks/use-api";
 import { getBuyerId } from "@/lib/auth";
 import { trackEvent } from "@/lib/analytics";
 import { toast } from "sonner";
@@ -17,6 +17,7 @@ export function CustomerJourney() {
   const createTask = useCreateTask();
   const updateTask = useUpdateTask();
   const deleteTask = useDeleteTask();
+  const deleteNote = useDeleteNote();
   const generatePlan = useGeneratePlan();
 
   const tasks = tasksData?.tasks || [];
@@ -43,6 +44,7 @@ export function CustomerJourney() {
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
 
   const [planResult, setPlanResult] = useState<any>(null);
+  const [selectedSavedPlanId, setSelectedSavedPlanId] = useState<string | null>(null);
   const [providerEmail, setProviderEmail] = useState<{subject: string, body: string, kind?: string} | null>(null);
   const [activeTab, setActiveTab] = useState("next_steps");
 
@@ -298,10 +300,31 @@ export function CustomerJourney() {
     setLastKnownDetails(note.known_details || []);
     setLastMissingDetails(note.missing_details || []);
     setSelectedTaskId(note.task_id || null);
+    setSelectedSavedPlanId(note.id || null);
     setActiveTab("next_steps");
     setActiveStep(6);
     document.getElementById("output-panel")?.scrollIntoView({ behavior: "smooth" });
     trackEvent("saved_plan_opened");
+  };
+
+  const handleDeleteSavedPlan = (note: any) => {
+    if (!note?.id || !confirm(`Delete saved plan "${note.title || "Saved plan"}"?`)) return;
+    deleteNote.mutate({ id: note.id, user_id: buyerId }, {
+      onSuccess: () => {
+        toast.success("Saved plan deleted");
+        if (selectedSavedPlanId === note.id) {
+          setSelectedSavedPlanId(null);
+          setSelectedTaskId(null);
+          setPlanResult(null);
+          setProviderEmail(null);
+          setLastKnownDetails([]);
+          setLastMissingDetails([]);
+        }
+      },
+      onError: () => {
+        toast.error("Saved plan deletion failed. Try again.");
+      },
+    });
   };
 
   const handleEditTask = (t: any) => {
@@ -323,6 +346,7 @@ export function CustomerJourney() {
           toast.success("Task removed");
           if (selectedTaskId === t.id) {
             setSelectedTaskId(null);
+            setSelectedSavedPlanId(null);
             setPlanResult(null);
           }
         },
@@ -376,6 +400,7 @@ export function CustomerJourney() {
     
     generatePlan.mutate({ task, mode: "full", user_id: buyerId }, {
       onSuccess: (data) => {
+        setSelectedSavedPlanId(null);
         setPlanResult(data.note.sections);
         setProviderEmail(data.note.provider_email);
         setLastKnownDetails(data.note.known_details || []);
@@ -922,16 +947,30 @@ ${buildComparisonRequirements(task)}`;
             <p className="text-sm text-slate-500 bg-slate-50 border border-dashed border-slate-200 rounded-xl p-4">Plans you generate will appear here so you can reopen them without starting again.</p>
           ) : (
             <div className="space-y-2 max-h-[240px] overflow-y-auto pr-1">
-              {savedPlans.slice(0, 8).map((note: any) => (
-                <button
-                  key={note.id}
-                  onClick={() => handleOpenSavedPlan(note)}
-                  className="w-full min-h-[54px] text-left px-4 py-3 rounded-xl border border-slate-200 hover:border-primary hover:bg-blue-50 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-                >
-                  <strong className="block text-sm text-slate-800">{note.title || "Saved plan"}</strong>
-                  <span className="block text-xs text-slate-500 mt-1">{formatSavedTime(note.created_at)} · {note.source === "openai" ? "AI-assisted" : "Guided plan"}</span>
-                </button>
-              ))}
+              {savedPlans.slice(0, 8).map((note: any) => {
+                const isDeleting = deleteNote.isPending && deleteNote.variables?.id === note.id;
+                return (
+                  <div key={note.id} className="flex items-stretch gap-2">
+                    <button
+                      onClick={() => handleOpenSavedPlan(note)}
+                      className="flex-1 min-h-[54px] text-left px-4 py-3 rounded-xl border border-slate-200 hover:border-primary hover:bg-blue-50 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                    >
+                      <strong className="block text-sm text-slate-800">{note.title || "Saved plan"}</strong>
+                      <span className="block text-xs text-slate-500 mt-1">{formatSavedTime(note.created_at)} · {note.source === "openai" ? "AI-assisted" : "Guided plan"}</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteSavedPlan(note)}
+                      disabled={deleteNote.isPending}
+                      aria-busy={isDeleting}
+                      aria-label={isDeleting ? `Deleting ${note.title || "saved plan"}` : `Delete ${note.title || "saved plan"}`}
+                      className="min-h-[54px] min-w-[48px] px-3 rounded-xl border border-red-200 bg-red-50 text-red-700 hover:bg-red-100 transition-colors disabled:opacity-50 flex items-center justify-center"
+                    >
+                      {isDeleting ? <Loader2 aria-hidden="true" className="w-4 h-4 animate-spin" /> : <Trash2 aria-hidden="true" className="w-4 h-4" />}
+                    </button>
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>

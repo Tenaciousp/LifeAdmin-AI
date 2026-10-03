@@ -52,6 +52,19 @@ export function useNotes(userId: string) {
   });
 }
 
+export function useDeleteNote() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (data: { id: string; user_id: string }) => fetcher("/api/notes/delete", {
+      method: "POST",
+      body: JSON.stringify({ id: data.id }),
+    }),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/notes", variables.user_id] });
+    },
+  });
+}
+
 // GET /api/tasks
 export function useTasks(userId: string) {
   return useQuery({
