@@ -77,6 +77,10 @@ class EnergyRenewalRouteBehaviourTests(unittest.TestCase):
             "Price-period comparison: ready for same-period annualisation.",
             note["sections"]["things_to_check"],
         )
+        self.assertIn(
+            "Current and renewal price frequency confirmed and converted to the same comparison period.",
+            note["sections"]["approval_checklist"],
+        )
         self.assertIn("Lowest total cost", message)
         self.assertIn("Happy to switch", message)
 
