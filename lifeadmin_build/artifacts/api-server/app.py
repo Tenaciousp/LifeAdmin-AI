@@ -628,8 +628,9 @@ def detect_playbook(task):
     canonical_route = {
         "tv_broadband_mobile": "communications", "energy_water": "utilities", "council_tax_licences": "council_tax",
         "insurance": "insurance", "subscriptions_memberships": "streaming", "rent_mortgage_property": "housing_payment",
-        "credit_loans_finance": "credit_payment", "home_security_maintenance": "bill", "transport_vehicle": "bill",
-        "health_care_pets": "bill", "family_childcare_education": "bill", "other_regular_payment": "bill",
+        "credit_loans_finance": "credit_payment", "home_security_maintenance": "home_services",
+        "transport_vehicle": "transport", "health_care_pets": "health_care_pets",
+        "family_childcare_education": "family_services", "other_regular_payment": "bill",
         "communications": "communications", "utilities": "utilities", "council_tax": "council_tax",
         "subscriptions": "streaming", "housing": "housing_payment", "credit": "credit_payment", "other_payment": "bill",
     }.get(canonical_category)
@@ -637,7 +638,11 @@ def detect_playbook(task):
         # A canonical category is authoritative; free-text heuristics only refine legacy tasks.
         if canonical.get("goal_id") == "identify_payment" or domain.is_unknown_payment(task):
             return "bill"
-        if canonical_route in {"communications", "utilities", "council_tax", "insurance", "streaming", "housing_payment", "credit_payment", "travel"}:
+        if canonical_route in {
+            "communications", "utilities", "council_tax", "insurance", "streaming",
+            "housing_payment", "credit_payment", "transport", "health_care_pets",
+            "family_services", "home_services", "travel",
+        }:
             return canonical_route
     raw_text = " ".join(str(task.get(key, "")) for key in ("title", "notes"))
     text = re.sub(r"[^a-z0-9+]+", " ", raw_text.lower()).strip()
@@ -1031,6 +1036,102 @@ def playbook_sections(playbook, task=None):
             ("Payment-risk warning", ["- Missing or reducing a payment can affect fees, interest and credit records.", "- Use official lender information or qualified debt advice before changing payments if affordability is a concern."]),
             ("Lender contact draft", ["Hello, please confirm my current balance, required payment, due date, interest rate, fees and any available support or payment-plan options in writing."]),
             ("Approval checklist", ["- Current statement checked.", "- Due date and required amount verified.", "- Consequences understood.", "- No payment instruction changed without approval."])
+        ],
+        "transport": [
+            ("Transport or vehicle details", [
+                f"- Record the vehicle, permit, pass, booking or charging service, plus {provider}, the reference, current price and relevant renewal or travel date.",
+                "- Keep registration, booking and account references separate from passwords, payment-card details and security codes.",
+            ]),
+            ("Cost and alternative check", [
+                "- Compare like-for-like cover or service, including the total annual or journey cost, admin fees, cancellation terms, usage limits and any interruption between providers.",
+                "- For permits, tax or official charges, verify the current amount and eligibility through the issuing authority rather than treating the charge as a commercial quote.",
+            ]),
+            ("Provider contact draft", [
+                f"Hello, please confirm the current price, renewal or expiry date, service terms, cancellation or amendment fees, and any lower-cost suitable option for my account with {provider}. Please reply in writing.",
+            ]),
+            ("Things to check", [
+                "- Vehicle, traveller or account eligibility and the exact service area.",
+                "- Start and end dates, notice periods, refund rules and any automatic renewal.",
+                "- Official confirmation for tax, permits, penalties or regulated transport charges.",
+            ]),
+            ("Approval checklist", [
+                "- Reference, amount and deadline verified.",
+                "- Like-for-like costs and service limits compared.",
+                "- Any service gap, fee or refund consequence understood.",
+                "- No booking, cancellation or payment submitted without approval.",
+            ]),
+        ],
+        "health_care_pets": [
+            ("Health, care or pet service details", [
+                f"- Record the service or plan, {provider}, payment amount, appointment or treatment date, renewal date and what is included.",
+                "- Separate routine plan costs from insurance premiums, excesses, exclusions and treatment charges.",
+            ]),
+            ("Cost and continuity check", [
+                "- Compare like-for-like service, cover limits, waiting periods, exclusions, excesses, cancellation terms and total annual cost.",
+                "- Check whether changing or cancelling affects ongoing treatment, pre-existing-condition cover, appointments, medicines or continuity of care.",
+            ]),
+            ("Provider contact draft", [
+                f"Hello, please confirm the current price, services or cover included, renewal date, exclusions, cancellation terms and any suitable lower-cost option for my account with {provider}. Please reply in writing.",
+            ]),
+            ("Things to check", [
+                "- Use official provider documents for prices and plan terms.",
+                "- Seek qualified clinical or veterinary advice for treatment decisions; this plan provides admin support only.",
+                "- Do not delay urgent medical, care or veterinary help while reviewing costs.",
+            ]),
+            ("Approval checklist", [
+                "- Service, cover and appointment details verified.",
+                "- Waiting periods, exclusions and continuity risks checked.",
+                "- Total cost and cancellation terms reviewed.",
+                "- No treatment, cover or payment change submitted without approval.",
+            ]),
+        ],
+        "family_services": [
+            ("Family, childcare or education details", [
+                f"- Record the nursery, school, club, tuition or education service, {provider}, child or course reference, charge frequency and deadline.",
+                "- Note funded and paid hours, session pattern, term dates, deposits, notice periods and extras separately.",
+            ]),
+            ("Cost and support check", [
+                "- Compare the same number and length of sessions, registration or deposit charges, meals or materials, holiday rules, notice fees and total term or annual cost.",
+                "- Check current funding, tax-free childcare, bursary or local support rules through the relevant official service before relying on an estimate.",
+            ]),
+            ("Provider contact draft", [
+                f"Hello, please confirm the fees, funded or included hours, extras, payment schedule, notice period, refund terms and upcoming deadlines for my account with {provider}. Please reply in writing.",
+            ]),
+            ("Things to check", [
+                "- Attendance pattern, term dates and the deadline for changing or ending sessions.",
+                "- Which extras are optional and whether deposits are refundable.",
+                "- Official eligibility and reconfirmation dates for any funding or support.",
+            ]),
+            ("Approval checklist", [
+                "- Sessions, dates and charge frequency verified.",
+                "- Funding assumptions checked against an official source.",
+                "- Notice, deposit and refund terms understood.",
+                "- No enrolment, cancellation or payment change submitted without approval.",
+            ]),
+        ],
+        "home_services": [
+            ("Home service details", [
+                f"- Record the alarm, boiler, appliance, repair or maintenance service, {provider}, equipment covered, current price, renewal date and service history.",
+                "- Separate subscription or cover charges from call-out fees, parts, labour and one-off repair costs.",
+            ]),
+            ("Like-for-like comparison", [
+                "- Compare total annual cost, call-out fees, excess, parts and labour limits, exclusions, response targets, minimum term, cancellation fees and equipment ownership.",
+                "- Check whether self-insuring or arranging a one-off repair is a realistic alternative without assuming either route is cheaper.",
+            ]),
+            ("Provider contact draft", [
+                f"Hello, please confirm the current price, cover or service included, exclusions, call-out charges, renewal date, cancellation terms and your best suitable price for my account with {provider}. Please reply in writing.",
+            ]),
+            ("Things to check", [
+                "- Property and equipment eligibility, age limits and required maintenance.",
+                "- Emergency response route, service-area limits and claim or call-out caps.",
+                "- Contract end date, auto-renewal, notice period and any equipment return requirement.",
+            ]),
+            ("Approval checklist", [
+                "- Equipment, property and required service verified.",
+                "- Full annual cost and exclusions compared like for like.",
+                "- Response limits, fees and cancellation consequences understood.",
+                "- No contract, repair or payment approved before written terms are reviewed.",
+            ]),
         ],
         "bill": [
             ("Household payment inventory", ["- Include TV licence, boiler cover, appliance cover, breakdown cover and other recurring direct debits or card payments.", "- If relevant, also check mortgage, rent, service charges, credit card minimum payments and loan payments."]),
