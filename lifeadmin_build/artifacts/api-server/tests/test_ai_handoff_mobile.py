@@ -43,6 +43,27 @@ class AiHandoffMobileRegressionTests(unittest.TestCase):
             self.assertIn(f'openAiAssistant("{url}"', SOURCE)
         self.assertGreaterEqual(SOURCE.count("<ExternalLink"), 5)
 
+    def test_popup_is_created_before_prompt_selection_or_clipboard_work(self):
+        start = SOURCE.index("const openAiAssistant")
+        end = SOURCE.index("\n\n  const tabRefs", start)
+        block = SOURCE[start:end]
+        self.assertLess(block.index('window.open("", "_blank")'), block.index("selectAiPromptForManualCopy()"))
+        self.assertLess(block.index("selectAiPromptForManualCopy()"), block.index("assistantWindow.location.href = url"))
+        self.assertLess(block.index("assistantWindow.location.href = url"), block.index("navigator.clipboard.writeText(aiPrompt)"))
+
+    def test_handoff_dialog_uses_dynamic_mobile_viewport_height(self):
+        self.assertIn('style={{ maxHeight: "calc(100dvh - 1rem)" }}', SOURCE)
+        self.assertIn("justify-center p-2 sm:p-4", SOURCE)
+        self.assertIn("w-full p-4 sm:p-6", SOURCE)
+
+    def test_mobile_handoff_keeps_manual_copy_fallback_after_popup_success(self):
+        start = SOURCE.index("const openAiAssistant")
+        end = SOURCE.index("\n\n  const tabRefs", start)
+        block = SOURCE[start:end]
+        self.assertIn("const promptSelected = selectAiPromptForManualCopy();", block)
+        self.assertIn("Prompt selected in LifeAdmin. Copy it when you return", block)
+        self.assertIn("if (!navigator.clipboard?.writeText)", block)
+
 
 if __name__ == "__main__":
     unittest.main()
