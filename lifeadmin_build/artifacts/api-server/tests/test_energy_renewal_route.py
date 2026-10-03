@@ -69,8 +69,14 @@ class EnergyRenewalRouteBehaviourTests(unittest.TestCase):
         self.assertIn("GBP 118 (Monthly)", message)
         self.assertIn("GBP 1,572 (Annual)", message)
         self.assertIn("15 November 2026", message)
+        self.assertIn("billing period for both my current price and renewal quote", message)
         self.assertEqual(note["known_details"]["current_price_frequency"], "Monthly")
         self.assertEqual(note["known_details"]["renewal_quote_frequency"], "Annual")
+        self.assertIn("same annual basis", note["sections"]["next_steps"])
+        self.assertIn(
+            "Price-period comparison: ready for same-period annualisation.",
+            note["sections"]["things_to_check"],
+        )
         self.assertIn("Lowest total cost", message)
         self.assertIn("Happy to switch", message)
 
