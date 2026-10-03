@@ -475,13 +475,13 @@ ${buildComparisonRequirements(task)}`;
   };
 
   const openAiAssistant = (url: string, name: string) => {
-    const promptSelected = selectAiPromptForManualCopy();
     const assistantWindow = window.open("", "_blank");
     if (!assistantWindow) {
       toast.error(`Could not open ${name}. Allow pop-ups for LifeAdmin and try again.`);
       return;
     }
     assistantWindow.opener = null;
+    const promptSelected = selectAiPromptForManualCopy();
     assistantWindow.location.href = url;
     if (!navigator.clipboard?.writeText) {
       toast.info(promptSelected
@@ -1047,11 +1047,12 @@ ${buildComparisonRequirements(task)}`;
       )}
 
       {aiHandoffOpen && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-2 sm:p-4">
           <div
             ref={aiHandoffDialogRef}
             tabIndex={-1}
-            className="bg-white rounded-2xl max-w-2xl w-full p-6 shadow-2xl animate-in fade-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto flex flex-col focus:outline-none"
+            style={{ maxHeight: "calc(100dvh - 1rem)" }}
+            className="bg-white rounded-2xl max-w-2xl w-full p-4 sm:p-6 shadow-2xl animate-in fade-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto flex flex-col focus:outline-none"
             role="dialog"
             aria-modal="true"
             aria-labelledby="aiHandoffTitle"
