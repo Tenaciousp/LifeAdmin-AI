@@ -1,17 +1,15 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 const CONSENT_KEY = "lifeadmin_analytics_consent";
 
 export function AnalyticsConsent() {
-  const [choice, setChoice] = useState<string | null>(null);
-
-  useEffect(() => {
+  const [choice, setChoice] = useState<string | null>(() => {
     try {
-      setChoice(localStorage.getItem(CONSENT_KEY));
+      return localStorage.getItem(CONSENT_KEY);
     } catch {
-      setChoice("denied");
+      return "denied";
     }
-  }, []);
+  });
 
   const choose = (value: "granted" | "denied") => {
     try {
@@ -29,12 +27,13 @@ export function AnalyticsConsent() {
     <aside
       className="fixed inset-x-3 bottom-3 z-[70] mx-auto max-w-2xl rounded-2xl border border-slate-200 bg-white p-4 shadow-2xl sm:p-5"
       role="dialog"
-      aria-label="Analytics privacy choice"
+      aria-labelledby="analytics-consent-heading"
+      aria-describedby="analytics-consent-description"
     >
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <p className="font-extrabold text-slate-900">Help improve LifeAdmin AI?</p>
-          <p className="mt-1 text-sm leading-relaxed text-slate-600">
+          <p id="analytics-consent-heading" className="font-extrabold text-slate-900">Help improve LifeAdmin AI?</p>
+          <p id="analytics-consent-description" className="mt-1 text-sm leading-relaxed text-slate-600">
             Optional analytics can measure feature usage and conversions. Bill text, provider messages, addresses and account details are not included in analytics events.
           </p>
         </div>
