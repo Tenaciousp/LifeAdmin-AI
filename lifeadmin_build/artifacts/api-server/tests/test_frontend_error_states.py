@@ -13,7 +13,7 @@ class FrontendErrorStateRegressionTests(unittest.TestCase):
             "Task save failed. Your details are still on screen. Try again.",
             "Task removal failed. Try again.",
             "Status update failed. Try again.",
-            "Plan generation failed. Your task is still saved. Try again.",
+            "Plan generation failed. Your task is still saved. The previous result is still available.",
         ):
             self.assertIn(phrase, SOURCE)
 
