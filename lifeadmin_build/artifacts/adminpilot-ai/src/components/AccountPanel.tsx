@@ -13,7 +13,7 @@ const ACCOUNT_SCOPED_QUERY_KEYS = [
 ] as const;
 
 export function AccountPanel() {
-  const { data: auth, isLoading } = useAuthMe();
+  const { data: auth, isLoading, isError, refetch: retryAuth } = useAuthMe();
   const queryClient = useQueryClient();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -104,8 +104,6 @@ export function AccountPanel() {
     }
   };
 
-  if (isLoading) return null;
-
   return (
     <section id="account" className="max-w-6xl mx-auto px-5 sm:px-6 py-16 md:py-20 grid md:grid-cols-2 gap-10 md:gap-12 items-start">
       <div>
@@ -119,7 +117,24 @@ export function AccountPanel() {
       </div>
 
       <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-xl">
-        {auth?.authenticated ? (
+        {isLoading ? (
+          <div role="status" aria-live="polite" className="rounded-xl border border-blue-200 bg-blue-50 p-5 text-blue-950">
+            <strong className="block">Checking account status...</strong>
+            <p className="mt-1 text-sm">Your account controls will appear when the secure check finishes.</p>
+          </div>
+        ) : isError ? (
+          <div role="alert" className="rounded-xl border border-amber-300 bg-amber-50 p-5 text-amber-950">
+            <strong className="block">We could not check your account</strong>
+            <p className="mt-1 text-sm">Your account has not been changed. Check your connection, then try again.</p>
+            <button
+              type="button"
+              onClick={() => void retryAuth()}
+              className="mt-4 min-h-[44px] rounded-xl bg-amber-900 px-4 py-2.5 font-bold text-white hover:bg-amber-800 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2"
+            >
+              Try account check again
+            </button>
+          </div>
+        ) : auth?.authenticated ? (
           <div>
             <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4 mb-6">
               <strong className="text-emerald-900 block mb-1">Signed in</strong>

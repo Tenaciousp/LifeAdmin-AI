@@ -140,7 +140,8 @@ export function useAdminOverview() {
 export function useAuthMe() {
   return useQuery({
     queryKey: ["/api/auth/me"],
-    queryFn: () => fetcher("/api/auth/me").catch(() => ({ authenticated: false })),
+    queryFn: () => fetcher("/api/auth/me"),
+    retry: false,
   });
 }
 
