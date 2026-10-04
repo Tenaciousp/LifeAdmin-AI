@@ -346,8 +346,12 @@ export function CustomerJourney() {
           toast.success("Task removed");
           if (selectedTaskId === t.id) {
             setSelectedTaskId(null);
-            setSelectedSavedPlanId(null);
-            setPlanResult(null);
+            if (!selectedSavedPlanId) {
+              setPlanResult(null);
+              setProviderEmail(null);
+              setLastKnownDetails([]);
+              setLastMissingDetails([]);
+            }
           }
         },
         onError: () => {
