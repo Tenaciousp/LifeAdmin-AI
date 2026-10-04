@@ -32,6 +32,17 @@ class CustomerJourneyAccessibilityTests(unittest.TestCase):
         self.assertIn('<Loader2 aria-hidden="true"', block)
         self.assertIn("Generating your custom admin plan...", block)
 
+    def test_result_tabs_support_complete_keyboard_navigation(self):
+        start = SOURCE.index("const handleTabKeyDown")
+        end = SOURCE.index("\n\n  return (", start)
+        block = SOURCE[start:end]
+        for key in ("ArrowRight", "ArrowLeft", "Home", "End"):
+            with self.subTest(key=key):
+                self.assertIn(`e.key === '${key}'`, block)
+        self.assertIn("e.preventDefault()", block)
+        self.assertIn("setActiveTab(tabIds[nextIndex])", block)
+        self.assertIn("tabRefs.current[nextIndex]?.focus()", block)
+
     def test_task_action_busy_states_match_only_the_affected_task(self):
         start = SOURCE.index("tasks.map((t: any) => {")
         end = SOURCE.index("saved-plans-heading", start)
