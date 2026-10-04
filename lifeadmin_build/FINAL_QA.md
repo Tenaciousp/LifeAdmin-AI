@@ -33,7 +33,7 @@ The latest completed workflow at the time of this update passed:
 
 - 141 automated API, domain, storage, privacy, payment-safety and frontend-contract tests
 - TypeScript type checking and Python compile validation
-- A live API smoke journey covering health, catalog, signed-out state, preview-only pricing, guest energy-task creation, provider/reference preservation, structured plan generation, saved-plan deletion and cleanup
+- A live API smoke journey covering health, catalog, preview-only pricing, guest energy-task creation, provider/reference preservation, structured plan generation, cross-guest isolation, guest-to-account migration, sign-out/sign-in isolation, saved-plan/task deletion and permanent account deletion
 - A production Vite frontend build
 
 Use the pull request's latest workflow result as the source of truth for the current head commit. A green workflow does not prove browser, clipboard, popup, responsive-layout or physical-device behaviour.

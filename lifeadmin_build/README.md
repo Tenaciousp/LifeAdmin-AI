@@ -94,6 +94,6 @@ npm run typecheck
 npm run build:web
 ```
 
-CI also starts the Python API and runs `scripts/smoke_api.py` against the live process. The smoke path checks health, the 12-category / seven-goal catalog, signed-out account state, preview-only pricing, guest energy-task creation, provider/reference preservation, structured plan generation, saved-plan deletion and task cleanup. Passing CI is not a substitute for browser, iPad/mobile, clipboard, popup or physical-device QA.
+CI also starts the Python API and runs `scripts/smoke_api.py` against the live process. The smoke path checks health, the 12-category / seven-goal catalog, preview-only pricing, guest energy-task creation, provider/reference preservation, structured plan generation, cross-guest isolation, guest-to-account migration, sign-out/sign-in isolation, saved-plan/task deletion and permanent account deletion. Passing CI is not a substitute for browser, iPad/mobile, clipboard, popup or physical-device QA.
 
 See `FINAL_QA.md` for the owner-review checklist, `DEPLOYMENT.md` for deployment guidance and `AUDIT_AND_FIXES.md` for the historical audit record.
