@@ -38,7 +38,7 @@ class CustomerJourneyAccessibilityTests(unittest.TestCase):
         block = SOURCE[start:end]
         for key in ("ArrowRight", "ArrowLeft", "Home", "End"):
             with self.subTest(key=key):
-                self.assertIn(`e.key === '${key}'`, block)
+                self.assertIn(f"e.key === '{key}'", block)
         self.assertIn("e.preventDefault()", block)
         self.assertIn("setActiveTab(tabIds[nextIndex])", block)
         self.assertIn("tabRefs.current[nextIndex]?.focus()", block)
