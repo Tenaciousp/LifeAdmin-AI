@@ -51,19 +51,7 @@ jobs:
             fi
             sleep 1
           done
-          python - <<'PY'
-          import json
-          import urllib.request
-
-          with urllib.request.urlopen("http://127.0.0.1:8000/api/health", timeout=5) as response:
-              health = json.load(response)
-          assert health["status"] == "ok"
-
-          with urllib.request.urlopen("http://127.0.0.1:8000/api/catalog", timeout=5) as response:
-              catalog = json.load(response)
-          assert len(catalog["categories"]) == 12
-          assert len(catalog["goals"]) == 7
-          PY
+          python scripts/smoke_api.py
 
       - name: Build production frontend
         run: npm run build:web
