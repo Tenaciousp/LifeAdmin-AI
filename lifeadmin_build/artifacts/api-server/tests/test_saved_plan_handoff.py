@@ -36,6 +36,19 @@ class SavedPlanHandoffRegressionTests(unittest.TestCase):
         self.assertIn("This plan's task details are unavailable. Reopen the saved plan and try again.", block)
         self.assertLess(block.index("if (!task && !savedPlan)"), block.index("const prompt ="))
 
+    def test_deleting_original_task_keeps_an_open_saved_plan_visible(self):
+        start = SOURCE.index("const handleDeleteTask")
+        end = SOURCE.index("\n\n  const handleMarkDone", start)
+        block = SOURCE[start:end]
+        self.assertIn("if (!selectedSavedPlanId)", block)
+        self.assertIn("setSelectedTaskId(null)", block)
+        guarded = block[block.index("if (!selectedSavedPlanId)"):]
+        self.assertIn("setPlanResult(null)", guarded)
+        self.assertIn("setProviderEmail(null)", guarded)
+        self.assertIn("setLastKnownDetails([])", guarded)
+        self.assertIn("setLastMissingDetails([])", guarded)
+        self.assertNotIn("setSelectedSavedPlanId(null)", block)
+
 
 if __name__ == "__main__":
     unittest.main()
