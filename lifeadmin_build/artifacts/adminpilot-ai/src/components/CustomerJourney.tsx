@@ -605,16 +605,21 @@ ${buildComparisonRequirements(task)}`;
   const tabRefs = useRef<(HTMLButtonElement | null)[]>([]);
   const tabIds = ["next_steps", "provider_message", "things_to_check", "approval_checklist"];
   const handleTabKeyDown = (e: React.KeyboardEvent, index: number) => {
-    let nextIndex = index;
+    let nextIndex: number;
     if (e.key === 'ArrowRight') {
       nextIndex = (index + 1) % tabIds.length;
     } else if (e.key === 'ArrowLeft') {
       nextIndex = (index - 1 + tabIds.length) % tabIds.length;
+    } else if (e.key === 'Home') {
+      nextIndex = 0;
+    } else if (e.key === 'End') {
+      nextIndex = tabIds.length - 1;
+    } else {
+      return;
     }
-    if (nextIndex !== index) {
-      setActiveTab(tabIds[nextIndex]);
-      tabRefs.current[nextIndex]?.focus();
-    }
+    e.preventDefault();
+    setActiveTab(tabIds[nextIndex]);
+    tabRefs.current[nextIndex]?.focus();
   };
 
   return (
