@@ -934,8 +934,13 @@ ${buildComparisonRequirements(task)}`;
                 <p className="text-sm text-slate-400">Create a task from the command centre to get started.</p>
               </div>
             ) : (
-              tasks.map((t: any) => (
-                <div key={t.id} className={`p-4 rounded-xl border transition-all ${selectedTaskId === t.id ? 'border-primary ring-1 ring-primary/20 bg-blue-50/30' : 'border-slate-200 hover:border-slate-300 bg-white'}`}>
+              tasks.map((t: any) => {
+                const isGenerating = generatePlan.isPending && generatePlan.variables?.task?.id === t.id;
+                const isMarkingDone = updateTask.isPending && updateTask.variables?.id === t.id && updateTask.variables?.status === "Done";
+                const isDeleting = deleteTask.isPending && deleteTask.variables?.id === t.id;
+
+                return (
+                  <div key={t.id} className={`p-4 rounded-xl border transition-all ${selectedTaskId === t.id ? 'border-primary ring-1 ring-primary/20 bg-blue-50/30' : 'border-slate-200 hover:border-slate-300 bg-white'}`}>
                   <div className="flex justify-between items-start mb-2">
                     <h3 className={`font-bold text-lg ${t.status === 'Done' ? 'text-slate-400 line-through' : 'text-slate-900'}`}>{t.title}</h3>
                     <div className="flex gap-2">
@@ -945,25 +950,26 @@ ${buildComparisonRequirements(task)}`;
                   </div>
                   
                   <div className="flex flex-wrap gap-2 mt-4" aria-live="polite">
-                    <button onClick={() => handleGenerate(t)} disabled={generatePlan.isPending} aria-busy={generatePlan.isPending} className="min-h-[44px] px-4 py-1.5 bg-primary hover:bg-blue-600 text-white rounded-lg text-sm font-bold transition-colors disabled:opacity-50 flex items-center gap-2">
-                      {generatePlan.isPending && <Loader2 aria-hidden="true" className="w-4 h-4 animate-spin" />}
-                      {generatePlan.isPending ? "Generating..." : "Generate plan"}
+                    <button onClick={() => handleGenerate(t)} disabled={generatePlan.isPending} aria-busy={isGenerating} className="min-h-[44px] px-4 py-1.5 bg-primary hover:bg-blue-600 text-white rounded-lg text-sm font-bold transition-colors disabled:opacity-50 flex items-center gap-2">
+                      {isGenerating && <Loader2 aria-hidden="true" className="w-4 h-4 animate-spin" />}
+                      {isGenerating ? "Generating..." : "Generate plan"}
                     </button>
                     <button onClick={() => handleEditTask(t)} className="min-h-[44px] px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-sm font-bold transition-colors">
                       Edit
                     </button>
                     {t.status !== 'Done' && (
-                      <button onClick={() => handleMarkDone(t)} disabled={updateTask.isPending} aria-busy={updateTask.isPending} className="min-h-[44px] px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-sm font-bold transition-colors disabled:opacity-50 flex items-center gap-2">
-                        {updateTask.isPending && <Loader2 aria-hidden="true" className="w-4 h-4 animate-spin" />}
-                        {updateTask.isPending ? "Updating..." : "Mark done"}
+                      <button onClick={() => handleMarkDone(t)} disabled={updateTask.isPending} aria-busy={isMarkingDone} className="min-h-[44px] px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-sm font-bold transition-colors disabled:opacity-50 flex items-center gap-2">
+                        {isMarkingDone && <Loader2 aria-hidden="true" className="w-4 h-4 animate-spin" />}
+                        {isMarkingDone ? "Updating..." : "Mark done"}
                       </button>
                     )}
-                    <button onClick={() => handleDeleteTask(t)} disabled={deleteTask.isPending} aria-busy={deleteTask.isPending} aria-label={deleteTask.isPending ? `Deleting ${t.title}` : `Delete ${t.title}`} className="min-h-[44px] px-3 py-1.5 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg text-sm font-bold transition-colors disabled:opacity-50 ml-auto">
-                      {deleteTask.isPending ? <Loader2 aria-hidden="true" className="w-4 h-4 animate-spin" /> : <Trash2 aria-hidden="true" className="w-4 h-4" />}
+                    <button onClick={() => handleDeleteTask(t)} disabled={deleteTask.isPending} aria-busy={isDeleting} aria-label={isDeleting ? `Deleting ${t.title}` : `Delete ${t.title}`} className="min-h-[44px] px-3 py-1.5 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg text-sm font-bold transition-colors disabled:opacity-50 ml-auto">
+                      {isDeleting ? <Loader2 aria-hidden="true" className="w-4 h-4 animate-spin" /> : <Trash2 aria-hidden="true" className="w-4 h-4" />}
                     </button>
                   </div>
-                </div>
-              ))
+                  </div>
+                );
+              })
             )}
           </div>
         </div>
