@@ -52,7 +52,7 @@ class AccountSessionPrivacyRegressionTests(unittest.TestCase):
             self.assertIn(setter, clear_block)
 
         delete_start = SOURCE.index("const handleDelete")
-        delete_end = SOURCE.index("\n\n  if (isLoading)", delete_start)
+        delete_end = SOURCE.index("\n\n  return (", delete_start)
         delete_block = SOURCE[delete_start:delete_end]
         self.assertLess(delete_block.index("if (!res.ok)"), delete_block.index("clearCredentialState()"))
         self.assertLess(delete_block.index("clearCredentialState()"), delete_block.index("refreshAccountQueries()"))
