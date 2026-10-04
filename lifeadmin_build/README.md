@@ -11,7 +11,7 @@ Customers search for or choose a household bill, select a goal, add only what th
 3. Things to check
 4. Approval checklist
 
-The product includes 12 household categories, seven action-based goals, smart routing, dynamic forms, a dedicated unknown-payment journey, saved plans, manual AI handoff, account controls, a protected admin dashboard and one-time pricing.
+The product includes 12 household categories, seven action-based goals, savings-first shortcuts, category-specific plans, a dedicated unknown-payment journey, saved plans, manual AI comparison handoff, account controls, a protected admin dashboard and one-time pricing.
 
 ## Privacy model
 
@@ -22,7 +22,7 @@ The product includes 12 household categories, seven action-based goals, smart ro
 - Guest work is isolated with a signed browser cookie
 - Signed-in data is separated by account
 - Analytics is opt-in and excludes bill text, provider messages, addresses and account details
-- Account deletion removes account-linked records
+- Account and saved-plan deletion are owner-scoped
 
 ## Pricing
 
@@ -30,7 +30,7 @@ The product includes 12 household categories, seven action-based goals, smart ro
 - **All Access:** an additional £1.99 / $1.99 one time
 - No subscription
 
-Equivalent local store tiers can be used later for native stores.
+Equivalent local store tiers can be considered later only as part of a separately approved native release.
 
 ## Run locally without Replit
 
@@ -60,38 +60,40 @@ Development needs no external database. LifeAdmin AI uses SQLite by default. Set
 
 ## Production configuration
 
-Copy `.env.example` and configure only the services you intend to use. Important production values include:
+Copy `.env.example` and configure only services that the owner has approved. Important production values may include:
 
 - `SESSION_SECRET`
 - `APP_BASE_URL`
 - `DATABASE_URL` for PostgreSQL, if used
-- `OPENAI_API_KEY` and optional `OPENAI_MODEL`
-- `STRIPE_SECRET_KEY`
-- `STRIPE_WEBHOOK_SECRET`
-- Stripe Core and All Access price IDs
+- Stripe credentials and both one-time price IDs, only if live payments are approved
 - `ADMIN_EMAILS`
 
 Never commit live credentials.
 
 ## Payments
 
-Stripe is optional during development. The interface remains in preview mode until both one-time products and Stripe credentials are configured. Checkout success is verified with the backend before an entitlement is shown as unlocked.
+Checkout is not live by default. The interface remains in preview until both one-time products and Stripe credentials are configured. Enabling live checkout, hosting or any paid service requires explicit owner approval.
 
-## Analytics and ads readiness
+## Manual AI comparison
 
-Analytics is disabled until a visitor explicitly opts in. The event layer supports privacy-conscious web analytics and GA4/Google Tag Manager style event forwarding. Do not send free-text bill content or sensitive details to advertising systems.
+Customers can edit and copy a privacy-reminded comparison prompt to Gemini, Microsoft Copilot, ChatGPT, Claude or Perplexity. The app opens the selected assistant but does not automatically transmit customer details or require paid AI usage.
 
-Recommended launch events include first open, bill search, suggested match accepted, plan generated, provider message copied, email draft opened, AI handoff copied, account created and verified purchases.
+## Analytics readiness
+
+Analytics is disabled until a visitor explicitly opts in. Do not send free-text bill content, provider messages, addresses, customer references or other sensitive details to analytics or advertising systems.
 
 ## Validation
 
-Run the API/domain/frontend-contract suite:
+From `lifeadmin_build`, run the same core checks used by CI:
 
 ```text
-cd artifacts/api-server
-python -m unittest discover -s tests -v
+npm install
+pip install -r requirements.txt
+npm test
+npm run typecheck
+npm run build:web
 ```
 
-The repository is intentionally independent of Replit Agent and contains no Replit runtime dependency.
+CI also starts the Python API and smoke-tests `/api/health` and the 12-category / seven-goal catalog. Passing CI is not a substitute for browser, iPad/mobile, clipboard, popup or physical-device QA.
 
-See `DEPLOYMENT.md` for deployment guidance and `AUDIT_AND_FIXES.md` for the audit history and known external launch requirements.
+See `FINAL_QA.md` for the owner-review checklist, `DEPLOYMENT.md` for deployment guidance and `AUDIT_AND_FIXES.md` for the historical audit record.

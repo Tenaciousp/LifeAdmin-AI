@@ -1,56 +1,78 @@
-# LifeAdmin AI final local QA
+# LifeAdmin AI owner-review QA
 
-Date: 22 September 2026
+Updated: 4 October 2026
 
-## Build status
+This branch is an owner-review candidate. Automated checks cover the application contracts and build, but they do not replace hands-on browser, iPad or phone testing.
 
-The source is now portable and does not require Replit Agent or a Replit runtime. It uses a standard npm/Vite frontend, a Python API, and SQLite by default with optional PostgreSQL.
+## Scope ready for review
 
-## Functional scope present
+- Responsive household-bill assistant with 12 categories and seven goals
+- Savings-first popular choices, smart search suggestions and goal dropdowns
+- Category-specific plans with next steps, provider messages, things to check and approval checklists
+- Energy-renewal comparison inputs for provider, tariff, rates, usage, renewal date and preferences
+- Provider and customer details preserved from search through task creation and plan output
+- Dedicated unknown-payment help with a bank-query draft
+- Editable manual comparison handoff to Gemini, Microsoft Copilot, ChatGPT, Claude and Perplexity
+- Guest and account data isolation, saved-plan reopening and owner-scoped deletion
+- Protected administrator dashboard with explicit access and recovery states
+- Core at £0.99 / $0.99 plus All Access at an additional £1.99 / $1.99
+- Accessible loading, error, retry, dialog, status and keyboard interaction states
 
-- Modern responsive landing page
-- Search-first household bill/payment flow
-- 12 bill categories and seven goals
-- Popular choices and smart suggested routing
-- Dynamic category/goal fields and useful missing-detail review
-- Dedicated unknown-payment journey
-- Four stable plan sections: Next steps, Provider message, Things to check, Approval checklist
-- Provider-message validation and email gating
-- Manual privacy-safe AI handoff
-- Saved-plan reopening
-- Guest use before account creation
-- Registration, sign-in, sign-out and permanent account deletion
-- Core and All Access one-time pricing model
-- Stripe checkout integration points and verified checkout-return handling
-- Protected administrator dashboard with metrics, charts, filters and recent activity
-- Explicit analytics consent and privacy-safe event sanitisation
-- Responsive/mobile-first controls and accessibility-oriented interaction states
-- Safety escalation for fraud, energy-payment hardship/disconnection, housing repossession/eviction risk and urgent insurance incidents
+## Automated verification
 
-## Automated validation
+The pull-request workflow installs dependencies in a clean environment and runs:
 
-- GitHub Actions clean-environment CI passed on 22 September 2026
-- 42 automated tests passed, 0 failed
-- TypeScript type checks passed
-- API smoke test passes for health and the 12-category / seven-goal catalog
-- Production Vite frontend build passed
-- Python dependency installation and compile validation passed
-- API smoke and contract coverage includes health, task creation, structured plans and all nine approved household scenarios
-- Zero-configuration SQLite account/task/note/purchase lifecycle covered by tests
-- Live AI output is rejected unless it follows the exact four-section result contract
-- Result rendering formats headings, lists, numbered steps and checklists without exposing raw markdown markers
+```text
+npm test
+npm run typecheck
+npm run dev:api
+npm run build:web
+```
 
-## External items still required for a public paid launch
+The latest completed workflow at the time of this update passed:
 
-These are owner/service setup items rather than unfinished application logic:
+- 141 automated API, domain, storage, privacy, payment-safety and frontend-contract tests
+- TypeScript type checking and Python compile validation
+- A live API smoke check for health plus the 12-category / seven-goal catalog
+- A production Vite frontend build
 
-- Hosting and production domain
-- Strong production session secret
-- Persistent database choice for the selected host
-- Stripe live account, Core/All Access price IDs and webhook secret if paid checkout is enabled
-- Production AI API key only if live-model output is wanted; deterministic guided plans work without it
-- Administrator email allowlist
-- Final business identity, support contact, privacy/terms wording and retention decisions
-- Analytics/ads identifiers only after production privacy and consent review
+Use the pull request's latest workflow result as the source of truth for the current head commit. A green workflow does not prove browser, clipboard, popup, responsive-layout or physical-device behaviour.
 
-Apple App Store and Google Play distribution remain a later native-packaging phase requiring the respective developer accounts, native billing, signing and device/store QA.
+## Owner hands-on checklist
+
+### Highest-priority customer path
+
+- [ ] On a phone-sized viewport, search for an electricity or gas renewal.
+- [ ] Confirm the suggested provider and renewal goal remain selected when the task is created.
+- [ ] Enter tariff, standing charge, unit rate, usage, renewal date and any customer reference.
+- [ ] Confirm the plan uses the supplied values without inventing missing figures.
+- [ ] Confirm the provider message is editable and includes only details the customer supplied.
+- [ ] Open each of the five comparison assistants and verify the editable prompt remains available when popup or clipboard access is restricted.
+
+### Alternative and recovery paths
+
+- [ ] Try an unknown card or bank payment and confirm the result is a bank-query workflow, not a provider email.
+- [ ] Try cancellation, dispute, price-reduction and bill-checking goals in different categories; confirm alternatives match the selected goal.
+- [ ] Force category, task, saved-plan and pricing requests to fail; confirm failures are not presented as empty data and retry controls work.
+- [ ] Use keyboard-only navigation through search, missing-details review, result tabs, saved plans, account forms and pricing.
+- [ ] At 200% zoom and on an iPad-sized viewport, confirm dialogs remain usable and important copy/actions are not clipped.
+
+### Privacy and administration
+
+- [ ] Create plans as two separate guests and confirm neither can view, change or delete the other's task or saved plan.
+- [ ] Create an account, sign out and sign back in; confirm only that account's plans appear.
+- [ ] Delete a saved plan and confirm its private content disappears from the open result.
+- [ ] Complete permanent account deletion and confirm the former credentials no longer work.
+- [ ] Confirm a non-admin receives the protected-dashboard access message and an allowed admin can load, filter and retry dashboard data.
+
+## Release guards
+
+- Checkout must remain in preview until the owner separately approves live payments and configures both one-time products.
+- The five external assistants are manual handoffs; the app must not send customer details automatically or incur paid AI usage.
+- Do not publish, deploy, advertise or submit to app stores from this review branch.
+- Do not place secrets, production customer data or private account details in test fixtures, issue comments or the pull request.
+- Administrator access, production session secrets, persistence, legal wording, support details and any hosting choice require owner-supplied production decisions.
+
+## Review record
+
+Record the browser/device, viewport, scenario and exact failed step for every manual defect. Keep security, privacy and payment changes isolated from general usability fixes and validate them separately.
