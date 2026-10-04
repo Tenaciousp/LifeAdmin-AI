@@ -37,7 +37,7 @@ Equivalent local store tiers can be considered later only as part of a separatel
 Requirements: Python 3.11+ and Node.js 20+.
 
 ```text
-npm install
+npm ci
 npm run dev:api
 npm run dev:web
 ```
@@ -47,7 +47,7 @@ The web app runs with Vite and proxies API calls to the Python service. SQLite i
 For a production-style single-server build:
 
 ```text
-npm install
+npm ci
 npm run build:web
 npm start
 ```
@@ -87,7 +87,7 @@ Analytics is disabled until a visitor explicitly opts in. Do not send free-text 
 From `lifeadmin_build`, run the same core checks used by CI:
 
 ```text
-npm install
+npm ci
 pip install -r requirements.txt
 npm test
 npm run typecheck

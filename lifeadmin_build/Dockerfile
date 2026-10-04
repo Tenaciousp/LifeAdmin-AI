@@ -1,10 +1,10 @@
 FROM node:22-bookworm-slim AS web
 WORKDIR /app
-COPY package.json ./
+COPY package.json package-lock.json ./
 COPY artifacts/adminpilot-ai/package.json artifacts/adminpilot-ai/package.json
 COPY artifacts/api-server/package.json artifacts/api-server/package.json
-RUN npm install
-COPY tsconfig.base.json tsconfig.json ./
+RUN npm ci
+COPY tsconfig.base.json ./
 COPY artifacts/adminpilot-ai artifacts/adminpilot-ai
 RUN npm run build:web
 

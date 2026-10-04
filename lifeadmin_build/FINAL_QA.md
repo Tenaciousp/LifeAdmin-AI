@@ -23,6 +23,7 @@ This branch is an owner-review candidate. Automated checks cover the application
 The pull-request workflow installs dependencies in a clean environment and runs:
 
 ```text
+npm ci
 npm test
 npm run typecheck
 npm run dev:api
@@ -31,12 +32,20 @@ npm run build:web
 
 The latest completed workflow at the time of this update passed:
 
-- 141 automated API, domain, storage, privacy, payment-safety and frontend-contract tests
+- 159 automated API, domain, storage, privacy, payment-safety and frontend-contract tests
 - TypeScript type checking and Python compile validation
 - A live API smoke journey covering health, catalog, preview-only pricing, guest energy-task creation, provider/reference preservation, structured plan generation, cross-guest isolation, guest-to-account migration, sign-out/sign-in isolation, saved-plan/task deletion and permanent account deletion
 - A production Vite frontend build
 
 Use the pull request's latest workflow result as the source of truth for the current head commit. A green workflow does not prove browser, clipboard, popup, responsive-layout or physical-device behaviour.
+
+## Portable-build checkpoint
+
+- JavaScript dependencies are committed in `package-lock.json`; CI, container builds and the documented setup use `npm ci`.
+- Docker build inputs now reference the existing `tsconfig.base.json` only. The previous `COPY` referenced a missing root `tsconfig.json`.
+- Docker context exclusions also cover generated frontend output and environment-file variants.
+- Local clean install, 159 tests, type checks and live API smoke passed on 4 October 2026. The production frontend build is validated by the latest pull-request workflow; the local transformation run did not complete promptly.
+- A full Docker image build was not run in the local validation environment because Docker is unavailable. Browser/mobile QA is still outstanding.
 
 ## Owner hands-on checklist
 

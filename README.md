@@ -10,7 +10,7 @@ Requirements: Node.js 20+ and Python 3.11+.
 
 ```bash
 cd lifeadmin_build
-npm install
+npm ci
 npm run dev:api
 ```
 
@@ -25,7 +25,7 @@ For a production build:
 
 ```bash
 cd lifeadmin_build
-npm install
+npm ci
 npm run build
 npm start
 ```
