@@ -205,6 +205,8 @@ export function CustomerJourney() {
     }
     setSelectedCategory(suggestedMatch.category_id);
     setSelectedGoal(suggestedMatch.goal_id || null);
+    setEditingId(null);
+    setPriority("Medium");
     trackEvent("suggestion_accepted", { category: suggestedMatch.category_id, goal: suggestedMatch.goal_id || "unspecified" });
 
     const cat = categories.find((c: any) => c.id === suggestedMatch.category_id);
@@ -219,6 +221,8 @@ export function CustomerJourney() {
 
   const handleCategorySelect = (id: string, presetGoalId?: string) => {
     setSelectedCategory(id);
+    setEditingId(null);
+    setPriority("Medium");
     const initialGoal = presetGoalId || null;
     setSelectedGoal(initialGoal);
     trackEvent("category_selected", { category: id });
@@ -282,6 +286,8 @@ export function CustomerJourney() {
           setNotes("");
           setDynamicFields({});
           setSelectedCategory(null);
+          setSelectedGoal(null);
+          setPriority("Medium");
           trackEvent("task_saved", { category: payload.category });
           setActiveStep(4);
         },
@@ -746,6 +752,7 @@ ${buildComparisonRequirements(task)}`;
                   setTitle("");
                   setDynamicFields({});
                   setNotes("");
+                  setPriority("Medium");
                   setActiveStep(1);
                 }} className="min-h-[44px] text-sm font-semibold text-emerald-700 hover:text-emerald-900 px-3 py-1.5 bg-white rounded-lg border border-emerald-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500">
                   Change
