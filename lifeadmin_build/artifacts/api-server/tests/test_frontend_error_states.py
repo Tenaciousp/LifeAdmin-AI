@@ -26,11 +26,11 @@ class FrontendErrorStateRegressionTests(unittest.TestCase):
             "disabled={createTask.isPending || updateTask.isPending}",
             "aria-busy={createTask.isPending || updateTask.isPending}",
             "disabled={generatePlan.isPending}",
-            "aria-busy={generatePlan.isPending}",
+            "aria-busy={isGenerating}",
             "disabled={updateTask.isPending}",
-            "aria-busy={updateTask.isPending}",
+            "aria-busy={isMarkingDone}",
             "disabled={deleteTask.isPending}",
-            "aria-busy={deleteTask.isPending}",
+            "aria-busy={isDeleting}",
         ):
             self.assertIn(phrase, SOURCE)
 
@@ -38,9 +38,9 @@ class FrontendErrorStateRegressionTests(unittest.TestCase):
         for phrase in (
             'createTask.isPending ? "Saving task..."',
             'updateTask.isPending ? "Updating task..."',
-            'generatePlan.isPending ? "Generating..."',
-            'updateTask.isPending ? "Updating..."',
-            'deleteTask.isPending ? `Deleting ${t.title}` : `Delete ${t.title}`',
+            'isGenerating ? "Generating..."',
+            'isMarkingDone ? "Updating..."',
+            'isDeleting ? `Deleting ${t.title}` : `Delete ${t.title}`',
             'aria-live="polite"',
         ):
             self.assertIn(phrase, SOURCE)
