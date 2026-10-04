@@ -637,7 +637,7 @@ ${buildComparisonRequirements(task)}`;
                 {suggestedMatch && (
                   <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 animate-in fade-in zoom-in-95">
                     <div className="flex items-center gap-2 mb-2 text-primary font-bold text-sm uppercase tracking-wider">
-                      <Zap className="w-4 h-4" /> Suggested Match
+                      <Zap aria-hidden="true" className="w-4 h-4" /> Suggested Match
                     </div>
                     <p className="text-slate-800 font-bold mb-1">
                       {categories.find((c: any) => c.id === suggestedMatch.category_id)?.label}
@@ -671,8 +671,8 @@ ${buildComparisonRequirements(task)}`;
 
                 {popular.length > 0 && !suggestedMatch && (
                   <div className="space-y-2">
-                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Popular choices</label>
-                    <div className="grid grid-cols-2 gap-2">
+                    <p id="popular-choices-label" className="text-xs font-bold text-slate-500 uppercase tracking-wider">Popular choices</p>
+                    <div role="group" aria-labelledby="popular-choices-label" className="grid grid-cols-2 gap-2">
                       {popular.map((p: any) => (
                         <button 
                           key={p.id}
@@ -688,7 +688,7 @@ ${buildComparisonRequirements(task)}`;
 
                 <Collapsible.Root open={isBrowseAllOpen} onOpenChange={setIsBrowseAllOpen}>
                   <Collapsible.Trigger className="flex items-center justify-between w-full p-3 bg-white border border-slate-200 rounded-xl text-slate-700 font-bold text-sm hover:bg-slate-50 transition-colors mt-2">
-                    Browse all categories <ChevronDown className={`w-4 h-4 transition-transform ${isBrowseAllOpen ? 'rotate-180' : ''}`} />
+                    Browse all categories <ChevronDown aria-hidden="true" className={`w-4 h-4 transition-transform ${isBrowseAllOpen ? 'rotate-180' : ''}`} />
                   </Collapsible.Trigger>
                   <Collapsible.Content className="pt-3 space-y-2">
                     {catalogLoading ? (
@@ -780,10 +780,12 @@ ${buildComparisonRequirements(task)}`;
 
                 {selectedGoal && <Collapsible.Root>
                   <Collapsible.Trigger className="flex items-center justify-between w-full text-sm font-bold text-slate-600 py-2 hover:text-slate-900 transition-colors">
-                    Change task name (optional) <ChevronDown className="w-4 h-4" />
+                    Change task name (optional) <ChevronDown aria-hidden="true" className="w-4 h-4" />
                   </Collapsible.Trigger>
                   <Collapsible.Content className="pt-2">
-                    <input 
+                    <label htmlFor="task-name" className="sr-only">Task name</label>
+                    <input
+                      id="task-name"
                       value={title}
                       onChange={e => setTitle(e.target.value)}
                       placeholder="Task name"
@@ -1016,7 +1018,7 @@ ${buildComparisonRequirements(task)}`;
                   )} 
                   className="min-h-[44px] flex-1 xl:flex-none px-4 py-2 bg-white text-slate-900 hover:bg-slate-100 rounded-xl text-sm font-bold transition-colors shadow-lg flex items-center justify-center gap-2"
                 >
-                  <Copy className="w-4 h-4" />
+                  <Copy aria-hidden="true" className="w-4 h-4" />
                   {activeTab === "provider_message" && providerEmail?.kind === "bank_query"
                     ? "Copy bank query message"
                     : `Copy ${activeTab.replace(/_/g, " ")}`}
@@ -1026,7 +1028,7 @@ ${buildComparisonRequirements(task)}`;
                     onClick={handleCompareWithAi}
                     className="min-h-[44px] flex-1 xl:flex-none px-4 py-2 bg-cyan-400 hover:bg-cyan-300 text-slate-950 rounded-xl text-sm font-extrabold transition-colors shadow-lg flex items-center justify-center gap-2"
                   >
-                    <Bot className="w-4 h-4" />
+                    <Bot aria-hidden="true" className="w-4 h-4" />
                     Compare alternatives with AI
                   </button>
                 )}
@@ -1034,7 +1036,7 @@ ${buildComparisonRequirements(task)}`;
                 <DropdownMenu.Root>
                   <DropdownMenu.Trigger asChild>
                     <button aria-label="More result actions" className="min-h-[44px] px-3 py-2 bg-white/10 hover:bg-white/20 text-white rounded-xl text-sm font-bold transition-colors flex items-center justify-center gap-2">
-                      <MoreHorizontal className="w-5 h-5" />
+                      <MoreHorizontal aria-hidden="true" className="w-5 h-5" />
                     </button>
                   </DropdownMenu.Trigger>
                   <DropdownMenu.Portal>
@@ -1043,19 +1045,19 @@ ${buildComparisonRequirements(task)}`;
                         const fullPlan = `${planResult.next_steps}\n\n${planResult.provider_message}\n\n${planResult.things_to_check}\n\n${planResult.approval_checklist}`;
                         copyToClipboard(fullPlan, "section_copied");
                       }}>
-                        <Copy className="w-4 h-4" /> Copy full plan
+                        <Copy aria-hidden="true" className="w-4 h-4" /> Copy full plan
                       </DropdownMenu.Item>
                       {providerEmail?.subject && providerEmail?.body && (
                         <DropdownMenu.Item className="flex items-center gap-2 px-3 py-2.5 outline-none rounded-lg cursor-pointer hover:bg-slate-100 text-slate-700 font-semibold text-sm" onSelect={openEmailDraft}>
-                          <Mail className="w-4 h-4" /> {providerEmail?.kind === "bank_query" ? "Open bank query draft" : "Open email draft"}
+                          <Mail aria-hidden="true" className="w-4 h-4" /> {providerEmail?.kind === "bank_query" ? "Open bank query draft" : "Open email draft"}
                         </DropdownMenu.Item>
                       )}
                       <DropdownMenu.Item className="flex items-center gap-2 px-3 py-2.5 outline-none rounded-lg cursor-pointer hover:bg-slate-100 text-slate-700 font-semibold text-sm" onSelect={() => copyToClipboard(planResult.things_to_check, "section_copied")}>
-                        <Copy className="w-4 h-4" /> Copy things to check
+                        <Copy aria-hidden="true" className="w-4 h-4" /> Copy things to check
                       </DropdownMenu.Item>
                       <DropdownMenu.Separator className="h-px bg-slate-100 my-1" />
                       <DropdownMenu.Item className="flex items-center gap-2 px-3 py-2.5 outline-none rounded-lg cursor-pointer hover:bg-blue-50 text-primary font-semibold text-sm" onSelect={handleAiHandoff}>
-                        <Bot className="w-4 h-4" /> Continue with AI
+                        <Bot aria-hidden="true" className="w-4 h-4" /> Continue with AI
                       </DropdownMenu.Item>
                     </DropdownMenu.Content>
                   </DropdownMenu.Portal>
@@ -1082,7 +1084,7 @@ ${buildComparisonRequirements(task)}`;
                     onClick={handleCompareWithAi}
                     className="min-h-[44px] px-4 py-2.5 rounded-xl bg-cyan-300 hover:bg-cyan-200 text-slate-950 font-extrabold text-sm flex items-center justify-center gap-2 shrink-0"
                   >
-                    <Bot className="w-4 h-4" />
+                    <Bot aria-hidden="true" className="w-4 h-4" />
                     Find current alternatives with AI
                   </button>
                 </div>
@@ -1092,8 +1094,8 @@ ${buildComparisonRequirements(task)}`;
 
           <div className="flex-1 bg-[#1e293b] border border-slate-700 rounded-xl p-6">
             {generatePlan.isPending ? (
-              <div className="h-full flex flex-col items-center justify-center text-slate-400 gap-3 min-h-[250px]">
-                <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
+              <div role="status" className="h-full flex flex-col items-center justify-center text-slate-400 gap-3 min-h-[250px]">
+                <Loader2 aria-hidden="true" className="w-8 h-8 animate-spin text-blue-500" />
                 <p className="font-semibold">Generating your custom admin plan...</p>
               </div>
             ) : !planResult ? (
@@ -1238,16 +1240,16 @@ ${buildComparisonRequirements(task)}`;
             <div className="mb-3">
               <p className="text-xs font-black uppercase tracking-wider text-slate-500 mb-2">Recommended free options</p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <button onClick={() => openAiAssistant("https://gemini.google.com/", "Google Gemini")} className="min-h-[48px] px-4 py-2 bg-blue-600 hover:bg-blue-500 rounded-xl text-sm font-extrabold text-white text-center flex items-center justify-center gap-2">Copy & open Gemini <ExternalLink className="w-4 h-4" /></button>
-                <button onClick={() => openAiAssistant("https://copilot.microsoft.com/", "Microsoft Copilot")} className="min-h-[48px] px-4 py-2 bg-slate-900 hover:bg-slate-800 rounded-xl text-sm font-extrabold text-white text-center flex items-center justify-center gap-2">Copy & open Copilot <ExternalLink className="w-4 h-4" /></button>
+                <button onClick={() => openAiAssistant("https://gemini.google.com/", "Google Gemini")} className="min-h-[48px] px-4 py-2 bg-blue-600 hover:bg-blue-500 rounded-xl text-sm font-extrabold text-white text-center flex items-center justify-center gap-2">Copy & open Gemini <ExternalLink aria-hidden="true" className="w-4 h-4" /></button>
+                <button onClick={() => openAiAssistant("https://copilot.microsoft.com/", "Microsoft Copilot")} className="min-h-[48px] px-4 py-2 bg-slate-900 hover:bg-slate-800 rounded-xl text-sm font-extrabold text-white text-center flex items-center justify-center gap-2">Copy & open Copilot <ExternalLink aria-hidden="true" className="w-4 h-4" /></button>
               </div>
             </div>
 
             <p className="text-xs font-black uppercase tracking-wider text-slate-500 mb-2">Other popular AI assistants</p>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mb-3">
-              <button onClick={() => openAiAssistant("https://chatgpt.com/", "ChatGPT")} className="min-h-[44px] px-3 py-2 bg-[#10a37f] hover:bg-[#0e906f] rounded-lg text-sm font-bold text-white flex items-center justify-center gap-2">ChatGPT <ExternalLink className="w-4 h-4" /></button>
-              <button onClick={() => openAiAssistant("https://claude.ai/new", "Claude")} className="min-h-[44px] px-3 py-2 bg-[#d97757] hover:bg-[#c4684a] rounded-lg text-sm font-bold text-white flex items-center justify-center gap-2">Claude <ExternalLink className="w-4 h-4" /></button>
-              <button onClick={() => openAiAssistant("https://www.perplexity.ai/", "Perplexity")} className="min-h-[44px] px-3 py-2 bg-slate-100 hover:bg-slate-200 rounded-lg text-sm font-bold text-slate-800 flex items-center justify-center gap-2">Perplexity <ExternalLink className="w-4 h-4" /></button>
+              <button onClick={() => openAiAssistant("https://chatgpt.com/", "ChatGPT")} className="min-h-[44px] px-3 py-2 bg-[#10a37f] hover:bg-[#0e906f] rounded-lg text-sm font-bold text-white flex items-center justify-center gap-2">ChatGPT <ExternalLink aria-hidden="true" className="w-4 h-4" /></button>
+              <button onClick={() => openAiAssistant("https://claude.ai/new", "Claude")} className="min-h-[44px] px-3 py-2 bg-[#d97757] hover:bg-[#c4684a] rounded-lg text-sm font-bold text-white flex items-center justify-center gap-2">Claude <ExternalLink aria-hidden="true" className="w-4 h-4" /></button>
+              <button onClick={() => openAiAssistant("https://www.perplexity.ai/", "Perplexity")} className="min-h-[44px] px-3 py-2 bg-slate-100 hover:bg-slate-200 rounded-lg text-sm font-bold text-slate-800 flex items-center justify-center gap-2">Perplexity <ExternalLink aria-hidden="true" className="w-4 h-4" /></button>
             </div>
 
             <div className="grid grid-cols-2 gap-2">
