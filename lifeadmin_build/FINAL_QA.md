@@ -54,6 +54,7 @@ Use the pull request's latest workflow result as the source of truth for the cur
 - [ ] Try an unknown card or bank payment and confirm the result is a bank-query workflow, not a provider email.
 - [ ] Try cancellation, dispute, price-reduction and bill-checking goals in different categories; confirm alternatives match the selected goal.
 - [ ] Force category, task, saved-plan and pricing requests to fail; confirm failures are not presented as empty data and retry controls work.
+- [ ] While one plan is open, start a different task’s generation and cancel the missing-details review or force generation to fail; confirm the previous result still uses its original task context.
 - [ ] Use keyboard-only navigation through search, missing-details review, result tabs, saved plans, account forms and pricing.
 - [ ] At 200% zoom and on an iPad-sized viewport, confirm dialogs remain usable and important copy/actions are not clipped.
 

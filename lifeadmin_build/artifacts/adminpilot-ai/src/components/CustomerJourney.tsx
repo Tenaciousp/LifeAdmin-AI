@@ -378,7 +378,6 @@ export function CustomerJourney() {
   };
 
   const handleGenerate = (task: any) => {
-    setSelectedTaskId(task.id);
     const gaps = findGaps(task);
     if (gaps.length > 0) {
       setDetectedGaps(gaps);
@@ -400,7 +399,9 @@ export function CustomerJourney() {
     
     generatePlan.mutate({ task, mode: "full", user_id: buyerId }, {
       onSuccess: (data) => {
+        setSelectedTaskId(task.id);
         setSelectedSavedPlanId(null);
+        setPendingGenerationTask(null);
         setPlanResult(data.note.sections);
         setProviderEmail(data.note.provider_email);
         setLastKnownDetails(data.note.known_details || []);
@@ -411,16 +412,19 @@ export function CustomerJourney() {
         document.getElementById("output-panel")?.scrollIntoView({ behavior: "smooth" });
       },
       onError: () => {
+        setPendingGenerationTask(null);
         setActiveStep(4);
-        toast.error("Plan generation failed. Your task is still saved. Try again.");
+        toast.error("Plan generation failed. Your task is still saved. The previous result is still available.");
       }
     });
   };
 
   const handleEditGaps = () => {
+    const task = pendingGenerationTask;
     setGapModalOpen(false);
-    if (pendingGenerationTask) {
-      handleEditTask(pendingGenerationTask);
+    setPendingGenerationTask(null);
+    if (task) {
+      handleEditTask(task);
     }
   };
 
