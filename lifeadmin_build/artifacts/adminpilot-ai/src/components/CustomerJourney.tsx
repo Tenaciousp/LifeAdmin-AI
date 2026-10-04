@@ -426,12 +426,23 @@ export function CustomerJourney() {
 
   const handleAiHandoff = () => {
     const task = tasks.find((t: any) => t.id === selectedTaskId);
-    if (!task || !planResult) return;
-    
+    const savedPlan = savedPlans.find((note: any) => note.id === selectedSavedPlanId);
+    if (!planResult) return;
+    if (!task && !savedPlan) {
+      toast.error("This plan's task details are unavailable. Reopen the saved plan and try again.");
+      return;
+    }
+
+    const taskTitle = task?.title || savedPlan?.title || "Saved household plan";
+    const service = task?.category || "Household bill or payment";
+    const goal = task
+      ? goals.find((g: any) => g.id === task.goal_id)?.label || "Resolve issue"
+      : "Review this saved plan";
+
     const prompt = `I need help with a household admin task.
-Task: ${task.title}
-Service: ${task.category}
-Goal: ${goals.find((g: any) => g.id === task.goal_id)?.label || 'Resolve issue'}
+Task: ${taskTitle}
+Service: ${service}
+Goal: ${goal}
 
 Known Details:
 ${formatDetailList(lastKnownDetails)}

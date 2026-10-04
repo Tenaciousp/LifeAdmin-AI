@@ -62,6 +62,7 @@ Use the pull request's latest workflow result as the source of truth for the cur
 - [ ] Create plans as two separate guests and confirm neither can view, change or delete the other's task or saved plan.
 - [ ] Create an account, sign out and sign back in; confirm only that account's plans appear.
 - [ ] Delete a saved plan and confirm its private content disappears from the open result.
+- [ ] Reopen a saved plan after its original task is unavailable and confirm “Continue with AI” opens an editable review prompt rather than doing nothing.
 - [ ] Complete permanent account deletion and confirm the former credentials no longer work.
 - [ ] Confirm a non-admin receives the protected-dashboard access message and an allowed admin can load, filter and retry dashboard data.
 
