@@ -1,6 +1,6 @@
 # LifeAdmin AI owner-review QA
 
-Updated: 4 October 2026
+Updated: 5 October 2026
 
 This branch is an owner-review candidate. Automated checks cover the application contracts and build, but they do not replace hands-on browser, iPad or phone testing.
 
@@ -38,6 +38,16 @@ The latest completed workflow at the time of this update passed:
 - A production Vite frontend build
 
 Use the pull request's latest workflow result as the source of truth for the current head commit. A green workflow does not prove browser, clipboard, popup, responsive-layout or physical-device behaviour.
+
+## Supported-browser QA attempt — 5 October 2026
+
+- Revision under review: `2ca754171207fb01cbf117df1ed87cdd6445a60b` (application code remains at `f9aa6fb191845b541648c454636c1128ba74c9c7`).
+- The clean checkout's API started successfully at `http://127.0.0.1:8000` and Vite started successfully at `http://127.0.0.1:5173` without installing another builder or hosting service.
+- The available supported Browser Use surface could not open the loopback preview and returned `net::ERR_BLOCKED_BY_CLIENT`.
+- There is no authorised HTTPS preview URL recorded in the repository. No browser interaction was completed, so none of the hands-on checklist items below are marked passed.
+- `BROWSER_QA_RUNBOOK.md` records the exact synthetic scenarios and evidence fields for the next authorised preview.
+
+Owner action required to resume browser QA: provide an authorised HTTPS preview URL for this exact branch/revision, or approve a hosting choice and acceptable running cost. Do not include credentials or customer data. Physical iPad/touch/clipboard testing and a full Docker-image build remain separate outstanding checks.
 
 ## Portable-build checkpoint
 

@@ -1,6 +1,6 @@
 # LifeAdmin completion checkpoint
 
-Reviewed: 4 October 2026. This checkpoint reconciles the available conversation history, current automation and repository documents. It is not proof that every historical conversation or requirement has been retrieved.
+Reviewed: 5 October 2026. This checkpoint reconciles the available conversation history, current automation and repository documents. It is not proof that every historical conversation or requirement has been retrieved.
 
 ## Priority and ownership
 
@@ -20,7 +20,9 @@ These are documented implementation requirements. Automated contract coverage is
 
 ## Next bounded task
 
-Complete supported browser QA of the existing core energy-renewal journey using synthetic data. Preserve supplied provider, reference, usage, rates and renewal date; generate a structured result; edit the provider message; save/reopen; review the manual AI handoff and fallback controls. Include unknown-payment routing and protected administration where the same preview supports them. Record environment, exact revision, scenario, actual results and defects. Fix only verified blockers in one coherent batch.
+Supported browser QA is blocked pending an authorised HTTPS preview. On 5 October 2026, the exact branch head `2ca754171207fb01cbf117df1ed87cdd6445a60b` ran locally (API on port 8000 and Vite on port 5173), but the available Browser Use surface rejected the loopback preview with `net::ERR_BLOCKED_BY_CLIENT`. No browser checklist item was marked passed and no UI defect was inferred from this access failure. There is no authorised preview URL in the repository.
+
+Resume with `BROWSER_QA_RUNBOOK.md` after the owner provides an authorised HTTPS preview URL for this revision, or approves a hosting choice and acceptable running cost. Complete the core energy-renewal journey using synthetic data; preserve supplied provider, reference, usage, rates and renewal date; generate a structured result; edit the provider message; save/reopen; review the manual AI handoff and fallback controls. Include unknown-payment routing and protected administration where the same preview supports them. Record environment, exact revision, scenario, actual results and defects. Fix only verified blockers in one coherent batch.
 Physical iPad/touch/clipboard and native-store checks remain outstanding until performed. Browser emulation is not physical-device evidence. If an existing authorised preview is unavailable, record the precise limitation and complete safe independent release preparation before requesting owner action. Do not install another builder or buy a service to resolve a preview limitation without approval.
 
 ## Release gates
@@ -35,7 +37,7 @@ Physical iPad/touch/clipboard and native-store checks remain outstanding until p
 
 ## Resource and recovery controls
 
-Keep one active writer and one bounded batch per run. Inspect checkpoint/current head first. Reuse unchanged verification by exact commit; use targeted checks during fixes and a single required CI cycle after a substantive batch. Avoid repeated installations, unchanged full suites, speculative features and repeated blocked retries. Stop compute when idle. Keep source, setup, known defects and next action recoverable outside chat. Record actual costs/allowance only when exposed; do not promise savings.
+Keep one active writer and one bounded batch per run. Inspect checkpoint/current head first. Reuse unchanged verification by exact commit; use targeted checks during fixes and a single required CI cycle after a substantive batch. Avoid repeated installations, unchanged full suites, speculative features and repeated blocked retries. Do not retry loopback Browser Use unless the access capability changes. Stop compute when idle. Keep source, setup, known defects and next action recoverable outside chat. Record actual costs/allowance only when exposed; do not promise savings.
 Ruflo/Claude installation did not produce a verified LifeAdmin development benefit. No agents or paid AI runs were started during setup. The last verified Claude authentication state was signed out and its Codespace was stopped; recheck only if that tool is needed for an approved task.
 LeadPilot's automation is paused. Its title/project reference is evidence of an existing task, not proof of recoverable source or an explanation of the reported project loss. Do not resume it while completing LifeAdmin.
 
