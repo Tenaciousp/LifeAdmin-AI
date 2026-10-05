@@ -49,3 +49,9 @@ After LifeAdmin completion, consolidate demonstrated lessons for the escalation 
 ## Paid web preparation, 5 October 2026
 
 Added review-only Render configuration, a private SQLite plus guest-JSON backup helper, three backup regression tests and PAID_WEB_RELEASE.md. The runtime Docker image includes the backup helper. Local automated suite passed 162 tests. Payment-preview safety tests passed; no Stripe transaction or deployment occurred. Browser access remains blocked as described above. Production Docker and real iPad checks remain outstanding. Keep the scheduled browser task paused until an authorised HTTPS preview exists.
+
+## Customer quality improvements, 5 October 2026
+
+The customer API review passed registration, login/logout, plan persistence and deletion, guest isolation, protected administration and safe checkout refusal. Direct planner checks covered 84 category/goal combinations with the intended bank-query replacement. CI #123 passed the baseline production build.
+
+Added a labelled inline message editor, visible bank-query wording and tab label, edited-message full-plan export and AI handoff, missing-detail guidance, smaller-screen result spacing, and access to every saved plan rather than only eight. Message edits are temporary while the result is open and clearly disclosed; durable message editing remains a future decision. Existing 162 tests and type checks passed before the final copy adjustments; CI validates the full final batch. A 9/10 presentation or overall rating is not verified without supported browser, physical iPad and sandbox payment evidence.

@@ -469,7 +469,7 @@ Next steps:
 ${planResult.next_steps || 'None'}
 
 Provider message:
-${planResult.provider_message || 'None'}
+${providerEmail?.body || planResult.provider_message || 'None'}
 
 Things to check:
 ${planResult.things_to_check || 'None'}
@@ -1012,7 +1012,7 @@ ${buildComparisonRequirements(task)}`;
             <p className="text-sm text-slate-500 bg-slate-50 border border-dashed border-slate-200 rounded-xl p-4">Plans you generate will appear here so you can reopen them without starting again.</p>
           ) : (
             <div className="space-y-2 max-h-[240px] overflow-y-auto pr-1">
-              {savedPlans.slice(0, 8).map((note: any) => {
+              {savedPlans.map((note: any) => {
                 const isDeleting = deleteNote.isPending && deleteNote.variables?.id === note.id;
                 return (
                   <div key={note.id} className="flex items-stretch gap-2">
@@ -1040,7 +1040,7 @@ ${buildComparisonRequirements(task)}`;
           )}
         </div>
 
-        <div id="output-panel" className="bg-[#0f172a] rounded-2xl p-6 shadow-xl text-slate-200 flex flex-col flex-1 min-h-[500px]" aria-live="polite">
+        <div id="output-panel" className="bg-[#0f172a] rounded-2xl p-4 sm:p-6 shadow-xl text-slate-200 flex flex-col flex-1 min-h-[500px]" aria-live="polite">
           <div className="flex flex-col xl:flex-row justify-between items-start xl:items-end gap-4 mb-6">
             <div>
               <p className="text-sm font-bold text-blue-400 tracking-wider uppercase mb-1">Your result</p>
@@ -1079,7 +1079,7 @@ ${buildComparisonRequirements(task)}`;
                   <DropdownMenu.Portal>
                     <DropdownMenu.Content className="min-w-[220px] bg-white rounded-xl p-2 shadow-2xl z-50 border border-slate-200 animate-in fade-in zoom-in-95" align="end" sideOffset={8}>
                       <DropdownMenu.Item className="flex items-center gap-2 px-3 py-2.5 outline-none rounded-lg cursor-pointer hover:bg-slate-100 text-slate-700 font-semibold text-sm" onSelect={() => {
-                        const fullPlan = `${planResult.next_steps}\n\n${planResult.provider_message}\n\n${planResult.things_to_check}\n\n${planResult.approval_checklist}`;
+                        const fullPlan = `${planResult.next_steps}\n\n${providerEmail?.body || planResult.provider_message}\n\n${planResult.things_to_check}\n\n${planResult.approval_checklist}`;
                         copyToClipboard(fullPlan, "section_copied");
                       }}>
                         <Copy aria-hidden="true" className="w-4 h-4" /> Copy full plan
@@ -1129,7 +1129,16 @@ ${buildComparisonRequirements(task)}`;
             );
           })()}
 
-          <div className="flex-1 bg-[#1e293b] border border-slate-700 rounded-xl p-6">
+          {planResult && (
+            <div className="mb-4 rounded-xl border border-slate-600 bg-slate-800 p-4">
+              <p className="text-sm font-bold text-white">Review before acting</p>
+              <p className="mt-1 text-sm leading-6 text-slate-200">Check the next steps, edit your message, then review the approval checklist before contacting anyone.</p>
+              {lastMissingDetails.length > 0 && (
+                <p className="mt-2 text-sm leading-6 text-amber-200">Details still needed: {lastMissingDetails.join(" · ")}. Add these to your task for a more specific plan.</p>
+              )}
+            </div>
+          )}
+          <div className="flex-1 bg-[#1e293b] border border-slate-700 rounded-xl p-4 sm:p-6">
             {generatePlan.isPending ? (
               <div role="status" className="h-full flex flex-col items-center justify-center text-slate-400 gap-3 min-h-[250px]">
                 <Loader2 aria-hidden="true" className="w-8 h-8 animate-spin text-blue-500" />
@@ -1155,14 +1164,34 @@ ${buildComparisonRequirements(task)}`;
                       onKeyDown={(e) => handleTabKeyDown(e, idx)}
                       className={`min-h-[44px] px-4 py-2 rounded-lg text-sm font-bold transition-colors whitespace-nowrap focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 ${activeTab === id ? 'bg-blue-500/20 text-blue-300' : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'}`}
                     >
-                      {id.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                      {id === 'provider_message' && providerEmail?.kind === 'bank_query' ? 'Bank query' : id.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
                     </button>
                   ))}
                 </div>
                 
                 <div id={`panel-${activeTab}`} aria-labelledby={`tab-${activeTab}`} className="prose prose-invert prose-blue max-w-none text-slate-300" role="tabpanel" tabIndex={0}>
                   <p className="not-prose text-xs font-semibold text-slate-400 mb-4">{sectionHelperText(activeTab)}</p>
-                  {planResult[activeTab]?.trim() ? (
+                  {activeTab === "provider_message" && providerEmail ? (
+                    <div className="not-prose space-y-3">
+                      <label htmlFor="result-message-editor" className="block text-sm font-bold text-white">
+                        {providerEmail.kind === "bank_query" ? "Review and edit your bank query" : "Review and edit your provider message"}
+                      </label>
+                      <p className="text-sm text-slate-200">Subject: {providerEmail.subject}</p>
+                      <textarea
+                        id="result-message-editor"
+                        value={providerEmail.body}
+                        onChange={(event) => {
+                          const body = event.target.value;
+                          setPlanResult((current: any) => ({ ...current, provider_message: body }));
+                          setProviderEmail(current => current ? { ...current, body } : current);
+                        }}
+                        rows={12}
+                        aria-describedby="result-message-help"
+                        className="w-full min-h-[240px] rounded-xl border border-slate-500 bg-slate-950 p-4 text-base leading-7 text-slate-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300"
+                      />
+                      <p id="result-message-help" className="text-sm text-slate-300">Copy and email actions use your edited wording. Edits last while this result is open; copy before leaving. Nothing is sent automatically.</p>
+                    </div>
+                  ) : planResult[activeTab]?.trim() ? (
                     <div dangerouslySetInnerHTML={{ __html: formatResultText(planResult[activeTab]) }} />
                   ) : (
                     <p className="not-prose text-sm text-slate-400">{activeTab === "provider_message" ? "Provider message not ready. Add who you want to contact and what you want to ask, then generate again." : "No additional content is needed for this section."}</p>
