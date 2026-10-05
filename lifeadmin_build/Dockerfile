@@ -13,6 +13,7 @@ WORKDIR /app
 COPY requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
 COPY artifacts/api-server artifacts/api-server
+COPY scripts scripts
 COPY --from=web /app/artifacts/adminpilot-ai/dist/public artifacts/adminpilot-ai/dist/public
 ENV PORT=8000
 EXPOSE 8000

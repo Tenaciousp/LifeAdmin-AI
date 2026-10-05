@@ -45,3 +45,7 @@ LeadPilot's automation is paused. Its title/project reference is evidence of an 
 
 Stop feature expansion. Pause the LifeAdmin automation at review readiness or when an owner/access blocker leaves no safe useful independent work. Keep the existing daily 09:45 Europe/London schedule while useful authorised work remains.
 After LifeAdmin completion, consolidate demonstrated lessons for the escalation app: agreed scope and acceptance criteria, app/landing page/add-on stages, source ownership, recovery testing, predictable cost decisions and maintenance responsibilities. Do not begin that project in this batch.
+
+## Paid web preparation, 5 October 2026
+
+Added review-only Render configuration, a private SQLite plus guest-JSON backup helper, three backup regression tests and PAID_WEB_RELEASE.md. The runtime Docker image includes the backup helper. Local automated suite passed 162 tests. Payment-preview safety tests passed; no Stripe transaction or deployment occurred. Browser access remains blocked as described above. Production Docker and real iPad checks remain outstanding. Keep the scheduled browser task paused until an authorised HTTPS preview exists.
