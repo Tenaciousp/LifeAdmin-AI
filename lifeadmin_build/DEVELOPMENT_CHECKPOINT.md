@@ -55,3 +55,26 @@ Added review-only Render configuration, a private SQLite plus guest-JSON backup 
 The customer API review passed registration, login/logout, plan persistence and deletion, guest isolation, protected administration and safe checkout refusal. Direct planner checks covered 84 category/goal combinations with the intended bank-query replacement. CI #123 passed the baseline production build.
 
 Added a labelled inline message editor, visible bank-query wording and tab label, edited-message full-plan export and AI handoff, missing-detail guidance, smaller-screen result spacing, and access to every saved plan rather than only eight. Message edits are temporary while the result is open and clearly disclosed; durable message editing remains a future decision. Existing 162 tests and type checks passed before the final copy adjustments; CI validates the full final batch. A 9/10 presentation or overall rating is not verified without supported browser, physical iPad and sandbox payment evidence.
+
+
+## Supported browser QA evidence, 7 October 2026
+
+Environment: public GitHub Codespaces HTTPS preview for `dev/energy-renewal-plan`, frontend port 5173 only; API port 8000 remained private. Synthetic data only. No real account, live payment or external message was used.
+
+Application revision exercised in browser: `00762a39046031ef46f944a059492301601cab37`. Existing CI #124 for that exact revision completed successfully with the repository's automated tests, type checks, API smoke and production frontend build. Those checks were not rerun during this documentation-only evidence update.
+
+Core energy-renewal browser QA passed for: landing/app load; 12-category selection; renewal-goal selection; provider/reference preservation; energy-detail fields; structured Next steps / Provider message / Things to check / Approval checklist output; editable provider message; saved-plan save/reopen; copy feedback; and manual editable AI handoff controls. The browser pass used synthetic provider `Acme Energy` and reference `ACC-12345678`; both were preserved into the generated plan/message.
+
+A focused follow-up verified saved-plan deletion succeeds and clears the open result. The first automation pass incorrectly reported deletion as broken because the browser runner did not surface the native confirmation consistently. Source review confirmed an explicit confirmation guard and owner-scoped delete mutation/API/storage implementation. The follow-up observed successful deletion.
+
+Unknown-payment browser QA passed: the journey rendered a `Bank query` tab with bank/card-provider query wording and did not present a provider email workflow.
+
+Clipboard/manual-handoff browser QA passed at the web level: copy action produced a visible `Copied to clipboard` toast; the manual AI dialog showed an editable prompt, safety warning and separate Gemini, Microsoft Copilot, ChatGPT, Claude and Perplexity handoff controls without automatic sending.
+
+Two apparent findings from the first automation pass were tool artefacts and are not product defects: the fish icon was the automation cursor, and the missing-detail entries are labelled in source beside the Info icon. No application edit was made for either.
+
+Protected-admin UI was not discoverable from the same consumer preview, so hands-on non-admin/admin browser verification remains pending. Existing automated/API evidence covers protected administration, but it is not a substitute for browser evidence.
+
+Remaining release verification: physical iPad/touch/clipboard behaviour; protected-admin browser path with an authorised admin/non-admin test route; full Docker-image build; owner production decisions for launch channel, acceptable running cost, hosting/domain, publisher/legal/support/privacy details, retention policy, administrator allowlist, secure production configuration, durable storage/recovery and test-mode payments before separate live-payment approval.
+
+No application source changed in this browser-QA evidence batch. Keep the LifeAdmin bounded automation paused until explicit owner instruction to resume or until the next authorised release-verification action is chosen.
