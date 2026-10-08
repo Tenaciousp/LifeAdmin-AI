@@ -1,6 +1,6 @@
 # LifeAdmin completion checkpoint
 
-Reviewed: 5 October 2026. This checkpoint reconciles the available conversation history, current automation and repository documents. It is not proof that every historical conversation or requirement has been retrieved.
+Reviewed: 8 October 2026. This checkpoint reconciles the available conversation history, current automation and repository documents. It is not proof that every historical conversation or requirement has been retrieved.
 
 ## Priority and ownership
 
@@ -8,10 +8,9 @@ Finish LifeAdmin before beginning the escalation app, landing page or add-ons. P
 
 ## Verified baseline
 
-Application commit: f9aa6fb191845b541648c454636c1128ba74c9c7.
-CI run #120 (37218410101) completed successfully: clean locked JavaScript installation, Python dependencies, 159 automated tests, type checks, live API smoke and production frontend build.
-Local clean installation, 159 tests, type checks and API smoke passed. Local frontend transformation attempts were interrupted after prolonged execution; use CI #120 as the production-build evidence. Full Docker-image validation was not performed because the local environment has no Docker.
-The QA count was corrected and the lockfile, npm ci setup, Docker input correction and expanded context exclusions were saved. Do not repeat those tasks.
+Browser-tested application commit: `00762a39046031ef46f944a059492301601cab37`.
+CI run #124 completed successfully for that exact application revision: clean locked JavaScript installation, Python dependencies, 162 automated tests, type checks, live API smoke and production frontend build. Supported browser evidence was saved in commit `868dea9359980b83dcccfe1810c55ba90f43498c`; documentation-only CI #125 also passed.
+The earlier QA-count correction, lockfile, `npm ci` setup, Docker input correction and expanded context exclusions remain complete. Do not repeat those tasks or the completed supported-browser scenarios unless application behaviour changes or a specific defect requires focused reproduction.
 
 ## Scope to preserve
 
@@ -20,10 +19,9 @@ These are documented implementation requirements. Automated contract coverage is
 
 ## Next bounded task
 
-Supported browser QA is blocked pending an authorised HTTPS preview. On 5 October 2026, the exact branch head `2ca754171207fb01cbf117df1ed87cdd6445a60b` ran locally (API on port 8000 and Vite on port 5173), but the available Browser Use surface rejected the loopback preview with `net::ERR_BLOCKED_BY_CLIENT`. No browser checklist item was marked passed and no UI defect was inferred from this access failure. There is no authorised preview URL in the repository.
+Supported browser QA is complete for the current application revision as recorded below. The next release-verification action is the one-time Docker image check in `scripts/verify_docker_release.sh`. The current automation environment has no Docker, Podman, Buildah or nerdctl engine, so the script has received shell syntax validation only. Run it once in the existing private Codespace or another authorised Docker host; it performs build, loopback-only startup, web/API smoke, preview-payment, mounted-data restart and packaged-backup checks with synthetic data.
 
-Resume with `BROWSER_QA_RUNBOOK.md` after the owner provides an authorised HTTPS preview URL for this revision, or approves a hosting choice and acceptable running cost. Complete the core energy-renewal journey using synthetic data; preserve supplied provider, reference, usage, rates and renewal date; generate a structured result; edit the provider message; save/reopen; review the manual AI handoff and fallback controls. Include unknown-payment routing and protected administration where the same preview supports them. Record environment, exact revision, scenario, actual results and defects. Fix only verified blockers in one coherent batch.
-Physical iPad/touch/clipboard and native-store checks remain outstanding until performed. Browser emulation is not physical-device evidence. If an existing authorised preview is unavailable, record the precise limitation and complete safe independent release preparation before requesting owner action. Do not install another builder or buy a service to resolve a preview limitation without approval.
+After Docker verification, the remaining hands-on gates require owner access or decisions: physical iPad/touch/keyboard/clipboard testing; protected-admin browser testing with an authorised non-admin and allowlisted admin; hosting/domain and recurring-cost approval; publisher/legal/support/privacy/retention information; administrator allowlist and secure production configuration; durable storage plus off-host backup/restore ownership; and Stripe test-mode credentials and Price IDs before a separate live-payment decision. Native-store packaging remains deferred from the first paid-web release.
 
 ## Release gates
 
@@ -46,9 +44,9 @@ LeadPilot's automation is paused. Its title/project reference is evidence of an 
 Stop feature expansion. Pause the LifeAdmin automation at review readiness or when an owner/access blocker leaves no safe useful independent work. Keep the existing daily 09:45 Europe/London schedule while useful authorised work remains.
 After LifeAdmin completion, consolidate demonstrated lessons for the escalation app: agreed scope and acceptance criteria, app/landing page/add-on stages, source ownership, recovery testing, predictable cost decisions and maintenance responsibilities. Do not begin that project in this batch.
 
-## Paid web preparation, 5 October 2026
+## Paid web preparation, updated 8 October 2026
 
-Added review-only Render configuration, a private SQLite plus guest-JSON backup helper, three backup regression tests and PAID_WEB_RELEASE.md. The runtime Docker image includes the backup helper. Local automated suite passed 162 tests. Payment-preview safety tests passed; no Stripe transaction or deployment occurred. Browser access remains blocked as described above. Production Docker and real iPad checks remain outstanding. Keep the scheduled browser task paused until an authorised HTTPS preview exists.
+Added review-only Render configuration, a private SQLite plus guest-JSON backup helper, three backup regression tests and `PAID_WEB_RELEASE.md`. The runtime Docker image includes the backup helper. The 162-test suite and payment-preview safety tests passed at the exact browser-tested application revision; no Stripe transaction or deployment occurred. Supported browser QA is complete. Production Docker, protected-admin browser and physical iPad checks remain outstanding.
 
 ## Customer quality improvements, 5 October 2026
 
@@ -77,4 +75,10 @@ Protected-admin UI was not discoverable from the same consumer preview, so hands
 
 Remaining release verification: physical iPad/touch/clipboard behaviour; protected-admin browser path with an authorised admin/non-admin test route; full Docker-image build; owner production decisions for launch channel, acceptable running cost, hosting/domain, publisher/legal/support/privacy details, retention policy, administrator allowlist, secure production configuration, durable storage/recovery and test-mode payments before separate live-payment approval.
 
-No application source changed in this browser-QA evidence batch. Keep the LifeAdmin bounded automation paused until explicit owner instruction to resume or until the next authorised release-verification action is chosen.
+No application source changed in this browser-QA evidence batch.
+
+## Release preparation checkpoint, 8 October 2026
+
+Added `scripts/verify_docker_release.sh` as a deterministic one-time route to verify the existing Dockerfile without adding recurring CI cost. The current execution environment has no supported container engine, so only shell syntax and repository-diff checks were performed here; a Docker build/start was not claimed. `FINAL_QA.md` and `PAID_WEB_RELEASE.md` now distinguish the completed supported-browser evidence from the remaining physical-device, protected-admin, Docker, production, recovery and payment gates.
+
+Immediate owner action: run `bash scripts/verify_docker_release.sh` from `lifeadmin_build` in the existing private Codespace or another authorised Docker host, and return its final pass line or non-sensitive failure output. No port needs to be made public and no private credential is needed. All further independent internal release preparation is complete for the unchanged application revision; pause the bounded automation pending this action or explicit owner instruction.

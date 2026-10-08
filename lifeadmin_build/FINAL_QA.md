@@ -1,6 +1,6 @@
 # LifeAdmin AI owner-review QA
 
-Updated: 5 October 2026
+Updated: 8 October 2026
 
 This branch is an owner-review candidate. Automated checks cover the application contracts and build, but they do not replace hands-on browser, iPad or phone testing.
 
@@ -30,47 +30,45 @@ npm run dev:api
 npm run build:web
 ```
 
-The latest completed workflow at the time of this update passed:
+CI #124 passed against the exact browser-tested application revision `00762a39046031ef46f944a059492301601cab37`. CI #125 then passed against documentation-only head `868dea9359980b83dcccfe1810c55ba90f43498c`:
 
-- 159 automated API, domain, storage, privacy, payment-safety and frontend-contract tests
+- 162 automated API, domain, storage, privacy, payment-safety, backup and frontend-contract tests
 - TypeScript type checking and Python compile validation
 - A live API smoke journey covering health, catalog, preview-only pricing, guest energy-task creation, provider/reference preservation, structured plan generation, cross-guest isolation, guest-to-account migration, sign-out/sign-in isolation, saved-plan/task deletion and permanent account deletion
 - A production Vite frontend build
 
 Use the pull request's latest workflow result as the source of truth for the current head commit. A green workflow does not prove browser, clipboard, popup, responsive-layout or physical-device behaviour.
 
-## Supported-browser QA attempt — 5 October 2026
+## Supported-browser QA — completed 7 October 2026
 
-- Revision under review: `2ca754171207fb01cbf117df1ed87cdd6445a60b` (application code remains at `f9aa6fb191845b541648c454636c1128ba74c9c7`).
-- The clean checkout's API started successfully at `http://127.0.0.1:8000` and Vite started successfully at `http://127.0.0.1:5173` without installing another builder or hosting service.
-- The available supported Browser Use surface could not open the loopback preview and returned `net::ERR_BLOCKED_BY_CLIENT`.
-- There is no authorised HTTPS preview URL recorded in the repository. No browser interaction was completed, so none of the hands-on checklist items below are marked passed.
-- `BROWSER_QA_RUNBOOK.md` records the exact synthetic scenarios and evidence fields for the next authorised preview.
-
-Owner action required to resume browser QA: provide an authorised HTTPS preview URL for this exact branch/revision, or approve a hosting choice and acceptable running cost. Do not include credentials or customer data. Physical iPad/touch/clipboard testing and a full Docker-image build remain separate outstanding checks.
+- A temporary GitHub Codespaces HTTPS preview exposed frontend port 5173 only; API port 8000 remained private and the preview was returned to Private after testing.
+- Synthetic browser QA passed the core energy-renewal journey, provider/reference preservation, structured result tabs, editable provider message, saved-plan save/reopen/delete, unknown-payment Bank query, clipboard feedback and the editable manual handoff to all five supported assistants.
+- Application revision exercised: `00762a39046031ef46f944a059492301601cab37`; CI #124 passed for that exact revision.
+- Two initial findings were rejected after focused follow-up: the fish icon was the automation cursor, and missing-detail labels were present. Neither was recorded as an application defect.
+- Protected-admin browser behaviour and physical iPad/touch/clipboard behaviour remain pending. Automated protection checks are not a substitute for the browser-admin pass.
 
 ## Portable-build checkpoint
 
 - JavaScript dependencies are committed in `package-lock.json`; CI, container builds and the documented setup use `npm ci`.
 - Docker build inputs now reference the existing `tsconfig.base.json` only. The previous `COPY` referenced a missing root `tsconfig.json`.
 - Docker context exclusions also cover generated frontend output and environment-file variants.
-- Local clean install, 159 tests, type checks and live API smoke passed on 4 October 2026. The production frontend build is validated by the latest pull-request workflow; the local transformation run did not complete promptly.
-- A full Docker image build was not run in the local validation environment because Docker is unavailable. Browser/mobile QA is still outstanding.
+- Local clean install, 162 tests, type checks and live API smoke passed before the browser evidence update. The production frontend build is validated by CI #124 and #125.
+- Docker, Podman, Buildah and nerdctl are unavailable in the current automation environment. `scripts/verify_docker_release.sh` now provides one bounded build/start/restart/backup check for the existing Codespace or another authorised Docker host; it has passed shell syntax validation but has not yet been executed with Docker.
 
 ## Owner hands-on checklist
 
 ### Highest-priority customer path
 
-- [ ] On a phone-sized viewport, search for an electricity or gas renewal.
-- [ ] Confirm the suggested provider and renewal goal remain selected when the task is created.
-- [ ] Enter tariff, standing charge, unit rate, usage, renewal date and any customer reference.
-- [ ] Confirm the plan uses the supplied values without inventing missing figures.
-- [ ] Confirm the provider message is editable and includes only details the customer supplied.
-- [ ] Open each of the five comparison assistants and verify the editable prompt remains available when popup or clipboard access is restricted.
+- [x] On a phone-sized viewport, search for an electricity or gas renewal.
+- [x] Confirm the suggested provider and renewal goal remain selected when the task is created.
+- [x] Enter tariff, standing charge, unit rate, usage, renewal date and any customer reference.
+- [x] Confirm the plan uses supplied values and identifies missing details rather than inventing figures.
+- [x] Confirm the provider message is editable and includes the supplied synthetic provider/reference context.
+- [x] Open the editable manual handoff and confirm Gemini, Microsoft Copilot, ChatGPT, Claude and Perplexity remain separate user-controlled actions.
 
 ### Alternative and recovery paths
 
-- [ ] Try an unknown card or bank payment and confirm the result is a bank-query workflow, not a provider email.
+- [x] Try an unknown card or bank payment and confirm the result is a bank-query workflow, not a provider email.
 - [ ] Try cancellation, dispute, price-reduction and bill-checking goals in different categories; confirm alternatives match the selected goal.
 - [ ] Force category, task, saved-plan and pricing requests to fail; confirm failures are not presented as empty data and retry controls work.
 - [ ] While one plan is open, start a different task’s generation and cancel the missing-details review or force generation to fail; confirm the previous result still uses its original task context.
@@ -81,7 +79,7 @@ Owner action required to resume browser QA: provide an authorised HTTPS preview 
 
 - [ ] Create plans as two separate guests and confirm neither can view, change or delete the other's task or saved plan.
 - [ ] Create an account, sign out and sign back in; confirm only that account's plans appear.
-- [ ] Delete a saved plan and confirm its private content disappears from the open result.
+- [x] Delete a saved plan and confirm its private content disappears from the open result.
 - [ ] Reopen a saved plan after its original task is unavailable and confirm “Continue with AI” opens an editable review prompt rather than doing nothing.
 - [ ] Complete permanent account deletion and confirm the former credentials no longer work.
 - [ ] Confirm a non-admin receives the protected-dashboard access message and an allowed admin can load, filter and retry dashboard data.
