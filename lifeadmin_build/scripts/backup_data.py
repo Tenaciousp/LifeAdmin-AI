@@ -6,12 +6,23 @@ import json
 import shutil
 import sqlite3
 from pathlib import Path
+import sys
+
+# The API and backup tool must use the same cross-process lock.
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "artifacts" / "api-server"))
+from backup_lock import data_lock
 
 
 JSON_FILES = ("tasks.json", "notes.json", "settings.json", "purchases.json")
 
 
 def backup_data(data_dir, destination):
+    """Copy SQLite and JSON while cooperating API requests are paused."""
+    with data_lock(data_dir, exclusive=True, timeout=30):
+        return _backup_data_unlocked(data_dir, destination)
+
+
+def _backup_data_unlocked(data_dir, destination):
     data_dir, destination = Path(data_dir).resolve(), Path(destination).resolve()
     database = data_dir / "lifeadmin.sqlite3"
     if not database.is_file():
