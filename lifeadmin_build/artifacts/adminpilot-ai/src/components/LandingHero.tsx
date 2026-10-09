@@ -70,10 +70,10 @@ export function LandingHero() {
 
               <div className="mt-5 rounded-xl bg-slate-900 text-white p-4 flex items-center justify-between gap-3">
                 <div>
-                  <p className="text-xs text-slate-300 font-semibold">Core one-time price</p>
+                  <p className="text-xs text-slate-300 font-semibold">Complete one-time price</p>
                   <p className="text-sm text-slate-200">No subscription</p>
                 </div>
-                <strong className="text-2xl">£0.99</strong>
+                <strong className="text-2xl">£1.99</strong>
               </div>
             </div>
           </div>
