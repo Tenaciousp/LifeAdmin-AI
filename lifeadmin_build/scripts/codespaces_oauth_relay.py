@@ -17,12 +17,17 @@ from __future__ import annotations
 
 import html
 import http.client
+import os
+import stat
+import time
+from pathlib import Path
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlsplit
 
 RELAY_PORT = 53683
 RCLONE_PORT = 53682
 MAX_FORM_BYTES = 8192
+AUTH_LINK_PATH = Path('/tmp/lifeadmin-rclone-auth-link')
 
 
 def validate_local_url(value: str, path: str, required: str) -> str:
@@ -58,6 +63,33 @@ def local_rclone_request(target: str) -> tuple[int, str | None]:
         connection.close()
 
 
+def pending_auth_target() -> str:
+    """Load a recent, owner-only link emitted by the rclone launcher."""
+    details = AUTH_LINK_PATH.lstat()
+    if not stat.S_ISREG(details.st_mode) or details.st_uid != os.getuid():
+        raise ValueError("Unexpected authorisation link file.")
+    if stat.S_IMODE(details.st_mode) != 0o600 or time.time() - details.st_mtime > 900:
+        raise ValueError("Authorisation link has expired or is not private.")
+    link = AUTH_LINK_PATH.read_text(encoding="utf-8").strip()
+    return validate_local_url(link, "/auth", "state")
+
+
+def google_redirect(handler: "Handler", target: str) -> None:
+    status, location = local_rclone_request(target)
+    if status not in (301, 302, 303, 307, 308) or not location:
+        raise ValueError("Rclone did not return a Google sign-in link.")
+    destination = urlsplit(location)
+    if destination.scheme != "https" or destination.hostname not in (
+        "accounts.google.com", "www.google.com"
+    ):
+        raise ValueError("Rclone returned an unexpected sign-in destination.")
+    handler.send_response(303)
+    handler.send_header("Location", location)
+    handler.send_header("Cache-Control", "no-store")
+    handler.send_header("Referrer-Policy", "no-referrer")
+    handler.end_headers()
+
+
 def page(message: str = "") -> bytes:
     notice = f"<p role='status'>{html.escape(message)}</p>" if message else ""
     return f"""<!doctype html>
@@ -74,7 +106,9 @@ small{{display:block;color:#555}}
 <p>This is a temporary, test-only helper. Never paste passwords, client secrets or access tokens here.</p>
 {notice}
 <h3>1. Start Google sign-in</h3>
-<p>Paste the complete <code>http://127.0.0.1:53682/auth?state=...</code>
+<p>If you started rclone with the new launcher, simply tap this link:</p>
+<p><a href="/begin">Open Google sign-in without copying a terminal link</a></p>
+<p>Alternatively, paste the complete <code>http://127.0.0.1:53682/auth?state=...</code>
 link printed by the running <code>rclone authorize</code> terminal.</p>
 <form method="post" action="/start" autocomplete="off">
 <label>Rclone authorisation link<input name="authorization_url" required></label>
@@ -103,14 +137,20 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header("Referrer-Policy", "no-referrer")
         self.send_header(
             "Content-Security-Policy",
-            "default-src 'none'; style-src 'unsafe-inline'; form-action 'self'",
+            "default-src 'none'; style-src 'unsafe-inline'; form-action 'self'; navigate-to 'self' https://accounts.google.com",
         )
         self.end_headers()
         self.wfile.write(body)
 
     def do_GET(self) -> None:
-        if urlsplit(self.path).path == "/":
+        route = urlsplit(self.path).path
+        if route == "/":
             self.respond(200, page())
+        elif route == "/begin":
+            try:
+                google_redirect(self, pending_auth_target())
+            except (ValueError, OSError, http.client.HTTPException):
+                self.respond(400, page("Could not start Google sign-in. Check the rclone launcher is waiting for code."))
         else:
             self.respond(404, page("Page not found."))
 
@@ -132,25 +172,14 @@ class Handler(BaseHTTPRequestHandler):
                 values[0], "/auth" if route == "/start" else "/",
                 "state" if route == "/start" else "code",
             )
-            status, location = local_rclone_request(target)
             if route == "/start":
-                if status not in (301, 302, 303, 307, 308) or not location:
-                    raise ValueError("Rclone did not return a Google sign-in link.")
-                if urlsplit(location).scheme != "https" or urlsplit(location).hostname not in (
-                    "accounts.google.com", "www.google.com"
-                ):
-                    raise ValueError("Rclone returned an unexpected sign-in destination.")
-                self.send_response(303)
-                self.send_header("Location", location)
-                self.send_header("Cache-Control", "no-store")
-                self.send_header("Referrer-Policy", "no-referrer")
-                self.end_headers()
-            elif status == 200:
-                self.respond(200, page("Callback delivered. Check the rclone authorize terminal. Do not share its token output."))
+                google_redirect(self, target)
             else:
-                raise ValueError("Rclone did not accept the callback.")
-        except (ValueError, OSError, http.client.HTTPException) as exc:
-            # Do not include exception details: they may contain a token URL.
+                status, _ = local_rclone_request(target)
+                if status != 200:
+                    raise ValueError("Rclone did not accept the callback.")
+                self.respond(200, page("Callback delivered. Check the rclone authorize terminal. Do not share its token output."))
+        except (ValueError, OSError, http.client.HTTPException):
             self.respond(400, page("Unable to continue. Check that rclone is still waiting for code and the localhost URL is complete."))
 
 
@@ -159,3 +188,4 @@ if __name__ == "__main__":
     print("Forward port 53683 as Private. Do NOT forward rclone port 53682.")
     print("No authorisation codes, client secrets or tokens will be logged.")
     ThreadingHTTPServer(("127.0.0.1", RELAY_PORT), Handler).serve_forever()
+
