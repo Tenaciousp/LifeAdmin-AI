@@ -21,7 +21,7 @@ from pathlib import Path
 
 REMOTE = "lifeadmin-drive:"
 LINK = Path("/tmp/lifeadmin-rclone-auth-link")
-AUTH_PATTERN = re.compile(r"http://127[.]0[.]0[.]1:53682/auth[?]state=[^\\s]+")
+AUTH_PATTERN = re.compile(r"http://127[.]0[.]0[.]1:53682/auth[?]state=[^\s]+")
 
 
 def listener_active(port: int) -> bool:
