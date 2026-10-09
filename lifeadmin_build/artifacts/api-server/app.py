@@ -1640,11 +1640,11 @@ class AdminPilotHandler(SimpleHTTPRequestHandler):
     def _do_GET(self):
         parsed = urlparse(self.path)
         path = parsed.path
+        if path in {"/api/health", "/api/healthz"}:
+            return json_response(self, {"status": "ok", "service": "lifeadmin-ai"})
         query = parse_qs(parsed.query)
         user = current_user(self)
         user_id = user["id"] if user else guest_session(self)
-        if path in {"/api/health", "/api/healthz"}:
-            return json_response(self, {"status": "ok", "service": "lifeadmin-ai"})
         if path == "/":
             index_path = os.path.join(WEB_DIR, "index.html")
             if os.path.isfile(index_path):
