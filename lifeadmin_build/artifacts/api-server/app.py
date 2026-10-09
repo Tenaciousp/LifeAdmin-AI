@@ -23,6 +23,7 @@ import urllib.request
 import urllib.error
 
 import storage
+from backup_lock import data_lock, LockTimeout
 import domain
 import energy_renewal
 
@@ -1613,7 +1614,30 @@ class AdminPilotHandler(SimpleHTTPRequestHandler):
         self.send_header("X-Frame-Options", "DENY")
         super().end_headers()
 
+    def _with_data_lock(self, action):
+        try:
+            with data_lock(DATA_DIR, timeout=0.5):
+                return action()
+        except LockTimeout:
+            return json_response(
+                self,
+                {"error": "Data maintenance in progress. Please retry shortly."},
+                503,
+                {"Retry-After": "2"},
+            )
+
     def do_GET(self):
+        path = urlparse(self.path).path
+        # Static assets and liveness checks stay available during snapshots.
+        if path not in {"/api/health", "/api/healthz"} and path.startswith("/api/"):
+            return self._with_data_lock(self._do_GET)
+        return self._do_GET()
+
+    def _do_POST(self):
+        # Includes Stripe webhook and account/session writes.
+        return self._with_data_lock(self._do_POST)
+
+    def _do_GET(self):
         parsed = urlparse(self.path)
         path = parsed.path
         query = parse_qs(parsed.query)
