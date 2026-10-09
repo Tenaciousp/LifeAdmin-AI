@@ -42,6 +42,11 @@ jobs:
           python -m unittest discover -s scripts -p test_backup_http_integration.py -v
 
 
+      - name: Test encrypted backup and offline restore (synthetic only)
+        run: |
+          pip install 'cryptography>=45,<47'
+          python -m unittest discover -s scripts -p test_secure_backup.py -v
+
       - name: Run type checks
         run: npm run typecheck
 
