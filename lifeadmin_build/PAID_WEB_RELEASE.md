@@ -4,11 +4,11 @@ Status: prepared for review, not submitted or published. Native app-store work i
 
 Supported browser QA completed on 7 October 2026 against application revision `00762a39046031ef46f944a059492301601cab37`; CI #124 passed for that exact application revision and CI #125 passed for documentation head `868dea9359980b83dcccfe1810c55ba90f43498c`. The completed evidence does not cover physical iPad behaviour, protected-admin browser behaviour, a Docker image run or payments.
 
-## Draft hosting
+## Existing Render service (verified 9 October 2026)
 
-`deploy/render.draft.yaml` describes one Docker web service with a 1 GB persistent disk. No service has been created. The draft is deliberately outside the root Blueprint path. Automatic deployment is disabled; submitting the draft would still create an initial deployment and incur hosting charges.
+The earlier statement that no hosting service existed is superseded. Read-only Render service inspection confirms an existing `LifeAdmin-AI` web service (`srv-db4c8u49v7es73a601jg`) connected to `Tenaciousp/LifeAdmin-AI`, branch `dev/energy-renewal-plan`, with Docker runtime, one instance, a 1 GB persistent disk mounted at `/app/artifacts/api-server/data`, Frankfurt region and **automatic deployment disabled**. Render reports service URL `https://lifeadmin-ai-an0o.onrender.com`. This inspection does **not** establish that the latest application revision is deployed, secure, ready for customers or approved for publication. Do not trigger a deployment or change access settings based on this documentation update.
 
-Before any submission, confirm the host, current total price including disk/tax, billing owner, Frankfurt data region, domain and public URL. Review the £10–15/month planning allowance against the actual checkout quote; this is not a price guarantee. Keep GitHub as the source of truth and retain an independent export.
+`deploy/render.draft.yaml` remains a draft configuration and is not proof of the running service's complete settings. Before any further deployment or spending, confirm the current billing owner, exact total price including disk/tax, service health, public accessibility, production secrets and storage recovery. Keep GitHub as source of truth and retain an independent export. No new service or subscription is authorised by this note.
 
 Use a single application instance with SQLite. The disk preserves the entire API data directory, including guest JSON files. Review write concurrency and database migration before scaling. Set APP_BASE_URL to the exact HTTPS origin, ADMIN_EMAILS to the owner's authorised account, and keep the generated SESSION_SECRET private and stable. No Stripe or AI keys are included in the draft. DEMO_PAYMENTS remains false.
 
@@ -47,7 +47,7 @@ Record the exact application commit, Docker version and final pass line. If it f
 ## Minimum owner decisions and actions
 
 1. Run the one-time Docker verification above in the existing private Codespace or another authorised Docker host and return the pass line or non-sensitive failure output.
-2. Test the current revision on a physical iPad, including touch, keyboard, clipboard fallback, account screens and payment return layout. Browser emulation is not physical-device evidence.
+2. Test the current revision on a physical iPad **as the final acceptance gate**, after the independent admin, recovery, security and sandbox-payment checks. Include touch, keyboard, clipboard fallback, account screens and payment-return layout. Browser emulation is not physical-device evidence.
 3. Provide one authorised non-admin account and one allowlisted admin account through secure configuration, then verify both protected-admin browser outcomes without sharing credentials.
 4. Choose the paid-web host, domain/public URL, billing owner, data region and acceptable total recurring cost after reviewing the provider's current checkout quote. Do not purchase until approved.
 5. Supply publisher/legal identity, support contact, privacy/terms/refund content, analytics-consent wording, and account/billing data-retention rules.
@@ -65,4 +65,4 @@ Until these actions are complete, keep the preview private and the release unpub
 - Off-host backup and isolated restore rehearsal; support and legal content reviewed.
 - Owner approval of recurring cost, final domain, production settings and publication.
 
-No new subscription, purchase, public deployment or live payment was made by this preparation.
+This document update made no new subscription, purchase, deployment or live-payment change. The existing Render service is separately verified above.
