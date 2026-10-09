@@ -33,7 +33,7 @@ def secure_file(path: Path) -> None:
 
 
 def main() -> int:
-    if not COMMAND[3] or not COMMAND[5]:
+    if not COMMAND[4] or not COMMAND[6]:
         print("Google client ID or secret is missing from this terminal.")
         print("Use the bash terminal where you originally entered both credentials.")
         return 1
