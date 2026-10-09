@@ -91,7 +91,11 @@ def main() -> int:
             stderr=subprocess.STDOUT, text=True, bufsize=1,
         )
         assert process.stdin is not None and process.stdout is not None
-        process.stdin.write("y\n")
+        # rclone 1.60 prompts twice: first for browser auth (yes), then
+        # after OAuth for Shared Drive configuration (no). Closing stdin
+        # after only the first answer makes the second prompt fail at EOF.
+        # This rehearsal uses a personal, app-scoped Drive remote.
+        process.stdin.write("y\nn\n")
         process.stdin.flush()
         process.stdin.close()
         ready = False
