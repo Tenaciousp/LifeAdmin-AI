@@ -64,19 +64,16 @@ export function PricingPanel() {
     );
   }
 
-  const { core, addons, purchases, payments_live, stripe_configured } = productsData;
-  const coreUnlocked = !!purchases?.core_app;
-  const allAccessUnlocked = !!purchases?.all_access;
+  const { core, purchases, payments_live, stripe_configured } = productsData;
+  const completeUnlocked = !!purchases?.core_app || !!purchases?.all_access;
   const paymentsLive = payments_live ?? stripe_configured ?? false;
-  const coreDisplay = currency === "GBP" ? "£0.99" : "$0.99";
-  const upgradeDisplay = currency === "GBP" ? "£1.99" : "$1.99";
-  const totalDisplay = currency === "GBP" ? "£2.98" : "$2.98";
+  const displayPrice = currency === "GBP" ? "£1.99" : "$1.99";
 
   return (
     <section id="addons" aria-labelledby="pricing-heading" className="max-w-6xl mx-auto px-5 sm:px-6 py-16 md:py-20">
       <div className="max-w-3xl mb-10">
-        <p className="text-sm font-bold text-primary tracking-wider uppercase mb-2">Simple one-time pricing</p>
-        <h2 id="pricing-heading" className="text-3xl md:text-4xl font-extrabold text-slate-900 mb-4">Simple pricing. Pay once, not monthly.</h2>
+        <p className="text-sm font-bold text-primary tracking-wider uppercase mb-2">One price. Everything included.</p>
+        <h2 id="pricing-heading" className="text-3xl md:text-4xl font-extrabold text-slate-900 mb-4">Try it free. Unlock everything for one small payment.</h2>
         <div className="flex flex-wrap items-center gap-3 mb-5">
           <span className="font-semibold text-slate-700">Show prices in</span>
           <div role="group" aria-label="Display currency" className="inline-flex rounded-xl border border-slate-300 bg-white p-1">
@@ -84,48 +81,29 @@ export function PricingPanel() {
             <button type="button" aria-pressed={currency === "USD"} onClick={() => setCurrency("USD")} className={`rounded-lg px-4 py-2 font-bold ${currency === "USD" ? "bg-primary text-white" : "text-slate-700"}`}>US · USD ($)</button>
           </div>
         </div>
-        <p className="text-lg text-slate-600">Start with Core for <strong>{coreDisplay}</strong>. Upgrade later for <strong>{upgradeDisplay}</strong>, or get both for <strong>{totalDisplay} total</strong>. These are one-time purchases, with no subscription.</p>
-        <p className="mt-3 text-sm text-slate-500">Currency selection changes the prices shown here, not your billing country. Your checkout will confirm the actual charge and currency before payment. Other countries: check the currency shown at checkout.</p>
+        <p className="text-lg text-slate-600"><strong>{displayPrice} once.</strong> All planning features included, with no subscription or upgrade fee.</p>
+        <p className="mt-3 text-sm text-slate-500">The selector shows advertised UK/US prices, not a guaranteed checkout currency. Your final price and currency are confirmed before payment. Other countries: check checkout pricing.</p>
       </div>
 
-      {!paymentsLive && !coreUnlocked && (
+      {!paymentsLive && !completeUnlocked && (
         <div className="mb-6 bg-blue-50 border border-blue-200 rounded-2xl p-4 text-blue-900 font-medium">
           Payments are not live yet. You are viewing the complete product in preview mode.
         </div>
       )}
 
-      <div className="grid md:grid-cols-2 gap-6">
+      <div className="max-w-3xl mx-auto">
         <PriceCard
-          name={core.name}
-          price={coreDisplay}
-          description="Household-bill plans, next steps, provider messages, things to check and approval checklists."
-          features={["12 household categories", "7 practical goals", "Provider-ready messages", "Unknown-payment journey", "Manual AI handoff"]}
-          unlocked={coreUnlocked}
-          disabled={coreUnlocked || !core.checkout_ready || loadingId === "core_app"}
-          buttonLabel={coreUnlocked ? "Core unlocked" : loadingId === "core_app" ? "Opening checkout..." : !core.checkout_ready ? "Payments not live yet" : "Get Core"}
+          name="LifeAdmin AI Complete"
+          price={displayPrice}
+          description="Everything you need to understand bills, reduce costs, negotiate, switch, cancel and challenge charges. You review and approve every action."
+          features={["12 household bill categories and 7 goals", "Personalised action plans and provider-ready messages", "Advanced negotiation and cost-reduction guidance", "Switching, renewal and cancellation support", "Complaints, refunds and escalation assistance", "Save and revisit plans with an account", "No subscription and no separate upgrade"]}
+          unlocked={completeUnlocked}
+          highlighted
+          disabled={completeUnlocked || !core.checkout_ready || loadingId === "core_app"}
+          buttonLabel={completeUnlocked ? "Complete access unlocked" : loadingId === "core_app" ? "Opening checkout..." : !core.checkout_ready ? "Payments not live yet" : "Unlock everything"}
           busy={loadingId === "core_app"}
           onClick={() => handleCheckout("core_app")}
         />
-
-        {(addons || []).map((addon: any) => {
-          const unlocked = !!purchases?.[addon.id];
-          const needsCore = !coreUnlocked && addon.id === "all_access";
-          return (
-            <PriceCard
-              key={addon.id}
-              name={addon.name}
-              price={addon.id === "all_access" ? upgradeDisplay : addon.price}
-              description="Advanced negotiation support, complaint and escalation help, switching guidance, comparison prompts and deeper provider messages."
-              features={["Everything in Core", "Advanced negotiation plans", "Complaint & escalation support", "Switching and comparison guidance", "Advanced planning modes"]}
-              unlocked={unlocked}
-              highlighted
-              disabled={unlocked || needsCore || !addon.checkout_ready || loadingId === addon.id}
-              buttonLabel={unlocked ? "All Access unlocked" : loadingId === addon.id ? "Opening checkout..." : needsCore ? "Get Core first" : !addon.checkout_ready ? "Payments not live yet" : "Unlock All Access"}
-              busy={loadingId === addon.id}
-              onClick={() => handleCheckout(addon.id)}
-            />
-          );
-        })}
       </div>
 
       <div className="mt-6 bg-white border border-slate-200 rounded-2xl p-5 flex flex-col md:flex-row md:items-center gap-4">
@@ -163,7 +141,7 @@ function PriceCard({ name, price, description, features, unlocked, disabled, but
 }) {
   return (
     <div className={`relative p-6 md:p-7 rounded-2xl border shadow-sm ${highlighted ? "bg-slate-900 border-slate-800 text-white" : unlocked ? "bg-emerald-50 border-emerald-200" : "bg-white border-slate-200"}`}>
-      {highlighted && <span className="absolute top-4 right-4 px-2.5 py-1 rounded-full bg-cyan-400/15 text-cyan-200 text-xs font-bold">Best value</span>}
+      {highlighted && <span className="absolute top-4 right-4 px-2.5 py-1 rounded-full bg-cyan-400/15 text-cyan-200 text-xs font-bold">Everything included</span>}
       <div className="flex items-start justify-between gap-3 mb-4 pr-16">
         <h3 className={`text-xl font-extrabold flex items-center gap-2 ${highlighted ? "text-white" : "text-slate-900"}`}>
           {name} {unlocked ? <Check aria-hidden="true" className="text-emerald-500 w-5 h-5" /> : <Lock aria-hidden="true" className={highlighted ? "text-slate-400 w-4 h-4" : "text-slate-400 w-4 h-4"} />}
