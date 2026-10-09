@@ -1633,7 +1633,7 @@ class AdminPilotHandler(SimpleHTTPRequestHandler):
             return self._with_data_lock(self._do_GET)
         return self._do_GET()
 
-    def _do_POST(self):
+    def do_POST(self):
         # Includes Stripe webhook and account/session writes.
         return self._with_data_lock(self._do_POST)
 
@@ -1688,7 +1688,7 @@ class AdminPilotHandler(SimpleHTTPRequestHandler):
             return super().do_GET()
         return json_response(self, {"error": "Web app has not been built yet."}, 503)
 
-    def do_POST(self):
+    def _do_POST(self):
         path = urlparse(self.path).path
         if path == "/api/stripe/webhook":
             return handle_stripe_webhook(self)
