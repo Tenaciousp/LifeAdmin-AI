@@ -8,7 +8,7 @@ Status: **NOT activated**, **NOT deployed**, **NOT scheduled**. No live customer
 - `scripts/cloud_upload.py`: optional encrypted-file-only rclone upload and full download verification. Requires separate rclone installation and OAuth configuration.
 - `scripts/test_secure_backup.py`: offline synthetic-data tests.
 
-The existing `scripts/backup_data.py` is unchanged.
+`scripts/backup_data.py` now uses the cooperative exclusive snapshot lock; the API's shared lock is tested separately.
 
 ## Local synthetic rehearsal only
 
@@ -61,8 +61,22 @@ Do not put Google OAuth credentials, encryption keys, account addresses, or acce
 
 **Important:** A configured `root_folder_id` is an rclone navigation setting, **not** an OAuth permission boundary. Do not use full `drive` scope and claim that `root_folder_id` limits the token's access. The older connector-created folder cannot be used with a new `drive.file` rclone client without a separate supported authorisation mechanism.
 
-**Pending owner-only authentication:** Create a Google Cloud OAuth client and approve the consent flow using a supported browser-capable machine. Current rclone documentation warns that its shared client ID is being retired during 2026; do not assume the shared client will work. Keep the OAuth client secret, refresh token, rclone config and backup encryption key out of GitHub, logs and screenshots. A temporary development credential must never be copied to production without an explicit separate approval.
+**Owner Google Cloud progress (reported):** Google Drive API enabled; OAuth Desktop client created; initially exposed client secret rotated and old secret deleted; restricted `drive.file` scope saved; personal account added as test user. **Not yet verified via a direct Cloud Console API read.** Next is the owner-only rclone consent flow using a browser-capable machine. Current rclone documentation warns that its shared client ID is being retired during 2026; do not assume the shared client will work. Keep the OAuth client secret, refresh token, rclone config and backup encryption key out of GitHub, logs and screenshots. A temporary development credential must never be copied to production without an explicit separate approval.
 
 **Synthetic acceptance test after OAuth:** Use only a disposable encrypted `.labak` archive, upload it to the rclone-created folder, download it and compare SHA-256, decrypt and restore offline, then revoke any temporary test credentials. Verify that the rclone OAuth app cannot read an unrelated pre-existing personal Drive file. Never delete personal files while testing permissions.
 
-**Not yet done:** OAuth client creation, Google consent, rclone configuration, cloud upload using rclone, Render credentials, daily scheduling, retention, alerts, and any production data transfer. These steps need separate authorisation and technical verification.
+**Not yet done:** rclone OAuth consent and refresh-token generation, rclone remote configuration, cloud upload using rclone, Render credentials, daily scheduling, retention, alerts, and any production data transfer. These steps need separate authorisation and technical verification.
+
+## Synthetic-only connection rehearsal (development branch)
+
+The manual helper `scripts/rehearse_drive_backup.py` builds a fictional SQLite database and JSON records in a temporary directory, generates a disposable AES-256-GCM key in memory, creates and verifies an encrypted `.labak` backup, uploads via the existing `cloud_upload.py` (which reads the remote encrypted file back and compares SHA-256), and verifies an offline restore. It does **not** read the application's data directory, and it does not schedule, delete or transfer production data. The synthetic encrypted remote object remains; the disposable key is discarded. This script has **not yet been executed against Google Drive**.
+
+For the manual rehearsal, a trusted operator must install `cryptography>=45,<47` and rclone in an isolated development environment, configure a `drive.file` OAuth remote with the owner's client, create `LifeAdmin-AI-Automated-Backups` through that same OAuth client, then run:
+
+```sh
+python scripts/rehearse_drive_backup.py lifeadmin-drive:LifeAdmin-AI-Automated-Backups
+```
+
+Do not commit the rclone config, OAuth client secret, refresh token or backup key, or paste them into chat. If Google OAuth is in **Testing** mode, refresh tokens may expire after seven days, so it is unsuitable for unattended production backups without resolving token lifetime. No Google or Render credentials have been configured by this code change.
+
+CI now installs `cryptography` **only in the CI runner** and runs the existing synthetic encryption/restore unit tests. The production `requirements.txt` and Docker image remain unchanged. The CI results must be checked after the commit before describing this test suite as passing.
