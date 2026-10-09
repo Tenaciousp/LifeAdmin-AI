@@ -9,6 +9,7 @@ export function PricingPanel() {
   const buyerId = getBuyerId();
   const { data: productsData, isLoading: productsLoading, isError: productsError, refetch: retryProducts } = useProducts(buyerId);
   const [email, setEmail] = useState("");
+  const [currency, setCurrency] = useState<"GBP" | "USD">(() => typeof navigator !== "undefined" && navigator.language.toLowerCase().startsWith("en-us") ? "USD" : "GBP");
   const [loadingId, setLoadingId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -67,13 +68,24 @@ export function PricingPanel() {
   const coreUnlocked = !!purchases?.core_app;
   const allAccessUnlocked = !!purchases?.all_access;
   const paymentsLive = payments_live ?? stripe_configured ?? false;
+  const coreDisplay = currency === "GBP" ? "£0.99" : "$0.99";
+  const upgradeDisplay = currency === "GBP" ? "£1.99" : "$1.99";
+  const totalDisplay = currency === "GBP" ? "£2.98" : "$2.98";
 
   return (
     <section id="addons" aria-labelledby="pricing-heading" className="max-w-6xl mx-auto px-5 sm:px-6 py-16 md:py-20">
       <div className="max-w-3xl mb-10">
         <p className="text-sm font-bold text-primary tracking-wider uppercase mb-2">Simple one-time pricing</p>
-        <h2 id="pricing-heading" className="text-3xl md:text-4xl font-extrabold text-slate-900 mb-4">Start for 99p/99c. Unlock everything for £2.98/$2.98 total.</h2>
-        <p className="text-lg text-slate-600">Core is 99p/99c once. All Access is an additional £1.99/$1.99 once. No subscription. Equivalent local store pricing applies where supported.</p>
+        <h2 id="pricing-heading" className="text-3xl md:text-4xl font-extrabold text-slate-900 mb-4">Simple pricing. Pay once, not monthly.</h2>
+        <div className="flex flex-wrap items-center gap-3 mb-5">
+          <span className="font-semibold text-slate-700">Show prices in</span>
+          <div role="group" aria-label="Display currency" className="inline-flex rounded-xl border border-slate-300 bg-white p-1">
+            <button type="button" aria-pressed={currency === "GBP"} onClick={() => setCurrency("GBP")} className={`rounded-lg px-4 py-2 font-bold ${currency === "GBP" ? "bg-primary text-white" : "text-slate-700"}`}>UK · GBP (£)</button>
+            <button type="button" aria-pressed={currency === "USD"} onClick={() => setCurrency("USD")} className={`rounded-lg px-4 py-2 font-bold ${currency === "USD" ? "bg-primary text-white" : "text-slate-700"}`}>US · USD ($)</button>
+          </div>
+        </div>
+        <p className="text-lg text-slate-600">Start with Core for <strong>{coreDisplay}</strong>. Upgrade later for <strong>{upgradeDisplay}</strong>, or get both for <strong>{totalDisplay} total</strong>. These are one-time purchases, with no subscription.</p>
+        <p className="mt-3 text-sm text-slate-500">Currency selection changes the prices shown here, not your billing country. Your checkout will confirm the actual charge and currency before payment. Other countries: check the currency shown at checkout.</p>
       </div>
 
       {!paymentsLive && !coreUnlocked && (
@@ -85,7 +97,7 @@ export function PricingPanel() {
       <div className="grid md:grid-cols-2 gap-6">
         <PriceCard
           name={core.name}
-          price={core.price}
+          price={coreDisplay}
           description="Household-bill plans, next steps, provider messages, things to check and approval checklists."
           features={["12 household categories", "7 practical goals", "Provider-ready messages", "Unknown-payment journey", "Manual AI handoff"]}
           unlocked={coreUnlocked}
@@ -102,7 +114,7 @@ export function PricingPanel() {
             <PriceCard
               key={addon.id}
               name={addon.name}
-              price={addon.price}
+              price={addon.id === "all_access" ? upgradeDisplay : addon.price}
               description="Advanced negotiation support, complaint and escalation help, switching guidance, comparison prompts and deeper provider messages."
               features={["Everything in Core", "Advanced negotiation plans", "Complaint & escalation support", "Switching and comparison guidance", "Advanced planning modes"]}
               unlocked={unlocked}
