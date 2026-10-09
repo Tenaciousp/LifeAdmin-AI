@@ -2,7 +2,7 @@
 
 Status: prepared for review, not submitted or published. Native app-store work is deferred.
 
-Supported browser QA completed on 7 October 2026 against application revision `00762a39046031ef46f944a059492301601cab37`; CI #124 passed for that exact application revision and CI #125 passed for documentation head `868dea9359980b83dcccfe1810c55ba90f43498c`. The completed evidence does not cover physical iPad behaviour, protected-admin browser behaviour, a Docker image run or payments.
+Supported browser QA completed on 7 October 2026 against application revision `00762a39046031ef46f944a059492301601cab37`; CI #124 passed for that exact application revision and CI #125 passed for documentation head `868dea9359980b83dcccfe1810c55ba90f43498c`. The completed browser evidence does not cover physical iPad behaviour, protected-admin browser behaviour or payments. The separate one-time Docker build/start/restart/persistence/backup check passed on owner-provided Codespaces evidence on 8 October 2026.
 
 ## Existing Render service (verified 9 October 2026)
 
@@ -42,11 +42,15 @@ bash scripts/verify_docker_release.sh
 
 The bounded script builds the repository Dockerfile, binds the container only to loopback on a random host port, runs the web/API smoke path, confirms preview-only payments, creates a synthetic energy task, exercises the packaged backup helper, restarts with the same mounted data and verifies provider/reference persistence. It uses synthetic values, does not deploy, does not publish ports publicly, and needs no owner or Stripe credentials. It cleans up its container and successful image after completion.
 
-Record the exact application commit, Docker version and final pass line. If it fails, retain the non-sensitive failure output and container log; do not repeatedly retry an unchanged failure. The Docker release gate remains pending until this command passes on a Docker-capable host.
+Record the exact application commit, Docker version and final pass line. If it fails, retain the non-sensitive failure output and container log; do not repeatedly retry an unchanged failure. The one-time Docker release gate **passed** on owner-provided Codespaces terminal evidence on 8 October 2026 (exact runtime commit was not captured). Do not repeat unchanged Docker verification; retain the original evidence and capture the commit if a material Docker change requires another run.
+
+## Restricted Google Drive synthetic rehearsal (verified 9 October 2026)
+
+The owner completed the private `lifeadmin-drive:` rclone OAuth flow in Codespaces. A non-sensitive token-presence check returned true, and `rclone lsd lifeadmin-drive:` completed without errors. The test-only rehearsal `python3 scripts/rehearse_drive_backup.py lifeadmin-drive:LifeAdmin-AI-Automated-Backups` reported **encrypted upload verified, no files deleted, and synthetic encrypted upload and offline restore verified**. The disposable encryption key was discarded, leaving an unrestorable encrypted synthetic object in the remote folder. This is **not** a production backup policy or recovery setup. No customer data was transferred and no automated schedule was enabled. Production still requires independently managed recoverable keys, consistency controls, restore ownership, retention/alerting and durable OAuth authorisation; OAuth Testing refresh tokens can expire.
 
 ## Minimum owner decisions and actions
 
-1. Run the one-time Docker verification above in the existing private Codespace or another authorised Docker host and return the pass line or non-sensitive failure output.
+1. One-time Docker verification and test-only encrypted Drive upload/offline restore have passed. Preserve this evidence and do not rerun unchanged checks.
 2. Test the current revision on a physical iPad **as the final acceptance gate**, after the independent admin, recovery, security and sandbox-payment checks. Include touch, keyboard, clipboard fallback, account screens and payment-return layout. Browser emulation is not physical-device evidence.
 3. Provide one authorised non-admin account and one allowlisted admin account through secure configuration, then verify both protected-admin browser outcomes without sharing credentials.
 4. Choose the paid-web host, domain/public URL, billing owner, data region and acceptable total recurring cost after reviewing the provider's current checkout quote. Do not purchase until approved.
@@ -60,9 +64,9 @@ Until these actions are complete, keep the preview private and the release unpub
 
 - Supported HTTPS preview and `BROWSER_QA_RUNBOOK.md` completed using synthetic data against application revision `00762a39046031ef46f944a059492301601cab37`.
 - Actual iPad Safari checks, including keyboard, clipboard, account screens and checkout returns.
-- Docker image build and startup with production settings and mounted storage.
+- One-time Docker build/start/restart and mounted-persistence check completed on 8 October; production configuration and operational recovery still require owner approval.
 - Sandbox payment lifecycle and final paid-access enforcement verified.
-- Off-host backup and isolated restore rehearsal; support and legal content reviewed.
+- Test-only off-host encrypted backup and isolated restore rehearsal completed on 9 October; production backup key custody, recovery/retention and support/legal review remain pending.
 - Owner approval of recurring cost, final domain, production settings and publication.
 
 This document update made no new subscription, purchase, deployment or live-payment change. The existing Render service is separately verified above.
