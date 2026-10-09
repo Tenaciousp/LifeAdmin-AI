@@ -1630,12 +1630,12 @@ class AdminPilotHandler(SimpleHTTPRequestHandler):
         path = urlparse(self.path).path
         # Static assets and liveness checks stay available during snapshots.
         if path not in {"/api/health", "/api/healthz"} and path.startswith("/api/"):
-            return self._with_data_lock(self._do_GET)
-        return self._do_GET()
+            return AdminPilotHandler._with_data_lock(self, lambda: AdminPilotHandler._do_GET(self))
+        return AdminPilotHandler._do_GET(self)
 
     def do_POST(self):
         # Includes Stripe webhook and account/session writes.
-        return self._with_data_lock(self._do_POST)
+        return AdminPilotHandler._with_data_lock(self, lambda: AdminPilotHandler._do_POST(self))
 
     def _do_GET(self):
         parsed = urlparse(self.path)
