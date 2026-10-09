@@ -99,15 +99,40 @@ def main() -> int:
         process.stdin.flush()
         process.stdin.close()
         ready = False
+        # Only emit hard-coded error labels. Raw rclone output can contain
+        # authorisation URLs, client secrets, tokens or callback parameters.
+        error_signatures = {
+            "invalid_grant": "Google rejected the exchanged authorisation code",
+            "invalid_client": "Google rejected the OAuth client credentials",
+            "access_denied": "Google denied the requested permission",
+            "failed to get token": "OAuth token exchange failed",
+            "failed to fetch token": "OAuth token exchange failed",
+            "oauth2: cannot fetch token": "OAuth token exchange failed",
+            "connection refused": "A required local connection was refused",
+            "context canceled": "The authorisation request was cancelled",
+            "unexpected eof": "rclone reached an unexpected end of input",
+            "error reading input": "rclone could not read a required answer",
+            "failed to save": "rclone could not save its configuration",
+            "invalid state": "OAuth callback state was rejected",
+            "state mismatch": "OAuth callback state was rejected",
+            "listen tcp": "rclone could not open the local callback listener",
+        }
+        diagnostics = set()
         for line in process.stdout:
             match = AUTH_PATTERN.search(line)
             if match and not ready:
                 write_private_link(match.group(0))
                 ready = True
                 print("READY: In the private 53683 helper, tap 'Open Google sign-in without copying a terminal link'.", flush=True)
+            lower = line.lower()
+            for signature, label in error_signatures.items():
+                if signature in lower:
+                    diagnostics.add(label)
         status = process.wait()
         if status != 0 or not ready:
             print("Google authorisation did not finish. No credentials were displayed.")
+            print("rclone exit status:", status)
+            print("Safe diagnostics:", "; ".join(sorted(diagnostics)) if diagnostics else "No known error category matched")
             return 1
         verified = subprocess.run(
             ["rclone", "lsd", REMOTE], capture_output=True,
