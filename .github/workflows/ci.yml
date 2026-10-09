@@ -36,6 +36,12 @@ jobs:
       - name: Run automated tests
         run: npm test
 
+      - name: Run backup locking and HTTP integration tests
+        run: |
+          python -m unittest discover -s scripts -p test_backup_lock.py -v
+          python -m unittest discover -s scripts -p test_backup_http_integration.py -v
+
+
       - name: Run type checks
         run: npm run typecheck
 
