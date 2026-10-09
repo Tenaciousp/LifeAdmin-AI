@@ -81,12 +81,12 @@ CATEGORY_PROMPTS = {
 
 CORE_PRODUCT = {
     "id": "core_app",
-    "name": "LifeAdmin AI Core",
-    "price": "£0.99 / $0.99",
-    "amount_pence": 99,
+    "name": "LifeAdmin AI Complete",
+    "price": "£1.99 / $1.99",
+    "amount_pence": 199,
     "billing": "one-time",
-    "description": "Create household admin plans, basic email drafts and daily task lists.",
-    "price_env": "STRIPE_PRICE_CORE_APP",
+    "description": "All household admin planning modes, advanced negotiation, switching, complaints and escalation guidance.",
+    "price_env": "STRIPE_PRICE_LIFEADMIN_COMPLETE",
     "apple_product_id": os.environ.get("APPLE_PRODUCT_CORE", "com.adminpilot.lifeadmin.core"),
     "google_product_id": os.environ.get("GOOGLE_PRODUCT_CORE", "lifeadmin_core"),
 }
@@ -311,9 +311,9 @@ def load_purchase_store():
 def normalized_entitlements(purchases):
     purchases = purchases or {}
     entitlements = {}
-    if purchases.get("core_app"):
+    # Honour all historical paid purchases while moving to one complete product.
+    if purchases.get("core_app") or purchases.get("all_access") or any(purchases.get(product_id) for product_id in LEGACY_ALL_ACCESS_PRODUCTS):
         entitlements["core_app"] = True
-    if purchases.get("all_access") or any(purchases.get(product_id) for product_id in LEGACY_ALL_ACCESS_PRODUCTS):
         entitlements["all_access"] = True
     return entitlements
 
@@ -370,11 +370,10 @@ def public_product(item):
 
 def product_payload(user_id="demo"):
     purchases = get_user_purchases(user_id)
-    products = [CORE_PRODUCT] + ADD_ONS
-    payments_live = all(stripe_ready_for(item) for item in products)
+    payments_live = stripe_ready_for(CORE_PRODUCT)
     return {
         "core": public_product(CORE_PRODUCT),
-        "addons": [public_product(item) for item in ADD_ONS],
+        "addons": [],
         "purchases": purchases,
         "payment_provider": "stripe" if payments_live else "preview",
         "payments_live": payments_live,
@@ -396,7 +395,7 @@ def locked_response(mode):
     item = ALL_ACCESS_PRODUCT
     name = item["name"]
     price = item["price"]
-    content = f"# All Access required\n\n{name} unlocks this output style and every advanced feature. One-time price: {price} or equivalent local store tier. Core access is required first."
+    content = f"# LifeAdmin AI Complete required\n\nOne-time price: {CORE_PRODUCT['price']} or equivalent local checkout price. No separate upgrade is required."
     return {
         "locked": True,
         "product_id": product_id,
@@ -506,8 +505,8 @@ def create_checkout_session(handler, body):
     if not price_id:
         return json_response(handler, {"error": "Checkout is not fully configured for this product."}, 400)
     user_id = effective_user_id(handler, body.get("user_id"))
-    if product_id == "all_access" and not get_user_purchases(user_id).get("core_app"):
-        return json_response(handler, {"error": "Purchase LifeAdmin AI Core before All Access."}, 409)
+    if product_id != "core_app":
+        return json_response(handler, {"error": "Only the LifeAdmin AI Complete product is available for new purchases."}, 400)
     email = str(body.get("email") or "").strip()
     base_url = get_base_url(handler)
     fields = {
@@ -617,8 +616,8 @@ def demo_purchase(handler, body):
     if product_id not in VALID_PRODUCTS:
         return json_response(handler, {"error": "Unknown product"}, 400)
     user_id = effective_user_id(handler, body.get("user_id"))
-    if product_id == "all_access" and not get_user_purchases(user_id).get("core_app"):
-        return json_response(handler, {"error": "Demo-unlock Core before All Access."}, 409)
+    if product_id != "core_app":
+        return json_response(handler, {"error": "Only the complete product is available for new demo purchases."}, 400)
     unlock_purchase(user_id, product_id, "demo")
     return json_response(handler, product_payload(user_id))
 
