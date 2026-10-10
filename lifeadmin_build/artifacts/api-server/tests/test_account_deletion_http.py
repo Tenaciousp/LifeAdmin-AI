@@ -189,6 +189,26 @@ class AccountDeletionHTTPTests(unittest.TestCase):
             self.assertIn("recent_activity", allowed)
             self.assertNotIn("password_hash", json.dumps(allowed))
 
+            # Removing an address from the allowlist must revoke administrator
+            # access immediately, even while its ordinary login stays valid.
+            with patch.dict(os.environ, {"ADMIN_EMAILS": ""}):
+                status, revoked, _ = self.request(
+                    "/api/admin/overview", cookie=sessions["admin@example.test"]
+                )
+                self.assertEqual(status, 403)
+                self.assertEqual(revoked["error"], "Admin access required")
+                status, auth, _ = self.request(
+                    "/api/auth/me", cookie=sessions["admin@example.test"]
+                )
+                self.assertEqual(status, 200)
+                self.assertTrue(auth["authenticated"])
+
+            status, restored, _ = self.request(
+                "/api/admin/overview", cookie=sessions["admin@example.test"]
+            )
+            self.assertEqual(status, 200)
+            self.assertEqual(restored["users"]["total"], 2)
+
             status, _, cleared = self.request(
                 "/api/auth/logout", {}, sessions["admin@example.test"]
             )
