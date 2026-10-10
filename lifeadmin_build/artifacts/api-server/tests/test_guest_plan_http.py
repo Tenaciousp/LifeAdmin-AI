@@ -78,3 +78,30 @@ class GuestSavedPlanHTTPTests(TwoGuestHTTPTests):
                       "known_details", "missing_details"):
             self.assertEqual(reopened[field], original_note[field])
 
+    def test_rate_limited_generation_does_not_save_a_plan_and_can_retry(self):
+        """A temporary generation error must not create a phantom saved plan."""
+        from http.cookies import SimpleCookie
+
+        status, _, issued = self.request("/api/notes")
+        self.assertEqual(status, 200)
+        guest = SimpleCookie()
+        guest.load(issued)
+        cookie = "lifeadmin_guest=" + guest["lifeadmin_guest"].value
+        request = {"task": {"title": "Synthetic retry case"}, "mode": "full"}
+
+        with patch.object(app, "agent_rate_limited", return_value=True):
+            status, refused, _ = self.request("/api/agent", request, cookie)
+        self.assertEqual(status, 429)
+        self.assertIn("error", refused)
+        self.assertEqual(self.request("/api/notes", cookie=cookie)[1]["notes"], [])
+
+        with patch.object(app, "agent_rate_limited", return_value=False), \
+             patch.object(app, "is_mode_unlocked", return_value=True), \
+             patch.object(app, "call_openai", return_value=("Synthetic recovered plan", "test")):
+            status, recovered, _ = self.request("/api/agent", request, cookie)
+        self.assertEqual(status, 200)
+        note_id = recovered["note"]["id"]
+        status, saved, _ = self.request("/api/notes", cookie=cookie)
+        self.assertEqual(status, 200)
+        self.assertEqual([note["id"] for note in saved["notes"]], [note_id])
+
