@@ -48,7 +48,7 @@ class DynamicFormTests(unittest.TestCase):
 
 class PaymentSafetyTests(unittest.TestCase):
     def test_stripe_readiness_requires_secret_and_price(self):
-        with patch.dict(os.environ, {"STRIPE_SECRET_KEY": "sk_test", "STRIPE_PRICE_CORE_APP": "price_core"}, clear=True):
+        with patch.dict(os.environ, {"STRIPE_SECRET_KEY": "sk_test", "STRIPE_PRICE_LIFEADMIN_COMPLETE": "price_core"}, clear=True):
             self.assertTrue(app.stripe_ready_for(app.CORE_PRODUCT))
             self.assertFalse(app.stripe_ready_for(app.ALL_ACCESS_PRODUCT))
 
@@ -59,7 +59,7 @@ class PaymentSafetyTests(unittest.TestCase):
         self.assertIn("checkout_ready", payload)
 
     def test_product_payload_is_preview_until_both_prices_are_ready(self):
-        with patch.dict(os.environ, {"STRIPE_SECRET_KEY": "sk_test", "STRIPE_PRICE_CORE_APP": "price_core"}, clear=True), \
+        with patch.dict(os.environ, {"STRIPE_SECRET_KEY": "sk_test", "STRIPE_PRICE_LIFEADMIN_COMPLETE": "price_core"}, clear=True), \
              patch.object(app, "get_user_purchases", return_value={"core_app": False, "all_access": False}):
             payload = app.product_payload("guest")
             self.assertFalse(payload["payments_live"])
