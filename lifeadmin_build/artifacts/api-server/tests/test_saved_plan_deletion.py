@@ -53,6 +53,36 @@ class SavedPlanStorageDeletionTests(unittest.TestCase):
             self.assertTrue(storage.delete_note("owner-a", "plan-a"))
             self.assertEqual(storage.list_notes("owner-a"), [])
 
+    def test_registered_saved_plan_remains_private_after_task_deletion(self):
+        """Deleting a registered user's task must not cascade-delete their plan."""
+        with tempfile.TemporaryDirectory() as tmpdir, \
+             patch.object(storage, "SQLITE_PATH", pathlib.Path(tmpdir) / "lifeadmin.sqlite3"), \
+             patch.dict(os.environ, {"DATABASE_URL": ""}, clear=False):
+            storage.ensure_schema()
+            with storage.sqlite_connect() as conn:
+                for user_id, email in (("owner-a", "a@example.test"), ("owner-b", "b@example.test")):
+                    conn.execute(
+                        "INSERT INTO adminpilot_users (id, email, password_hash, created_at) VALUES (?, ?, ?, ?)",
+                        (user_id, email, "synthetic", "2026-10-10T00:00:00+00:00"),
+                    )
+
+            task = {"id": "task-a", "title": "Synthetic energy renewal"}
+            plan = {
+                "id": "plan-a", "task_id": task["id"], "title": task["title"],
+                "sections": {"next_steps": "Synthetic steps"},
+                "provider_email": {"subject": "Synthetic request", "body": "Synthetic only"},
+                "known_details": {"provider": "Fictional Energy"},
+                "missing_details": ["renewal date"],
+            }
+            storage.create_task("owner-a", task)
+            storage.add_note("owner-a", plan)
+            self.assertTrue(storage.delete_task("owner-a", task["id"]))
+            self.assertEqual(storage.list_tasks("owner-a"), [])
+            self.assertEqual(storage.list_notes("owner-a"), [plan])
+            self.assertEqual(storage.list_notes("owner-b"), [])
+            self.assertFalse(storage.delete_note("owner-b", plan["id"]))
+            self.assertEqual(storage.list_notes("owner-a"), [plan])
+
     def test_postgresql_and_sqlite_queries_both_match_owner_and_note(self):
         source = pathlib.Path(storage.__file__).read_text(encoding="utf-8")
         start = source.index("def delete_note")
