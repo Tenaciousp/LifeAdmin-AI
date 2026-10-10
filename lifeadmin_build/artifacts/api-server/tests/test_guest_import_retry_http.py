@@ -102,5 +102,61 @@ class GuestImportRetryTests(unittest.TestCase):
         self.assertEqual(len(app.anonymous_items(app.TASKS_FILE, "guest-a")), 1)
 
 
+    def test_second_registration_cannot_claim_another_accounts_pending_guest_work(self):
+        app.set_pending_import_guest("account-a", "guest-a")
+        handler = _RouteHandler("/api/auth/register", {"email": "other@example.test", "password": "synthetic"})
+        handler.headers["Cookie"] = self.cookie("guest-a")
+        with patch.object(app, "current_user", return_value=None), \
+             patch.object(app, "auth_rate_limited", return_value=False), \
+             patch.object(app.storage, "create_user") as create:
+            app.AdminPilotHandler._do_POST(handler)
+        self.assertEqual(handler.status, 409)
+        self.assertIn("Sign in to that account", handler.payload()["error"])
+        create.assert_not_called()
+        self.assertEqual(app.pending_import_guest("account-a"), "guest-a")
+
+    def test_account_deletion_clears_only_its_pending_guest_binding(self):
+        app.set_pending_import_guest("account-a", "guest-a")
+        app.set_pending_import_guest("account-b", "guest-b")
+        with patch.object(app.storage, "delete_account") as delete:
+            status, result = self.request("/api/auth/delete", {"id": "account-a"}, body={"password": "synthetic"})
+        self.assertEqual(status, 200)
+        self.assertTrue(result["deleted"])
+        delete.assert_called_once_with("account-a", "synthetic")
+        self.assertIsNone(app.pending_import_guest("account-a"))
+        self.assertEqual(app.pending_import_guest("account-b"), "guest-b")
+
+    def test_retry_skips_items_already_present_in_destination_account(self):
+        app.save_anonymous_items(app.TASKS_FILE, "guest-a", [{"id": "task-1", "title": "Already imported"}])
+        app.save_anonymous_items(app.NOTES_FILE, "guest-a", [{"id": "plan-1", "title": "Already imported"}])
+        app.set_pending_import_guest("account-a", "guest-a")
+        with patch.object(app.storage, "available", return_value=True), \
+             patch.object(app.storage, "list_tasks", return_value=[{"id": "task-1"}]), \
+             patch.object(app.storage, "list_notes", return_value=[{"id": "plan-1"}]), \
+             patch.object(app.storage, "create_task") as create, \
+             patch.object(app.storage, "add_note") as add:
+            status, result = self.request("/api/auth/retry-guest-import", {"id": "account-a"})
+        self.assertEqual(status, 200)
+        self.assertFalse(result["guest_import_pending"])
+        self.assertEqual(app.anonymous_items(app.TASKS_FILE, "guest-a"), [])
+        self.assertEqual(app.anonymous_items(app.NOTES_FILE, "guest-a"), [])
+        create.assert_not_called()
+        add.assert_not_called()
+
+    def test_destination_read_failure_keeps_guest_records_and_retry_available(self):
+        app.save_anonymous_items(app.TASKS_FILE, "guest-a", [{"id": "task-1"}])
+        app.set_pending_import_guest("account-a", "guest-a")
+        with patch.object(app.storage, "available", return_value=True), \
+             patch.object(app.storage, "list_tasks", side_effect=RuntimeError("synthetic outage")), \
+             patch.object(app.storage, "list_notes", return_value=[]), \
+             patch.object(app.storage, "create_task") as create:
+            status, result = self.request("/api/auth/retry-guest-import", {"id": "account-a"})
+        self.assertEqual(status, 200)
+        self.assertTrue(result["guest_import_pending"])
+        self.assertEqual(app.anonymous_items(app.TASKS_FILE, "guest-a"), [{"id": "task-1"}])
+        self.assertEqual(app.pending_import_guest("account-a"), "guest-a")
+        create.assert_not_called()
+
+
 if __name__ == "__main__":
     unittest.main()
