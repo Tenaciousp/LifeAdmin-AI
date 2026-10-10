@@ -1,6 +1,7 @@
 """Create a private local data backup; never uploads or overwrites a backup."""
 
 import argparse
+from contextlib import closing
 import hashlib
 import json
 import shutil
@@ -33,11 +34,14 @@ def _backup_data_unlocked(data_dir, destination):
     try:
         target = destination / database.name
         target.touch(mode=0o600)
-        with sqlite3.connect(database.as_uri() + "?mode=ro", uri=True) as source:
-            with sqlite3.connect(target) as copied:
-                source.backup(copied)
-                if copied.execute("PRAGMA integrity_check").fetchone()[0] != "ok":
-                    raise ValueError("Database backup failed integrity check")
+        # sqlite3 connection context managers commit/rollback but do not close.
+        # Keep transaction semantics while closing both handles deterministically.
+        with closing(sqlite3.connect(database.as_uri() + "?mode=ro", uri=True)) as source:
+            with closing(sqlite3.connect(target)) as copied:
+                with source, copied:
+                    source.backup(copied)
+                    if copied.execute("PRAGMA integrity_check").fetchone()[0] != "ok":
+                        raise ValueError("Database backup failed integrity check")
         for name in JSON_FILES:
             source = data_dir / name
             if source.exists():
