@@ -10,10 +10,21 @@ AUTH = (SRC / "lib" / "auth.ts").read_text(encoding="utf-8")
 
 class AccountSwitchFrontendPrivacyTests(unittest.TestCase):
     def test_account_change_remounts_private_workspace_and_checkout(self):
-        self.assertIn('const { data: auth } = useAuthMe()', LANDING)
+        self.assertIn('const { data: auth, isError: authError, refetch: retryAuth } = useAuthMe()', LANDING)
         self.assertIn('auth?.authenticated && auth.user?.id ? auth.user.id : "guest"', LANDING)
         self.assertIn('<CustomerJourney key={workspaceKey} />', LANDING)
         self.assertIn('<PricingPanel key={workspaceKey} />', LANDING)
+
+    def test_private_workspace_waits_for_successful_session_check(self):
+        self.assertIn("const sessionReady = !!auth && !authError", LANDING)
+        self.assertIn("sessionReady ? (", LANDING)
+        self.assertIn("sessionReady ? <PricingPanel key={workspaceKey} />", LANDING)
+        self.assertIn("We could not check your session", LANDING)
+        self.assertIn("Your work has not been changed.", LANDING)
+        self.assertIn("Checking your session", LANDING)
+        self.assertIn("Try session check again", LANDING)
+        self.assertIn("onClick={() => void retryAuth()}", LANDING)
+        self.assertIn('role={authError ? "alert" : "status"}', LANDING)
 
     def test_account_transition_clears_old_queries_before_identity_update(self):
         start = ACCOUNT.index("const refreshAccountQueries = async (nextAuth:")
