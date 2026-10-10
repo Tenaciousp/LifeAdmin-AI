@@ -2,11 +2,13 @@
 
 ## One-time pricing
 
-**LifeAdmin AI Complete: £1.99 UK / $1.99 US once.**
+**LifeAdmin AI Complete: one purchase, no subscription.**
+
+Proposed regional one-time prices: UK £1.99 (GBP), US $1.99 (USD), eurozone €1.99 (EUR), Canada C$2.99 (CAD), Australia A$3.99 (AUD), India ₹199 (INR). These are deliberate regional prices, not FX conversions. The selected region is informational and not verified billing location. Other countries currently show an availability message, not a fabricated local price.
 
 One purchase includes 12 household categories, seven goals, next steps, provider messages, checklists, unknown-payment support, manual AI handoff, advanced negotiation, switching, complaint/escalation support and all advanced planning modes in this release.
 
-There is no subscription, separate upgrade or second payment. Existing Core and All Access purchasers retain complete access under the migration rule. The displayed currency selector is informational; the Stripe checkout amount and currency must match the approved market price before payment is enabled.
+There is no subscription, separate upgrade or second payment. Existing Core and All Access purchasers retain complete access under the migration rule. The selector shows indicative regional prices. Checkout is disabled for any region lacking its own configured Stripe Price. The backend retrieves and verifies the actual Stripe Price currency, one-time type, active status and exact minor-unit amount before creating a Checkout Session. This does not replace Stripe sandbox tests, customer-country/tax checks, or live launch approval.
 
 ## Web payments
 
@@ -16,7 +18,8 @@ Required production secrets:
 
 - `STRIPE_SECRET_KEY`
 - `STRIPE_WEBHOOK_SECRET`
-- `STRIPE_PRICE_LIFEADMIN_COMPLETE` (one-time Stripe Price for the complete product; verify market/currency before launch)
+- `STRIPE_PRICE_LIFEADMIN_COMPLETE_GBP`, `STRIPE_PRICE_LIFEADMIN_COMPLETE_USD`, `STRIPE_PRICE_LIFEADMIN_COMPLETE_EUR`, `STRIPE_PRICE_LIFEADMIN_COMPLETE_CAD`, `STRIPE_PRICE_LIFEADMIN_COMPLETE_AUD`, `STRIPE_PRICE_LIFEADMIN_COMPLETE_INR` (one matching one-time Stripe Price per enabled market)
+- Legacy `STRIPE_PRICE_LIFEADMIN_COMPLETE` is accepted only as the GBP fallback, and must be verified as GBP £1.99 before checkout.
 
 Never place live secrets in client code or source control.
 
