@@ -352,8 +352,34 @@ def stripe_configured():
     return bool(os.environ.get("STRIPE_SECRET_KEY"))
 
 
+# Proposed one-time regional prices. Enable a market only after creating and
+# verifying its matching Stripe Price. Amounts are in minor currency units.
+REGIONAL_PRICES = {
+    "GBP": {"amount": 199, "env": "STRIPE_PRICE_LIFEADMIN_COMPLETE_GBP"},
+    "USD": {"amount": 199, "env": "STRIPE_PRICE_LIFEADMIN_COMPLETE_USD"},
+    "EUR": {"amount": 199, "env": "STRIPE_PRICE_LIFEADMIN_COMPLETE_EUR"},
+    "CAD": {"amount": 299, "env": "STRIPE_PRICE_LIFEADMIN_COMPLETE_CAD"},
+    "AUD": {"amount": 399, "env": "STRIPE_PRICE_LIFEADMIN_COMPLETE_AUD"},
+    "INR": {"amount": 19900, "env": "STRIPE_PRICE_LIFEADMIN_COMPLETE_INR"},
+}
+
+
+def regional_price_id(currency):
+    market = REGIONAL_PRICES.get(currency)
+    if not market:
+        return None
+    # Backwards-compatible legacy Stripe Price is only usable for GBP.
+    return os.environ.get(market["env"]) or (
+        os.environ.get("STRIPE_PRICE_LIFEADMIN_COMPLETE") if currency == "GBP" else None
+    )
+
+
 def stripe_ready_for(product):
-    return bool(stripe_configured() and product and os.environ.get(product["price_env"]))
+    if not stripe_configured() or not product:
+        return False
+    if product["id"] == "core_app":
+        return any(regional_price_id(currency) for currency in REGIONAL_PRICES)
+    return bool(os.environ.get(product["price_env"]))
 
 
 def product_lookup(product_id):
@@ -377,6 +403,10 @@ def product_payload(user_id="demo"):
         "purchases": purchases,
         "payment_provider": "stripe" if payments_live else "preview",
         "payments_live": payments_live,
+        "regional_checkout_ready": {
+            currency: bool(stripe_configured() and regional_price_id(currency))
+            for currency in REGIONAL_PRICES
+        },
         # Backward-compatible name for the current client. It now means fully checkout-ready.
         "stripe_configured": payments_live,
     }
@@ -501,12 +531,24 @@ def create_checkout_session(handler, body):
     product = product_lookup(product_id)
     if not product:
         return json_response(handler, {"error": "Unknown product"}, 400)
-    price_id = os.environ.get(product["price_env"])
-    if not price_id:
-        return json_response(handler, {"error": "Checkout is not fully configured for this product."}, 400)
-    user_id = effective_user_id(handler, body.get("user_id"))
     if product_id != "core_app":
         return json_response(handler, {"error": "Only the LifeAdmin AI Complete product is available for new purchases."}, 400)
+    currency = str(body.get("currency") or "").upper()
+    if currency not in REGIONAL_PRICES:
+        return json_response(handler, {"error": "Choose a supported checkout currency."}, 400)
+    price_id = regional_price_id(currency)
+    if not price_id:
+        return json_response(handler, {"error": "Checkout is not configured for this currency."}, 400)
+    # Never charge a regional customer using an unverified currency/amount.
+    stripe_price = stripe_api_request("GET", "/v1/prices/" + price_id, None)
+    expected = REGIONAL_PRICES[currency]["amount"]
+    if (stripe_price.get("currency", "").upper() != currency
+            or stripe_price.get("unit_amount") != expected
+            or not stripe_price.get("active", False)
+            or stripe_price.get("type") != "one_time"
+            or stripe_price.get("recurring")):
+        return json_response(handler, {"error": "Checkout price verification failed for this currency."}, 400)
+    user_id = effective_user_id(handler, body.get("user_id"))
     email = str(body.get("email") or "").strip()
     base_url = get_base_url(handler)
     fields = {
@@ -518,6 +560,7 @@ def create_checkout_session(handler, body):
         "client_reference_id": user_id,
         "metadata[product_id]": product_id,
         "metadata[user_id]": user_id,
+        "metadata[currency]": currency,
         "allow_promotion_codes": "true",
     }
     if env_bool("STRIPE_TERMS_REQUIRED", False):
