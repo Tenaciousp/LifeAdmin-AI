@@ -47,7 +47,7 @@ export function useSuggestMatch() {
 export function useNotes(userId: string, workspaceId: string) {
   return useQuery({
     queryKey: ["/api/notes", userId, workspaceId],
-    queryFn: () => fetcher("/api/notes"),
+    queryFn: ({ signal }) => fetcher("/api/notes", { signal }),
     enabled: !!userId,
   });
 }
@@ -69,7 +69,7 @@ export function useDeleteNote() {
 export function useTasks(userId: string, workspaceId: string) {
   return useQuery({
     queryKey: ["/api/tasks", userId, workspaceId],
-    queryFn: () => fetcher("/api/tasks"),
+    queryFn: ({ signal }) => fetcher("/api/tasks", { signal }),
     enabled: !!userId,
   });
 }
@@ -140,7 +140,7 @@ export function useAdminOverview() {
 export function useAuthMe() {
   return useQuery({
     queryKey: ["/api/auth/me"],
-    queryFn: () => fetcher("/api/auth/me"),
+    queryFn: ({ signal }) => fetcher("/api/auth/me", { signal }),
     retry: false,
     // A different browser tab may have signed out or changed account.
     refetchOnWindowFocus: "always",
@@ -151,7 +151,7 @@ export function useAuthMe() {
 export function useProducts(userId: string, workspaceId: string) {
   return useQuery({
     queryKey: ["/api/products", userId, workspaceId],
-    queryFn: () => fetcher("/api/products"),
+    queryFn: ({ signal }) => fetcher("/api/products", { signal }),
     enabled: !!userId,
   });
 }
