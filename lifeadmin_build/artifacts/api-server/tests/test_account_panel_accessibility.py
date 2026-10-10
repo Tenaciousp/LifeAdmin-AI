@@ -48,6 +48,8 @@ class AccountPanelAccessibilityTests(unittest.TestCase):
 
     def test_partial_guest_import_retry_is_visible_and_accessible(self):
         self.assertIn("auth.guest_import_pending", SOURCE)
+        self.assertIn("auth.guest_import_retry_available", SOURCE)
+        self.assertIn("Return to that browser, sign in and retry the transfer there.", SOURCE)
         self.assertIn("Some guest work is waiting to transfer", SOURCE)
         self.assertIn("Retry transferring my work", SOURCE)
         self.assertIn('busyAction === "retry-import"', SOURCE)
