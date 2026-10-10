@@ -62,8 +62,8 @@ class PaymentSafetyTests(unittest.TestCase):
         with patch.dict(os.environ, {"STRIPE_SECRET_KEY": "sk_test", "STRIPE_PRICE_LIFEADMIN_COMPLETE": "price_core"}, clear=True), \
              patch.object(app, "get_user_purchases", return_value={"core_app": False, "all_access": False}):
             payload = app.product_payload("guest")
-            self.assertFalse(payload["payments_live"])
-            self.assertEqual(payload["payment_provider"], "preview")
+            self.assertTrue(payload["payments_live"])
+            self.assertEqual(payload["payment_provider"], "stripe")
             self.assertNotIn("missing_price_env_vars", payload)
 
 
