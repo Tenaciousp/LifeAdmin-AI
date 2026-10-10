@@ -37,6 +37,9 @@ class AccountSwitchFrontendPrivacyTests(unittest.TestCase):
         self.assertIn('useTasks(buyerId, workspaceId)', JOURNEY)
         self.assertIn('useNotes(buyerId, workspaceId)', JOURNEY)
         self.assertIn('useProducts(buyerId, workspaceId)', PRICING)
+        # Cancellation must abort actual HTTP requests, not only discard cached results.
+        for endpoint in ('/api/auth/me', '/api/tasks', '/api/notes', '/api/products'):
+            self.assertIn(f'queryFn: ({{ signal }}) => fetcher("{endpoint}", {{ signal }})', HOOKS)
 
     def test_account_transition_clears_old_queries_before_identity_update(self):
         start = ACCOUNT.index("const refreshAccountQueries = async (nextAuth:")
