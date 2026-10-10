@@ -30,9 +30,11 @@ const faqs = [
 ];
 
 export function LandingPage() {
-  const { data: auth, isError: authError, refetch: retryAuth } = useAuthMe();
-  // Keep private workspace and checkout unmounted until session status is known.
-  const sessionReady = !!auth && !authError;
+  const { data: auth, isError: authError, isFetching: authChecking, refetch: retryAuth } = useAuthMe();
+  // Mount only after initial verification; hide, rather than unmount, during
+  // rechecks so harmless focus/connection changes never erase a draft.
+  const sessionReady = !!auth;
+  const sessionBlocked = authChecking || authError;
   // Remount private in-memory work when the signed-in account changes.
   const workspaceKey = auth?.authenticated && auth.user?.id ? auth.user.id : "guest";
   return (
@@ -91,10 +93,8 @@ export function LandingPage() {
         </section>
 
         <div className="bg-slate-100 border-b border-slate-200 py-4 md:py-8">
-          {sessionReady ? (
-            <CustomerJourney key={workspaceKey} workspaceId={workspaceKey} />
-          ) : (
-            <section id="app" role={authError ? "alert" : "status"} aria-live="polite" className="max-w-3xl mx-auto px-5 py-12">
+          {(!sessionReady || sessionBlocked) && (
+            <section id={!sessionReady ? "app" : undefined} role={authError ? "alert" : "status"} aria-live="polite" className="max-w-3xl mx-auto px-5 py-12">
               <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
                 <h2 className="text-xl font-bold text-slate-900">
                   {authError ? "We could not check your session" : "Checking your session"}
@@ -111,6 +111,11 @@ export function LandingPage() {
                 )}
               </div>
             </section>
+          )}
+          {sessionReady && (
+            <div hidden={sessionBlocked}>
+              <CustomerJourney key={workspaceKey} workspaceId={workspaceKey} />
+            </div>
           )}
         </div>
 
@@ -141,7 +146,11 @@ export function LandingPage() {
         </div>
 
         <div className="bg-slate-50">
-          {sessionReady ? <PricingPanel key={workspaceKey} workspaceId={workspaceKey} /> : (
+          {sessionReady ? (
+            <div hidden={sessionBlocked}>
+              <PricingPanel key={workspaceKey} workspaceId={workspaceKey} />
+            </div>
+          ) : (
             <div role="status" className="max-w-3xl mx-auto px-5 py-10 text-sm text-slate-600">
               Pricing and checkout will be available once your session is checked.
             </div>
