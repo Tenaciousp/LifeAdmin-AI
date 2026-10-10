@@ -6,9 +6,9 @@ import { Check, Lock, ShieldCheck } from "lucide-react";
 import { trackEvent } from "@/lib/analytics";
 import { MARKET_PRICES, initialMarket, type MarketCurrency, type MarketSelection } from "@/lib/market-pricing";
 
-export function PricingPanel() {
+export function PricingPanel({ workspaceId }: { workspaceId: string }) {
   const buyerId = getBuyerId();
-  const { data: productsData, isLoading: productsLoading, isError: productsError, refetch: retryProducts } = useProducts(buyerId);
+  const { data: productsData, isLoading: productsLoading, isError: productsError, refetch: retryProducts } = useProducts(buyerId, workspaceId);
   const [email, setEmail] = useState("");
   const [currency, setCurrency] = useState<MarketSelection>(initialMarket);
   const [loadingId, setLoadingId] = useState<string | null>(null);
