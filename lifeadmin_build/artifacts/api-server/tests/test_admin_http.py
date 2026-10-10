@@ -42,7 +42,7 @@ class AdminHTTPTests(unittest.TestCase):
         self.overview = patch.object(
             app.storage, "admin_overview", return_value={"users": {"total": 2}}
         )
-        self.overview.start()
+        self.overview_mock = self.overview.start()
         self.server = ThreadingHTTPServer(("127.0.0.1", 0), app.AdminPilotHandler)
         self.thread = threading.Thread(target=self.server.serve_forever, daemon=True)
         self.thread.start()
@@ -76,13 +76,13 @@ class AdminHTTPTests(unittest.TestCase):
                 status, body = self.get("/api/admin/overview", identity)
                 self.assertEqual(status, 403)
                 self.assertEqual(body["error"], "Admin access required")
-        self.overview.assert_not_called()
+        self.overview_mock.assert_not_called()
 
     def test_authorised_admin_receives_http_200(self):
         status, body = self.get("/api/admin/overview", "admin")
         self.assertEqual(status, 200)
         self.assertEqual(body, {"users": {"total": 2}})
-        self.overview.assert_called_once_with()
+        self.overview_mock.assert_called_once_with()
 
     def test_settings_route_also_denies_non_admin(self):
         status, body = self.get("/api/settings", "customer")
