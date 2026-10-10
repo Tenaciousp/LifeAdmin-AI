@@ -65,6 +65,8 @@ export function CustomerJourney() {
     setGapModalOpen(false);
     setPendingGenerationTask(null);
     setDetectedGaps([]);
+    // Keep the workflow indicator aligned with the plan still on screen.
+    setActiveStep(planResult ? 6 : 4);
   };
 
   useEffect(() => {
@@ -429,7 +431,8 @@ export function CustomerJourney() {
       },
       onError: () => {
         setPendingGenerationTask(null);
-        setActiveStep(4);
+        // A failed second generation must not send the visible prior plan backwards.
+        setActiveStep(planResult ? 6 : 4);
         toast.error("Plan generation failed. Your task is still saved. The previous result is still available.");
       }
     });

@@ -52,12 +52,23 @@ class MissingDetailsDialogAccessibilityTests(unittest.TestCase):
             "setGapModalOpen(false)",
             "setPendingGenerationTask(null)",
             "setDetectedGaps([])",
+            "setActiveStep(planResult ? 6 : 4)",
         ):
             self.assertIn(phrase, handler)
         self.assertNotIn("setPlanResult", handler)
         self.assertNotIn("setSelectedTaskId", handler)
         self.assertIn('onClick={cancelGapReview}', self.dialog)
         self.assertIn("Cancel review", self.dialog)
+
+    def test_failed_second_generation_preserves_prior_plan_workflow_step(self):
+        start = SOURCE.index("const executeGeneration = (task: any) => {")
+        end = SOURCE.index("\n  const handleEditGaps", start)
+        generation = SOURCE[start:end]
+        error = generation[generation.index("onError: () => {"):]
+        self.assertIn("setActiveStep(planResult ? 6 : 4)", error)
+        self.assertNotIn("setPlanResult(null)", error)
+        self.assertNotIn("setSelectedTaskId(null)", error)
+        self.assertNotIn("setSelectedSavedPlanId(null)", error)
 
     def test_dialog_fits_dynamic_mobile_viewport_at_zoom(self):
         self.assertIn('style={{ maxHeight: "calc(100dvh - 1rem)" }}', self.dialog)
