@@ -30,7 +30,7 @@ class MissingDetailsDialogAccessibilityTests(unittest.TestCase):
 
     def test_keyboard_focus_stays_inside_and_escape_closes(self):
         self.assertIn('event.key === "Escape"', self.effect)
-        self.assertIn("setGapModalOpen(false)", self.effect)
+        self.assertIn("cancelGapReview()", self.effect)
         self.assertIn('event.key !== "Tab"', self.effect)
         self.assertIn("focusable[0]", self.effect)
         self.assertIn("focusable[focusable.length - 1]", self.effect)
@@ -43,6 +43,21 @@ class MissingDetailsDialogAccessibilityTests(unittest.TestCase):
         self.assertIn("dialog.focus()", self.effect)
         self.assertIn("returnFocusTo?.isConnected", self.effect)
         self.assertIn("returnFocusTo.focus()", self.effect)
+
+    def test_cancel_review_clears_pending_request_without_erasing_open_plan(self):
+        start = SOURCE.index("const cancelGapReview = () => {")
+        end = SOURCE.index("\n  };", start)
+        handler = SOURCE[start:end]
+        for phrase in (
+            "setGapModalOpen(false)",
+            "setPendingGenerationTask(null)",
+            "setDetectedGaps([])",
+        ):
+            self.assertIn(phrase, handler)
+        self.assertNotIn("setPlanResult", handler)
+        self.assertNotIn("setSelectedTaskId", handler)
+        self.assertIn('onClick={cancelGapReview}', self.dialog)
+        self.assertIn("Cancel review", self.dialog)
 
     def test_dialog_fits_dynamic_mobile_viewport_at_zoom(self):
         self.assertIn('style={{ maxHeight: "calc(100dvh - 1rem)" }}', self.dialog)

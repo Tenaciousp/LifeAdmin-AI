@@ -61,6 +61,12 @@ export function CustomerJourney() {
   const gapDialogRef = useRef<HTMLDivElement | null>(null);
   const gapReturnFocusRef = useRef<HTMLElement | null>(null);
 
+  const cancelGapReview = () => {
+    setGapModalOpen(false);
+    setPendingGenerationTask(null);
+    setDetectedGaps([]);
+  };
+
   useEffect(() => {
     if (!aiHandoffOpen) return;
     const dialog = aiHandoffDialogRef.current;
@@ -141,7 +147,7 @@ export function CustomerJourney() {
     const handleGapKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         event.preventDefault();
-        setGapModalOpen(false);
+        cancelGapReview();
         return;
       }
       if (event.key !== "Tab") return;
@@ -1229,7 +1235,10 @@ ${buildComparisonRequirements(task)}`;
               </ul>
             </div>
             
-            <div className="flex justify-end gap-3">
+            <div className="flex flex-col sm:flex-row sm:justify-end gap-3">
+              <button type="button" onClick={cancelGapReview} className="min-h-[44px] px-4 py-2 rounded-xl text-sm font-bold bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary">
+                Cancel review
+              </button>
               <button onClick={handleEditGaps} className="min-h-[44px] px-4 py-2 rounded-xl text-sm font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary">
                 Edit task
               </button>
