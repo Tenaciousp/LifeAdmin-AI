@@ -84,6 +84,24 @@ class AdminHTTPTests(unittest.TestCase):
         self.assertEqual(body, {"users": {"total": 2}})
         self.overview_mock.assert_called_once_with()
 
+    def test_admin_database_failure_is_retryable_without_leaking_details(self):
+        self.overview_mock.side_effect = [
+            RuntimeError("synthetic private database details"),
+            {"users": {"total": 2}},
+        ]
+        status, failed = self.get("/api/admin/overview", "admin")
+        self.assertEqual(status, 503)
+        self.assertEqual(
+            failed["error"],
+            "Administrator statistics are temporarily unavailable. Please retry.",
+        )
+        self.assertNotIn("synthetic private database details", str(failed))
+
+        status, recovered = self.get("/api/admin/overview", "admin")
+        self.assertEqual(status, 200)
+        self.assertEqual(recovered, {"users": {"total": 2}})
+        self.assertEqual(self.overview_mock.call_count, 2)
+
     def test_settings_route_also_denies_non_admin(self):
         status, body = self.get("/api/settings", "customer")
         self.assertEqual(status, 403)
