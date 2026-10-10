@@ -149,8 +149,8 @@ class GuestImportRetryTests(unittest.TestCase):
         app.save_anonymous_items(app.NOTES_FILE, "guest-a", [{"id": "plan-1", "title": "Already imported"}])
         app.set_pending_import_guest("account-a", "guest-a")
         with patch.object(app.storage, "available", return_value=True), \
-             patch.object(app.storage, "list_tasks", return_value=[{"id": "task-1"}]), \
-             patch.object(app.storage, "list_notes", return_value=[{"id": "plan-1"}]), \
+             patch.object(app.storage, "list_tasks", return_value=[{"id": "task-1", "title": "Already imported"}]), \
+             patch.object(app.storage, "list_notes", return_value=[{"id": "plan-1", "title": "Already imported"}]), \
              patch.object(app.storage, "create_task") as create, \
              patch.object(app.storage, "add_note") as add:
             status, result = self.request("/api/auth/retry-guest-import", {"id": "account-a"})
@@ -160,6 +160,21 @@ class GuestImportRetryTests(unittest.TestCase):
         self.assertEqual(app.anonymous_items(app.NOTES_FILE, "guest-a"), [])
         create.assert_not_called()
         add.assert_not_called()
+
+    def test_conflicting_destination_record_does_not_discard_guest_original(self):
+        original = {"id": "task-1", "title": "Guest version"}
+        app.save_anonymous_items(app.TASKS_FILE, "guest-a", [original])
+        app.set_pending_import_guest("account-a", "guest-a")
+        with patch.object(app.storage, "available", return_value=True), \
+             patch.object(app.storage, "list_tasks", return_value=[{"id": "task-1", "title": "Different account version"}]), \
+             patch.object(app.storage, "list_notes", return_value=[]), \
+             patch.object(app.storage, "create_task") as create:
+            status, result = self.request("/api/auth/retry-guest-import", {"id": "account-a"})
+        self.assertEqual(status, 200)
+        self.assertTrue(result["guest_import_pending"])
+        self.assertEqual(app.anonymous_items(app.TASKS_FILE, "guest-a"), [original])
+        self.assertEqual(app.pending_import_guest("account-a"), "guest-a")
+        create.assert_not_called()
 
     def test_destination_read_failure_keeps_guest_records_and_retry_available(self):
         app.save_anonymous_items(app.TASKS_FILE, "guest-a", [{"id": "task-1"}])
