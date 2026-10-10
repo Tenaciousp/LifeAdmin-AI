@@ -1,5 +1,6 @@
 import { LandingHero } from "@/components/LandingHero";
 import { CustomerJourney } from "@/components/CustomerJourney";
+import { useAuthMe } from "@/hooks/use-api";
 import { PricingPanel } from "@/components/PricingPanel";
 import { AccountPanel } from "@/components/AccountPanel";
 import { AnalyticsConsent, resetAnalyticsConsent } from "@/components/AnalyticsConsent";
@@ -29,6 +30,9 @@ const faqs = [
 ];
 
 export function LandingPage() {
+  const { data: auth } = useAuthMe();
+  // Remount private in-memory work when the signed-in account changes.
+  const workspaceKey = auth?.authenticated && auth.user?.id ? auth.user.id : "guest";
   return (
     <div className="min-h-screen bg-slate-50 selection:bg-primary/20 selection:text-primary">
       <nav className="fixed top-0 inset-x-0 z-50 bg-[#0f172a]/90 backdrop-blur-xl border-b border-white/10">
@@ -85,7 +89,7 @@ export function LandingPage() {
         </section>
 
         <div className="bg-slate-100 border-b border-slate-200 py-4 md:py-8">
-          <CustomerJourney />
+          <CustomerJourney key={workspaceKey} />
         </div>
 
         <section id="benefits" className="max-w-6xl mx-auto px-5 sm:px-6 py-16 md:py-20">
@@ -115,7 +119,7 @@ export function LandingPage() {
         </div>
 
         <div className="bg-slate-50">
-          <PricingPanel />
+          <PricingPanel key={workspaceKey} />
         </div>
 
         <section id="privacy" className="max-w-6xl mx-auto px-5 sm:px-6 py-16 md:py-20 grid md:grid-cols-2 gap-6">

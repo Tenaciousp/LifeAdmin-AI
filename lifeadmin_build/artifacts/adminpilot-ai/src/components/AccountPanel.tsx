@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useAuthMe } from "@/hooks/use-api";
+import { saveBuyerEmail, clearBuyerEmail } from "@/lib/auth";
 import { toast } from "sonner";
 import { trackEvent } from "@/lib/analytics";
 import { useQueryClient } from "@tanstack/react-query";
@@ -29,10 +30,12 @@ export function AccountPanel() {
     setShowDelete(false);
   };
 
-  const refreshAccountQueries = () => {
+  const refreshAccountQueries = (nextAuth: { authenticated: boolean; user?: { id: string; email?: string } }) => {
     for (const queryKey of ACCOUNT_SCOPED_QUERY_KEYS) {
       queryClient.removeQueries({ queryKey: [...queryKey] });
     }
+    // Update identity before refetch so previous account's open plans unmount.
+    queryClient.setQueryData(["/api/auth/me"], nextAuth);
     void queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
   };
 
@@ -53,7 +56,8 @@ export function AccountPanel() {
       toast.success(path === "/api/auth/register" ? "Account created" : "Signed in");
       clearCredentialState();
       if (path === "/api/auth/register") trackEvent("account_created");
-      refreshAccountQueries();
+      if (data.user?.email) saveBuyerEmail(data.user.email);
+      refreshAccountQueries(data);
     } catch (err: any) {
       toast.error(err.message || "Authentication failed");
     } finally {
@@ -68,7 +72,8 @@ export function AccountPanel() {
       if (!res.ok) throw new Error("Could not sign out");
       toast.success("Signed out");
       clearCredentialState();
-      refreshAccountQueries();
+      clearBuyerEmail();
+      refreshAccountQueries({ authenticated: false });
     } catch (err: any) {
       toast.error(err.message || "Could not sign out");
     } finally {
@@ -96,7 +101,8 @@ export function AccountPanel() {
       if (!res.ok) throw new Error(data.error || "Could not delete account");
       toast.success("Account deleted");
       clearCredentialState();
-      refreshAccountQueries();
+      clearBuyerEmail();
+      refreshAccountQueries({ authenticated: false });
     } catch (err: any) {
       toast.error(err.message || "Could not delete account");
     } finally {

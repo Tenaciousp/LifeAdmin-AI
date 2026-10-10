@@ -1,0 +1,35 @@
+import pathlib
+import unittest
+
+
+SRC = pathlib.Path(__file__).resolve().parents[2] / "adminpilot-ai" / "src"
+LANDING = (SRC / "pages" / "LandingPage.tsx").read_text(encoding="utf-8")
+ACCOUNT = (SRC / "components" / "AccountPanel.tsx").read_text(encoding="utf-8")
+AUTH = (SRC / "lib" / "auth.ts").read_text(encoding="utf-8")
+
+
+class AccountSwitchFrontendPrivacyTests(unittest.TestCase):
+    def test_account_change_remounts_private_workspace_and_checkout(self):
+        self.assertIn('const { data: auth } = useAuthMe()', LANDING)
+        self.assertIn('auth?.authenticated && auth.user?.id ? auth.user.id : "guest"', LANDING)
+        self.assertIn('<CustomerJourney key={workspaceKey} />', LANDING)
+        self.assertIn('<PricingPanel key={workspaceKey} />', LANDING)
+
+    def test_account_transition_clears_old_queries_before_identity_update(self):
+        start = ACCOUNT.index("const refreshAccountQueries = (nextAuth:")
+        end = ACCOUNT.index("\n  };", start)
+        refresh = ACCOUNT[start:end]
+        self.assertLess(refresh.index("queryClient.removeQueries"), refresh.index("queryClient.setQueryData"))
+        self.assertIn('queryClient.setQueryData(["/api/auth/me"], nextAuth)', refresh)
+        self.assertIn('queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] })', refresh)
+        self.assertIn("refreshAccountQueries(data)", ACCOUNT)
+        self.assertEqual(ACCOUNT.count("refreshAccountQueries({ authenticated: false })"), 2)
+
+    def test_checkout_email_is_replaced_on_login_and_cleared_on_exit(self):
+        self.assertIn("if (data.user?.email) saveBuyerEmail(data.user.email)", ACCOUNT)
+        self.assertEqual(ACCOUNT.count("clearBuyerEmail();"), 2)
+        self.assertIn("localStorage.removeItem('adminpilot_buyer_email')", AUTH)
+
+
+if __name__ == "__main__":
+    unittest.main()
