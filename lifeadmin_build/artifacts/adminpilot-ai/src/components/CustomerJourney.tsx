@@ -7,10 +7,10 @@ import { ChevronDown, Loader2, Info, MoreHorizontal, Mail, Copy, Bot, Search, Za
 import * as Collapsible from "@radix-ui/react-collapsible";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 
-export function CustomerJourney() {
+export function CustomerJourney({ workspaceId }: { workspaceId: string }) {
   const buyerId = getBuyerId();
-  const { data: tasksData, isLoading: tasksLoading, isError: tasksError, refetch: retryTasks } = useTasks(buyerId);
-  const { data: notesData, isLoading: notesLoading, isError: notesError, refetch: retryNotes } = useNotes(buyerId);
+  const { data: tasksData, isLoading: tasksLoading, isError: tasksError, refetch: retryTasks } = useTasks(buyerId, workspaceId);
+  const { data: notesData, isLoading: notesLoading, isError: notesError, refetch: retryNotes } = useNotes(buyerId, workspaceId);
   const { data: catalog, isLoading: catalogLoading, isError: catalogError, refetch: retryCatalog } = useCatalog();
   const suggestMatch = useSuggestMatch();
   
