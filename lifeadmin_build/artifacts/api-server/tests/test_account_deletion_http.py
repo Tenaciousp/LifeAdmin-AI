@@ -107,6 +107,55 @@ class AccountDeletionHTTPTests(unittest.TestCase):
         self.assertEqual(status, 401)
         self.assertIn("error", refused)
 
+    def test_deleting_one_account_purges_its_records_without_harming_another(self):
+        """Account deletion cascades through private data, not other accounts."""
+        credentials = [
+            ("first@example.test", "synthetic-password-first"),
+            ("second@example.test", "synthetic-password-second"),
+        ]
+        accounts = []
+        for email, password in credentials:
+            status, created, set_cookie = self.request(
+                "/api/auth/register", {"email": email, "password": password}
+            )
+            self.assertEqual(status, 201)
+            cookie = SimpleCookie()
+            cookie.load(set_cookie)
+            accounts.append((
+                created["user"]["id"],
+                f"adminpilot_session={cookie['adminpilot_session'].value}",
+            ))
+
+        for index, (user_id, _) in enumerate(accounts):
+            task = {"id": f"task-{index}", "title": f"Synthetic task {index}"}
+            note = {"id": f"note-{index}", "task_id": task["id"],
+                    "title": task["title"], "sections": {"next_steps": "Synthetic only"}}
+            storage.create_task(user_id, task)
+            storage.add_note(user_id, note)
+            storage.unlock_purchase(user_id, "core_app", "synthetic-test")
+
+        deleted_user, deleted_cookie = accounts[0]
+        kept_user, kept_cookie = accounts[1]
+        status, result, _ = self.request(
+            "/api/auth/delete", {"password": credentials[0][1]}, deleted_cookie
+        )
+        self.assertEqual(status, 200)
+        self.assertEqual(result, {"deleted": True})
+        self.assertEqual(storage.list_tasks(deleted_user), [])
+        self.assertEqual(storage.list_notes(deleted_user), [])
+        self.assertEqual(storage.get_purchases(deleted_user), {})
+
+        status, former_auth, _ = self.request("/api/auth/me", cookie=deleted_cookie)
+        self.assertEqual(status, 200)
+        self.assertFalse(former_auth["authenticated"])
+        status, remaining_auth, _ = self.request("/api/auth/me", cookie=kept_cookie)
+        self.assertEqual(status, 200)
+        self.assertTrue(remaining_auth["authenticated"])
+        self.assertEqual(remaining_auth["user"]["id"], kept_user)
+        self.assertEqual([task["id"] for task in storage.list_tasks(kept_user)], ["task-1"])
+        self.assertEqual([note["id"] for note in storage.list_notes(kept_user)], ["note-1"])
+        self.assertEqual(storage.get_purchases(kept_user), {"core_app": True})
+
 
 if __name__ == "__main__":
     unittest.main()
