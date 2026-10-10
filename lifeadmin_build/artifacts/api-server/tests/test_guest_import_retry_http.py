@@ -119,9 +119,16 @@ class GuestImportRetryTests(unittest.TestCase):
         create.assert_not_called()
         self.assertEqual(app.pending_import_guest("account-a"), "guest-a")
 
-    def test_account_deletion_clears_only_its_pending_guest_binding(self):
+    def test_account_deletion_purges_its_pending_guest_data_only(self):
         app.set_pending_import_guest("account-a", "guest-a")
         app.set_pending_import_guest("account-b", "guest-b")
+        for guest in ("guest-a", "guest-b"):
+            app.save_anonymous_items(app.TASKS_FILE, guest, [{"id": guest + "-task"}])
+            app.save_anonymous_items(app.NOTES_FILE, guest, [{"id": guest + "-plan"}])
+        store = app.load_purchase_store()
+        store["users"]["guest-a"] = {"core_app": True}
+        store["users"]["guest-b"] = {"core_app": True}
+        app.write_json(app.PURCHASES_FILE, store)
         with patch.object(app.storage, "delete_account") as delete:
             status, result = self.request("/api/auth/delete", {"id": "account-a"}, body={"password": "synthetic"})
         self.assertEqual(status, 200)
@@ -129,6 +136,13 @@ class GuestImportRetryTests(unittest.TestCase):
         delete.assert_called_once_with("account-a", "synthetic")
         self.assertIsNone(app.pending_import_guest("account-a"))
         self.assertEqual(app.pending_import_guest("account-b"), "guest-b")
+        for path in (app.TASKS_FILE, app.NOTES_FILE):
+            store = app.read_json(path, {})
+            self.assertNotIn("guest-a", store.get("users", {}))
+            self.assertIn("guest-b", store.get("users", {}))
+        store = app.load_purchase_store()
+        self.assertNotIn("guest-a", store["users"])
+        self.assertIn("guest-b", store["users"])
 
     def test_retry_skips_items_already_present_in_destination_account(self):
         app.save_anonymous_items(app.TASKS_FILE, "guest-a", [{"id": "task-1", "title": "Already imported"}])
