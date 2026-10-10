@@ -14,7 +14,7 @@ Use a single application instance with SQLite. The disk preserves the entire API
 
 ## Payment setup, still without live sales
 
-LifeAdmin AI Complete is £1.99 UK / $1.99 US once, with all current planning features included. Existing purchasers retain full access. Verify actual checkout currency and amount for each market before enabling payments; the selector changes display only. Review processor fees against these low prices.
+LifeAdmin AI Complete is one one-time purchase, with all current planning features included. Proposed prices: UK £1.99, US $1.99, eurozone €1.99, Canada C$2.99, Australia A$3.99, India ₹199. Other countries show availability rather than an invented local quote. Existing purchasers retain full access. Each enabled market needs a matching Stripe Price ID; the server verifies its currency, active one-time status and exact amount before checkout. The selector is not a billing-country detector. Review regional tax compliance, customer-country handling, processor fees and sandbox transactions before enabling live sales.
 
 In an authorised private preview, use Stripe sandbox credentials and a complete-product sandbox Price ID only. Follow MONETISATION.md for supported environment variables and checkout configuration. Test purchase, cancellation, failed payment, return verification, duplicate confirmation and account entitlement persistence. Never accept a browser return alone as proof of payment. Verify entitlement enforcement against the final paid feature boundaries. Preview safeguards passed automated tests; no real Stripe transaction was tested in this workspace.
 
