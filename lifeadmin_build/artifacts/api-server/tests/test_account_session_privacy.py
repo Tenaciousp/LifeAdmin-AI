@@ -34,12 +34,13 @@ class AccountSessionPrivacyRegressionTests(unittest.TestCase):
         block = function_block("handleAction", "handleLogout")
         self.assertLess(block.index("if (!res.ok)"), block.index("clearCredentialState()"))
         self.assertEqual(block.count("clearCredentialState()"), 1)
-        self.assertLess(block.index("clearCredentialState()"), block.index("refreshAccountQueries()"))
+        self.assertLess(block.index("clearCredentialState()"), block.index("refreshAccountQueries(data)"))
 
     def test_logout_clears_credentials_before_refreshing_account_state(self):
         block = function_block("handleLogout", "handleDelete")
         self.assertLess(block.index("if (!res.ok)"), block.index("clearCredentialState()"))
-        self.assertLess(block.index("clearCredentialState()"), block.index("refreshAccountQueries()"))
+        self.assertLess(block.index("clearCredentialState()"), block.index("clearBuyerEmail()"))
+        self.assertLess(block.index("clearBuyerEmail()"), block.index("refreshAccountQueries({ authenticated: false })"))
 
     def test_account_deletion_clears_all_sensitive_form_state(self):
         clear_block = function_block("clearCredentialState", "refreshAccountQueries")
@@ -55,7 +56,8 @@ class AccountSessionPrivacyRegressionTests(unittest.TestCase):
         delete_end = SOURCE.index("\n\n  return (", delete_start)
         delete_block = SOURCE[delete_start:delete_end]
         self.assertLess(delete_block.index("if (!res.ok)"), delete_block.index("clearCredentialState()"))
-        self.assertLess(delete_block.index("clearCredentialState()"), delete_block.index("refreshAccountQueries()"))
+        self.assertLess(delete_block.index("clearCredentialState()"), delete_block.index("clearBuyerEmail()"))
+        self.assertLess(delete_block.index("clearBuyerEmail()"), delete_block.index("refreshAccountQueries({ authenticated: false })"))
 
 
 if __name__ == "__main__":
