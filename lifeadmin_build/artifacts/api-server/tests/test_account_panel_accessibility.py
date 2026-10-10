@@ -32,7 +32,7 @@ class AccountPanelAccessibilityTests(unittest.TestCase):
         self.assertIn('<Trash2 aria-hidden="true"', SOURCE)
 
     def test_each_account_action_reports_its_own_busy_state(self):
-        self.assertIn('useState<"register" | "login" | "logout" | "delete" | null>(null)', SOURCE)
+        self.assertIn('useState<"register" | "login" | "logout" | "delete" | "retry-import" | null>(null)', SOURCE)
         for action in ("register", "login", "logout", "delete"):
             with self.subTest(action=action):
                 self.assertIn(f'busyAction === "{action}"', SOURCE)
@@ -45,6 +45,16 @@ class AccountPanelAccessibilityTests(unittest.TestCase):
             with self.subTest(label=label):
                 self.assertIn(label, SOURCE)
         self.assertGreaterEqual(SOURCE.count("aria-busy={busyAction ==="), 4)
+
+    def test_partial_guest_import_retry_is_visible_and_accessible(self):
+        self.assertIn("auth.guest_import_pending", SOURCE)
+        self.assertIn("Some guest work is waiting to transfer", SOURCE)
+        self.assertIn("Retry transferring my work", SOURCE)
+        self.assertIn('busyAction === "retry-import"', SOURCE)
+        self.assertIn("const handleRetryGuestImport = async () =>", SOURCE)
+        self.assertIn('fetch("/api/auth/retry-guest-import"', SOURCE)
+        self.assertIn("await retryAuth()", SOURCE)
+        self.assertIn("await queryClient.invalidateQueries", SOURCE)
 
     def test_destructive_confirmation_remains_required(self):
         self.assertIn('if (deleteConfirm !== "DELETE")', SOURCE)
