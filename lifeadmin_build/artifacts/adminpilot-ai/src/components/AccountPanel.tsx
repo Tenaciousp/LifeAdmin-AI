@@ -20,7 +20,7 @@ export function AccountPanel() {
   const [password, setPassword] = useState("");
   const [deleteConfirm, setDeleteConfirm] = useState("");
   const [showDelete, setShowDelete] = useState(false);
-  const [busyAction, setBusyAction] = useState<"register" | "login" | "logout" | "delete" | null>(null);
+  const [busyAction, setBusyAction] = useState<"register" | "login" | "logout" | "delete" | "retry-import" | null>(null);
   const isBusy = busyAction !== null;
 
   const clearCredentialState = () => {
@@ -56,13 +56,43 @@ export function AccountPanel() {
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || "Authentication failed");
-      toast.success(path === "/api/auth/register" ? "Account created" : "Signed in");
+      if (data.guest_import_pending) {
+        toast.warning("Account created. Some guest work is still waiting to transfer.");
+      } else {
+        toast.success(path === "/api/auth/register" ? "Account created" : "Signed in");
+      }
       clearCredentialState();
       if (path === "/api/auth/register") trackEvent("account_created");
       if (data.user?.email) saveBuyerEmail(data.user.email);
       await refreshAccountQueries(data);
     } catch (err: any) {
       toast.error(err.message || "Authentication failed");
+    } finally {
+      setBusyAction(null);
+    }
+  };
+
+  const handleRetryGuestImport = async () => {
+    setBusyAction("retry-import");
+    try {
+      const res = await fetch("/api/auth/retry-guest-import", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: "{}",
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "Could not retry your saved work transfer.");
+      await retryAuth();
+      for (const queryKey of ACCOUNT_SCOPED_QUERY_KEYS) {
+        await queryClient.invalidateQueries({ queryKey: [...queryKey] });
+      }
+      if (data.guest_import_pending) {
+        toast.warning("Some guest work is still waiting. You can safely try again.");
+      } else {
+        toast.success("Your remaining guest work has been transferred.");
+      }
+    } catch (err: any) {
+      toast.error(err.message || "Transfer unavailable. Your remaining guest work is safe.");
     } finally {
       setBusyAction(null);
     }
@@ -150,6 +180,16 @@ export function AccountPanel() {
               <span className="text-emerald-700 text-sm">Tasks and plans are saved to your account.</span>
               <p className="text-xs mt-2 text-emerald-800 break-all">{auth.user?.email}</p>
             </div>
+
+            {auth.guest_import_pending && (
+              <div role="status" aria-live="polite" className="mb-5 rounded-xl border border-amber-300 bg-amber-50 p-4 text-amber-950">
+                <strong className="block">Some guest work is waiting to transfer</strong>
+                <p className="mt-1 text-sm">Your account was created, but not everything could be copied. The remaining work is still saved in this browser's guest workspace. Retry here before signing out or changing browsers.</p>
+                <button type="button" onClick={handleRetryGuestImport} disabled={isBusy} aria-busy={busyAction === "retry-import"} className="mt-3 min-h-[44px] rounded-lg bg-amber-900 px-4 py-2.5 font-bold text-white hover:bg-amber-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2 disabled:opacity-50">
+                  {busyAction === "retry-import" ? "Retrying transfer..." : "Retry transferring my work"}
+                </button>
+              </div>
+            )}
 
             <button onClick={handleLogout} disabled={isBusy} aria-busy={busyAction === "logout"} className="w-full min-h-[46px] py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl transition-colors disabled:opacity-50">
               {busyAction === "logout" ? "Signing out..." : "Sign out"}
