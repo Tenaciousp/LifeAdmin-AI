@@ -950,6 +950,61 @@ def playbook_sections(playbook, task=None):
     details = canonical.get("details") or {}
     provider = str(details.get("provider") or "the provider").strip()
 
+    # Goal-specific help takes precedence over the telecom savings playbook.
+    if playbook == "communications" and goal_id in {
+        "check_bill", "challenge_charge", "cancel_switch", "contact_provider"
+    }:
+        goal_help = {
+            "check_bill": (
+                ["1. Compare the latest bill with the previous bill and agreed package price.",
+                 "2. Separate recurring charges, usage, add-ons, expired discounts and one-off fees.",
+                 "3. Check the billing period and any price-change notice against the contract.",
+                 "4. Request an itemised explanation and correction of any unexplained difference before considering a new package."],
+                f"Hello, please explain my {provider} bill, including the billing period, itemised charges and any difference from the previous amount or agreed price. Please identify any expired discount, additional usage or one-off fee, and correct any billing error. Please reply in writing."
+            ),
+            "challenge_charge": (
+                ["1. Record the disputed charge, date, amount and why you believe it is wrong.",
+                 "2. Gather the bill, agreed terms, payment evidence and previous correspondence.",
+                 "3. Ask the provider to investigate and explain the charge, and request a correction or refund where appropriate.",
+                 "4. Keep the complaint reference and response deadline; check the official complaints route if unresolved."],
+                f"Hello, I am challenging a charge on my {provider} account. Please investigate the disputed charge, explain its basis and provide supporting billing information. If incorrect, please correct the bill and confirm any refund due. Please provide a complaint reference and response timeframe in writing."
+            ),
+            "cancel_switch": (
+                ["1. Check the contract end date, notice period, exit fees and any bundle discounts affected.",
+                 "2. Confirm the cancellation or switching route with the provider before acting.",
+                 "3. If switching, arrange service continuity and number transfer before ending the old service.",
+                 "4. Confirm the final bill, equipment returns and end date in writing, then review before approving."],
+                f"Hello, please confirm the cancellation or switching options for my {provider} service, including the notice period, exit fees, final bill, equipment returns and service end date. Please explain any effect on bundled services. This is an information request, not authorisation to cancel."
+            ),
+            "contact_provider": (
+                ["1. Identify the account and the specific question or issue you need resolved.",
+                 "2. Gather relevant bills, dates and earlier correspondence.",
+                 "3. Use the provider's official contact route and request a written answer.",
+                 "4. Save the response and follow-up date before deciding on any account change."],
+                f"Hello, I have a query about my {provider} account. Please review the details below, explain the available next steps and reply in writing. Please do not change my service without my approval."
+            ),
+        }
+        steps, message = goal_help[goal_id]
+        context = [f"- Provider: {provider}."]
+        for key, label in (("account_reference", "Account or customer reference"),
+                           ("amount", "Current amount"), ("previous_amount", "Previous amount"),
+                           ("date", "Relevant date"), ("what_happened", "Issue supplied")):
+            if details.get(key):
+                context.append(f"- {label}: {details[key]}.")
+                message += f"\n\n{label}: {details[key]}"
+        return [
+            ("Account details supplied", context),
+            ("Your action plan", steps),
+            ("Provider contact draft", [message]),
+            ("Things to check", ["- Check the correct account, billing period, amounts and contract terms.",
+                                  "- Use official contact details and share only information needed for the query.",
+                                  "- Do not stop payments or change service before understanding the consequences."]),
+            ("Approval checklist", ["- Facts and supporting evidence checked.",
+                                     "- Draft reviewed before contacting the provider.",
+                                     "- Any correction, refund or end date confirmed in writing.",
+                                     "- No cancellation, switch or new contract authorised by this plan."]),
+        ]
+
     if playbook == "streaming" and task:
         tailored = named_subscription_sections(task)
         if tailored:
