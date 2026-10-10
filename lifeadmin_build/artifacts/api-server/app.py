@@ -302,9 +302,14 @@ def verified_guest_cookie(handler):
 
 
 def guest_import_status(handler, user):
-    """Require both the registered account and its original guest browser."""
-    return bool(user and pending_import_guest(user["id"]) == verified_guest_cookie(handler)
-                and pending_import_guest(user["id"]))
+    """An account must see its incomplete import on every signed-in browser."""
+    return bool(user and pending_import_guest(user["id"]))
+
+
+def guest_import_retry_available(handler, user):
+    """Only the original signed guest browser may retry that account's import."""
+    return bool(user and pending_import_guest(user["id"])
+                and pending_import_guest(user["id"]) == verified_guest_cookie(handler))
 
 
 def migrate_purchases():
@@ -1783,6 +1788,7 @@ class AdminPilotHandler(SimpleHTTPRequestHandler):
         if path == "/api/auth/me":
             payload = auth_payload(user)
             payload["guest_import_pending"] = guest_import_status(self, user)
+            payload["guest_import_retry_available"] = guest_import_retry_available(self, user)
             return json_response(self, payload)
         if path == "/api/products":
             return json_response(self, product_payload(user_id))
@@ -1845,6 +1851,7 @@ class AdminPilotHandler(SimpleHTTPRequestHandler):
                 token = storage.create_session(user["id"])
                 payload = auth_payload(user)
                 payload["guest_import_pending"] = pending
+                payload["guest_import_retry_available"] = pending
                 return json_response(self, payload, 201, {"Set-Cookie": session_cookie(self, token)})
             except (ValueError, storage.StorageUnavailable) as exc:
                 return json_response(self, {"error": str(exc)}, 400)
