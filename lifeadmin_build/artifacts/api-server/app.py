@@ -210,7 +210,7 @@ def save_anonymous_items(path, user_id, items):
 def migrate_guest_workspace(guest_id, user_id):
     """Claim guest work without discarding items that fail to migrate."""
     if not storage.available():
-        return
+        return True
     for path, writer in ((TASKS_FILE, storage.create_task), (NOTES_FILE, storage.add_note)):
         items = anonymous_items(path, guest_id)
         remaining = []
@@ -235,6 +235,54 @@ def migrate_guest_workspace(guest_id, user_id):
         purchase_store = load_purchase_store()
         purchase_store.get("users", {}).pop(safe_user_id(guest_id), None)
         write_json(PURCHASES_FILE, purchase_store)
+    return guest_import_pending(guest_id)
+
+
+def guest_import_pending(guest_id):
+    """True if any unclaimed guest work or entitlement remains."""
+    return bool(
+        anonymous_items(TASKS_FILE, guest_id)
+        or anonymous_items(NOTES_FILE, guest_id)
+        or any(get_user_purchases(guest_id).values())
+    )
+
+
+def pending_import_guest(user_id):
+    return load_purchase_store().get("pending_guest_imports", {}).get(str(user_id))
+
+
+def set_pending_import_guest(user_id, guest_id=None):
+    with _JSON_LOCK:
+        store = load_purchase_store()
+        pending = store.setdefault("pending_guest_imports", {})
+        if guest_id:
+            pending[str(user_id)] = guest_id
+        else:
+            pending.pop(str(user_id), None)
+        write_json(PURCHASES_FILE, store)
+
+
+def verified_guest_cookie(handler):
+    """Accept only the existing signed guest cookie; never mint one for recovery."""
+    try:
+        cookie = SimpleCookie()
+        cookie.load(handler.headers.get("Cookie", ""))
+        token = cookie.get("lifeadmin_guest")
+        if not token:
+            return None
+        raw, sep, signature = token.value.partition(".")
+        expected = hmac.new(_SESSION_SECRET, raw.encode(), hashlib.sha256).hexdigest()
+        if sep and hmac.compare_digest(signature, expected):
+            return safe_user_id(raw)
+    except Exception:
+        pass
+    return None
+
+
+def guest_import_status(handler, user):
+    """Require both the registered account and its original guest browser."""
+    return bool(user and pending_import_guest(user["id"]) == verified_guest_cookie(handler)
+                and pending_import_guest(user["id"]))
 
 
 def migrate_purchases():
@@ -1711,7 +1759,9 @@ class AdminPilotHandler(SimpleHTTPRequestHandler):
             notes = storage.list_notes(user_id) if user else anonymous_items(NOTES_FILE, user_id)
             return json_response(self, {"notes": notes})
         if path == "/api/auth/me":
-            return json_response(self, auth_payload(user))
+            payload = auth_payload(user)
+            payload["guest_import_pending"] = guest_import_status(self, user)
+            return json_response(self, payload)
         if path == "/api/products":
             return json_response(self, product_payload(user_id))
         if path == "/api/catalog":
@@ -1758,10 +1808,20 @@ class AdminPilotHandler(SimpleHTTPRequestHandler):
             try:
                 guest_id = None if user else guest_session(self)
                 user = storage.create_user(body.get("email"), body.get("password"))
-                if guest_id:
-                    migrate_guest_workspace(guest_id, user["id"])
+                pending = False
+                if guest_id and guest_import_pending(guest_id):
+                    # Persist an account-to-guest binding before attempting any transfer.
+                    set_pending_import_guest(user["id"], guest_id)
+                    try:
+                        pending = migrate_guest_workspace(guest_id, user["id"])
+                    except Exception:
+                        pending = True
+                    if not pending:
+                        set_pending_import_guest(user["id"])
                 token = storage.create_session(user["id"])
-                return json_response(self, auth_payload(user), 201, {"Set-Cookie": session_cookie(self, token)})
+                payload = auth_payload(user)
+                payload["guest_import_pending"] = pending
+                return json_response(self, payload, 201, {"Set-Cookie": session_cookie(self, token)})
             except (ValueError, storage.StorageUnavailable) as exc:
                 return json_response(self, {"error": str(exc)}, 400)
         if path == "/api/auth/login":
@@ -1773,6 +1833,19 @@ class AdminPilotHandler(SimpleHTTPRequestHandler):
                 return json_response(self, auth_payload(user), headers={"Set-Cookie": session_cookie(self, token)})
             except (ValueError, storage.StorageUnavailable) as exc:
                 return json_response(self, {"error": str(exc)}, 401)
+        if path == "/api/auth/retry-guest-import":
+            if not user:
+                return json_response(self, {"error": "Sign in before retrying guest import"}, 401)
+            guest_id = pending_import_guest(user["id"])
+            if not guest_id or guest_id != verified_guest_cookie(self):
+                return json_response(self, {"error": "No guest import is available for this account and browser"}, 403)
+            try:
+                pending = migrate_guest_workspace(guest_id, user["id"])
+                if not pending:
+                    set_pending_import_guest(user["id"])
+                return json_response(self, {"guest_import_pending": pending})
+            except Exception:
+                return json_response(self, {"error": "Import is temporarily unavailable. Remaining guest work is safe. Try again."}, 503)
         if path == "/api/auth/logout":
             storage.delete_session(session_token(self))
             return json_response(self, auth_payload(), headers={"Set-Cookie": session_cookie(self, "", 0)})
