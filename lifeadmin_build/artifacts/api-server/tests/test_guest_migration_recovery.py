@@ -19,6 +19,8 @@ class GuestMigrationRecoveryTests(unittest.TestCase):
                  patch.object(app, "NOTES_FILE", notes_file), \
                  patch.object(app, "PURCHASES_FILE", purchases_file), \
                  patch.object(app.storage, "available", return_value=True), \
+                 patch.object(app.storage, "list_tasks", return_value=[]), \
+                 patch.object(app.storage, "list_notes", return_value=[]), \
                  patch.object(app.storage, "create_task", side_effect=[None, RuntimeError("outage")]) as create, \
                  patch.object(app.storage, "add_note", side_effect=RuntimeError("outage")):
                 app.save_anonymous_items(tasks_file, "guest-a", tasks)
@@ -37,6 +39,8 @@ class GuestMigrationRecoveryTests(unittest.TestCase):
                  patch.object(app, "NOTES_FILE", notes_file), \
                  patch.object(app, "PURCHASES_FILE", purchases_file), \
                  patch.object(app.storage, "available", return_value=True), \
+                 patch.object(app.storage, "list_tasks", return_value=[]), \
+                 patch.object(app.storage, "list_notes", return_value=[]), \
                  patch.object(app.storage, "create_task") as create, \
                  patch.object(app.storage, "add_note") as add:
                 app.save_anonymous_items(tasks_file, "guest-a", [{"id": "task-a"}])
@@ -58,6 +62,8 @@ class GuestMigrationRecoveryTests(unittest.TestCase):
                  patch.object(app, "NOTES_FILE", notes_file), \
                  patch.object(app, "PURCHASES_FILE", purchases_file), \
                  patch.object(app.storage, "available", return_value=True), \
+                 patch.object(app.storage, "list_tasks", return_value=[]), \
+                 patch.object(app.storage, "list_notes", return_value=[]), \
                  patch.object(app.storage, "unlock_purchase", side_effect=RuntimeError("outage")):
                 app.write_json(purchases_file, {"users": {"guest-a": {"core_app": True}}, "stripe_sessions": {}})
                 app.migrate_guest_workspace("guest-a", "account-a")
