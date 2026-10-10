@@ -7,7 +7,7 @@
   ],
   "scripts": {
     "dev:web": "npm --workspace @workspace/adminpilot-ai run dev",
-    "dev:api": "npm --workspace @workspace/api-server run dev",
+    "dev:api": "sh -c 'set -a; if [ -f .env ]; then . ./.env; fi; set +a; npm --workspace @workspace/api-server run dev'",
     "build:web": "npm --workspace @workspace/adminpilot-ai run build",
     "typecheck": "npm --workspace @workspace/adminpilot-ai run typecheck && npm --workspace @workspace/api-server run typecheck",
     "test": "npm --workspace @workspace/api-server run test",
