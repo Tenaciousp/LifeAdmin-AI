@@ -102,6 +102,22 @@ class AdminHTTPTests(unittest.TestCase):
         self.assertEqual(recovered, {"users": {"total": 2}})
         self.assertEqual(self.overview_mock.call_count, 2)
 
+    def test_configured_database_unavailable_does_not_fall_back_to_demo_metrics(self):
+        # A configured production backend that cannot be queried must not
+        # silently show an unrelated local/demo aggregate.
+        with patch.dict(os.environ, {"DATABASE_URL": "postgresql://invalid.test/synthetic"}):
+            with patch.object(app.storage, "available", return_value=False):
+                status, failed = self.get("/api/admin/overview", "admin")
+                self.assertEqual(status, 503)
+                self.assertEqual(
+                    failed["error"],
+                    "Administrator statistics are temporarily unavailable. Please retry.",
+                )
+                status, denied = self.get("/api/admin/overview", "customer")
+                self.assertEqual(status, 403)
+                self.assertEqual(denied["error"], "Admin access required")
+        self.overview_mock.assert_not_called()
+
     def test_settings_route_also_denies_non_admin(self):
         status, body = self.get("/api/settings", "customer")
         self.assertEqual(status, 403)
