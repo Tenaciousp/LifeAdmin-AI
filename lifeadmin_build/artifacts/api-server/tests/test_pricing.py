@@ -11,6 +11,12 @@ class SimplifiedPricingTests(unittest.TestCase):
         self.assertEqual(app.CORE_PRODUCT["amount_pence"], 199)
         self.assertEqual(app.ALL_ACCESS_PRODUCT["amount_pence"], 199)
 
+    def test_complete_purchase_unlocks_advanced_modes(self):
+        entitlements = app.normalized_entitlements({"core_app": True})
+        self.assertTrue(entitlements["core_app"])
+        self.assertTrue(entitlements["all_access"])
+        self.assertEqual(app.product_payload("guest")["addons"], [])
+
     def test_every_advanced_mode_requires_all_access(self):
         self.assertEqual(set(app.MODE_REQUIREMENTS), app.ADVANCED_MODES)
         self.assertTrue(all(product == "all_access" for product in app.MODE_REQUIREMENTS.values()))
