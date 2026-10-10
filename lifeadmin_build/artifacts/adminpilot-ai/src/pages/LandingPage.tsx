@@ -30,7 +30,9 @@ const faqs = [
 ];
 
 export function LandingPage() {
-  const { data: auth } = useAuthMe();
+  const { data: auth, isError: authError, refetch: retryAuth } = useAuthMe();
+  // Keep private workspace and checkout unmounted until session status is known.
+  const sessionReady = !!auth && !authError;
   // Remount private in-memory work when the signed-in account changes.
   const workspaceKey = auth?.authenticated && auth.user?.id ? auth.user.id : "guest";
   return (
@@ -89,7 +91,27 @@ export function LandingPage() {
         </section>
 
         <div className="bg-slate-100 border-b border-slate-200 py-4 md:py-8">
-          <CustomerJourney key={workspaceKey} />
+          {sessionReady ? (
+            <CustomerJourney key={workspaceKey} />
+          ) : (
+            <section id="app" role={authError ? "alert" : "status"} aria-live="polite" className="max-w-3xl mx-auto px-5 py-12">
+              <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+                <h2 className="text-xl font-bold text-slate-900">
+                  {authError ? "We could not check your session" : "Checking your session"}
+                </h2>
+                <p className="mt-2 text-slate-600">
+                  {authError
+                    ? "Your work has not been changed. Check your connection and try again before continuing."
+                    : "We are checking which workspace to open before loading your tasks and saved plans."}
+                </p>
+                {authError && (
+                  <button type="button" onClick={() => void retryAuth()} className="mt-4 min-h-[44px] rounded-xl bg-slate-900 px-5 py-2.5 font-bold text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2">
+                    Try session check again
+                  </button>
+                )}
+              </div>
+            </section>
+          )}
         </div>
 
         <section id="benefits" className="max-w-6xl mx-auto px-5 sm:px-6 py-16 md:py-20">
@@ -119,7 +141,11 @@ export function LandingPage() {
         </div>
 
         <div className="bg-slate-50">
-          <PricingPanel key={workspaceKey} />
+          {sessionReady ? <PricingPanel key={workspaceKey} /> : (
+            <div role="status" className="max-w-3xl mx-auto px-5 py-10 text-sm text-slate-600">
+              Pricing and checkout will be available once your session is checked.
+            </div>
+          )}
         </div>
 
         <section id="privacy" className="max-w-6xl mx-auto px-5 sm:px-6 py-16 md:py-20 grid md:grid-cols-2 gap-6">
