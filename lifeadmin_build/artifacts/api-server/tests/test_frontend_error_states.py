@@ -19,7 +19,11 @@ class FrontendErrorStateRegressionTests(unittest.TestCase):
 
         start = SOURCE.index("const executeGeneration")
         end = SOURCE.index("\n\n  const handleEditGaps", start)
-        self.assertIn("setActiveStep(4)", SOURCE[start:end])
+        generation = SOURCE[start:end]
+        error = generation[generation.index("onError: () => {"):]
+        self.assertIn("setActiveStep(planResult ? 6 : 4)", error)
+        self.assertNotIn("setPlanResult(null)", error)
+        self.assertNotIn("setSelectedTaskId(null)", error)
 
     def test_pending_task_actions_block_duplicate_submissions(self):
         for phrase in (
