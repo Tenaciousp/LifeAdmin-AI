@@ -1,4 +1,5 @@
 import importlib.util
+from contextlib import closing
 import json
 from pathlib import Path
 import sqlite3
@@ -19,9 +20,10 @@ class DataBackupTests(unittest.TestCase):
         self.root = Path(self.temp.name)
         self.data = self.root / "data"
         self.data.mkdir()
-        with sqlite3.connect(self.data / "lifeadmin.sqlite3") as connection:
-            connection.execute("CREATE TABLE records (value TEXT)")
-            connection.execute("INSERT INTO records VALUES ('synthetic account')")
+        with closing(sqlite3.connect(self.data / "lifeadmin.sqlite3")) as connection:
+            with connection:
+                connection.execute("CREATE TABLE records (value TEXT)")
+                connection.execute("INSERT INTO records VALUES ('synthetic account')")
         (self.data / "notes.json").write_text('{"users":{"synthetic":[]}}')
 
     def tearDown(self):
@@ -29,7 +31,7 @@ class DataBackupTests(unittest.TestCase):
 
     def test_backup_restores_database_and_guest_json(self):
         destination = backup.backup_data(self.data, self.root / "backup")
-        with sqlite3.connect(destination / "lifeadmin.sqlite3") as restored:
+        with closing(sqlite3.connect(destination / "lifeadmin.sqlite3")) as restored:
             self.assertEqual(restored.execute("SELECT value FROM records").fetchone()[0], "synthetic account")
             self.assertEqual(restored.execute("PRAGMA integrity_check").fetchone()[0], "ok")
         self.assertEqual(json.loads((destination / "notes.json").read_text()), {"users": {"synthetic": []}})
