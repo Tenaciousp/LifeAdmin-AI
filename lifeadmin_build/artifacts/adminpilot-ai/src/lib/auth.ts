@@ -17,3 +17,7 @@ export function saveBuyerEmail(email: string) {
     localStorage.setItem('adminpilot_buyer_email', email.trim());
   }
 }
+
+export function clearBuyerEmail() {
+  localStorage.removeItem('adminpilot_buyer_email');
+}

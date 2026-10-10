@@ -82,8 +82,8 @@ The publisher still needs final legal identity, privacy contact, support URL, pr
 
 ### Owner/platform actions before paid web launch
 
-- [ ] Add production `DATABASE_URL`
-- [ ] Add production AI provider credential/configuration if live-model output is required
+- [ ] Choose and verify persistent production storage: SQLite on a persistent volume, or PostgreSQL with `DATABASE_URL`
+- [ ] Confirm deterministic plans and manual AI handoff for launch; paid model credentials are optional and require separate owner approval
 - [ ] Configure Stripe secret, webhook secret and final Core/All Access price IDs
 - [ ] Add final legal/business contact details and hosted privacy/terms/support URLs
 - [ ] Configure administrator allowlist

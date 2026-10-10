@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from "react";
-import { useTasks, useNotes, useCreateTask, useGeneratePlan, useUpdateTask, useDeleteTask, useSuggestMatch, useCatalog } from "@/hooks/use-api";
+import { useTasks, useNotes, useCreateTask, useGeneratePlan, useUpdateTask, useDeleteTask, useDeleteNote, useSuggestMatch, useCatalog } from "@/hooks/use-api";
 import { getBuyerId } from "@/lib/auth";
 import { trackEvent } from "@/lib/analytics";
 import { toast } from "sonner";
@@ -7,16 +7,17 @@ import { ChevronDown, Loader2, Info, MoreHorizontal, Mail, Copy, Bot, Search, Za
 import * as Collapsible from "@radix-ui/react-collapsible";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 
-export function CustomerJourney() {
+export function CustomerJourney({ workspaceId }: { workspaceId: string }) {
   const buyerId = getBuyerId();
-  const { data: tasksData, isLoading: tasksLoading } = useTasks(buyerId);
-  const { data: notesData, isLoading: notesLoading } = useNotes(buyerId);
-  const { data: catalog, isLoading: catalogLoading } = useCatalog();
+  const { data: tasksData, isLoading: tasksLoading, isError: tasksError, refetch: retryTasks } = useTasks(buyerId, workspaceId);
+  const { data: notesData, isLoading: notesLoading, isError: notesError, refetch: retryNotes } = useNotes(buyerId, workspaceId);
+  const { data: catalog, isLoading: catalogLoading, isError: catalogError, refetch: retryCatalog } = useCatalog();
   const suggestMatch = useSuggestMatch();
   
   const createTask = useCreateTask();
   const updateTask = useUpdateTask();
   const deleteTask = useDeleteTask();
+  const deleteNote = useDeleteNote();
   const generatePlan = useGeneratePlan();
 
   const tasks = tasksData?.tasks || [];
@@ -43,6 +44,7 @@ export function CustomerJourney() {
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
 
   const [planResult, setPlanResult] = useState<any>(null);
+  const [selectedSavedPlanId, setSelectedSavedPlanId] = useState<string | null>(null);
   const [providerEmail, setProviderEmail] = useState<{subject: string, body: string, kind?: string} | null>(null);
   const [activeTab, setActiveTab] = useState("next_steps");
 
@@ -54,18 +56,137 @@ export function CustomerJourney() {
   const [aiPrompt, setAiPrompt] = useState("");
   const [aiHandoffMode, setAiHandoffMode] = useState<"review" | "compare">("review");
   const aiPromptRef = useRef<HTMLTextAreaElement | null>(null);
+  const aiHandoffDialogRef = useRef<HTMLDivElement | null>(null);
+  const aiHandoffReturnFocusRef = useRef<HTMLElement | null>(null);
+  const gapDialogRef = useRef<HTMLDivElement | null>(null);
+  const gapReturnFocusRef = useRef<HTMLElement | null>(null);
+
+  const cancelGapReview = () => {
+    setGapModalOpen(false);
+    setPendingGenerationTask(null);
+    setDetectedGaps([]);
+    // Keep the workflow indicator aligned with the plan still on screen.
+    setActiveStep(planResult ? 6 : 4);
+  };
 
   useEffect(() => {
     if (!aiHandoffOpen) return;
+    const dialog = aiHandoffDialogRef.current;
+    if (!dialog) return;
+
+    const returnFocusTo = aiHandoffReturnFocusRef.current;
     const timer = window.setTimeout(() => {
-      const el = aiPromptRef.current;
-      if (!el) return;
-      el.scrollTop = 0;
-      el.setSelectionRange(0, 0);
-      el.blur();
+      const prompt = aiPromptRef.current;
+      if (prompt) {
+        prompt.scrollTop = 0;
+        prompt.setSelectionRange(0, 0);
+      }
+      dialog.focus();
     }, 0);
-    return () => window.clearTimeout(timer);
-  }, [aiHandoffOpen, aiHandoffMode, aiPrompt]);
+
+    const handleDialogKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        setAiHandoffOpen(false);
+        return;
+      }
+      if (event.key !== "Tab") return;
+
+      const focusable = Array.from(
+        dialog.querySelectorAll<HTMLElement>(
+          'button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), a[href], [tabindex]:not([tabindex="-1"])'
+        )
+      ).filter((element) => element.getAttribute("aria-hidden") !== "true");
+
+      if (focusable.length === 0) {
+        event.preventDefault();
+        dialog.focus();
+        return;
+      }
+
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      const active = document.activeElement;
+
+      if (event.shiftKey && (active === first || active === dialog)) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && active === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+
+    dialog.addEventListener("keydown", handleDialogKeyDown);
+    return () => {
+      window.clearTimeout(timer);
+      dialog.removeEventListener("keydown", handleDialogKeyDown);
+      if (returnFocusTo?.isConnected) returnFocusTo.focus();
+    };
+  }, [aiHandoffOpen]);
+
+  useEffect(() => {
+    if (!aiHandoffOpen) return;
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [aiHandoffOpen]);
+
+  useEffect(() => {
+    if (!gapModalOpen) return;
+    const dialog = gapDialogRef.current;
+    if (!dialog) return;
+
+    const returnFocusTo = gapReturnFocusRef.current;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    const timer = window.setTimeout(() => dialog.focus(), 0);
+    const handleGapKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        cancelGapReview();
+        return;
+      }
+      if (event.key !== "Tab") return;
+
+      const focusable = Array.from(
+        dialog.querySelectorAll<HTMLElement>(
+          'button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), a[href], [tabindex]:not([tabindex="-1"])'
+        )
+      ).filter((element) => element.getAttribute("aria-hidden") !== "true");
+
+      if (focusable.length === 0) {
+        event.preventDefault();
+        dialog.focus();
+        return;
+      }
+
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      const active = document.activeElement;
+      if (event.shiftKey && (active === first || active === dialog)) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && active === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+
+    dialog.addEventListener("keydown", handleGapKeyDown);
+    return () => {
+      window.clearTimeout(timer);
+      dialog.removeEventListener("keydown", handleGapKeyDown);
+      document.body.style.overflow = previousOverflow;
+      if (returnFocusTo?.isConnected) returnFocusTo.focus();
+    };
+  }, [gapModalOpen]);
+
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -92,12 +213,14 @@ export function CustomerJourney() {
     }
     setSelectedCategory(suggestedMatch.category_id);
     setSelectedGoal(suggestedMatch.goal_id || null);
+    setEditingId(null);
+    setPriority("Medium");
     trackEvent("suggestion_accepted", { category: suggestedMatch.category_id, goal: suggestedMatch.goal_id || "unspecified" });
 
     const cat = categories.find((c: any) => c.id === suggestedMatch.category_id);
     const gl = goals.find((g: any) => g.id === suggestedMatch.goal_id);
     setTitle(gl ? `${gl.label}: ${cat?.label.toLowerCase()}` : "");
-    setDynamicFields({});
+    setDynamicFields({ ...(suggestedMatch.prefill_details || {}) });
     setNotes("");
     setSuggestedMatch(null);
     setSearchQuery("");
@@ -106,6 +229,8 @@ export function CustomerJourney() {
 
   const handleCategorySelect = (id: string, presetGoalId?: string) => {
     setSelectedCategory(id);
+    setEditingId(null);
+    setPriority("Medium");
     const initialGoal = presetGoalId || null;
     setSelectedGoal(initialGoal);
     trackEvent("category_selected", { category: id });
@@ -156,6 +281,9 @@ export function CustomerJourney() {
           toast.success("Task details updated");
           setEditingId(null);
           setActiveStep(4);
+        },
+        onError: () => {
+          toast.error("Task update failed. Your changes are still on screen. Try again.");
         }
       });
     } else {
@@ -166,8 +294,13 @@ export function CustomerJourney() {
           setNotes("");
           setDynamicFields({});
           setSelectedCategory(null);
+          setSelectedGoal(null);
+          setPriority("Medium");
           trackEvent("task_saved", { category: payload.category });
           setActiveStep(4);
+        },
+        onError: () => {
+          toast.error("Task save failed. Your details are still on screen. Try again.");
         }
       });
     }
@@ -181,10 +314,31 @@ export function CustomerJourney() {
     setLastKnownDetails(note.known_details || []);
     setLastMissingDetails(note.missing_details || []);
     setSelectedTaskId(note.task_id || null);
+    setSelectedSavedPlanId(note.id || null);
     setActiveTab("next_steps");
     setActiveStep(6);
     document.getElementById("output-panel")?.scrollIntoView({ behavior: "smooth" });
     trackEvent("saved_plan_opened");
+  };
+
+  const handleDeleteSavedPlan = (note: any) => {
+    if (!note?.id || !confirm(`Delete saved plan "${note.title || "Saved plan"}"?`)) return;
+    deleteNote.mutate({ id: note.id, user_id: buyerId }, {
+      onSuccess: () => {
+        toast.success("Saved plan deleted");
+        if (selectedSavedPlanId === note.id) {
+          setSelectedSavedPlanId(null);
+          setSelectedTaskId(null);
+          setPlanResult(null);
+          setProviderEmail(null);
+          setLastKnownDetails([]);
+          setLastMissingDetails([]);
+        }
+      },
+      onError: () => {
+        toast.error("Saved plan deletion failed. Try again.");
+      },
+    });
   };
 
   const handleEditTask = (t: any) => {
@@ -206,8 +360,16 @@ export function CustomerJourney() {
           toast.success("Task removed");
           if (selectedTaskId === t.id) {
             setSelectedTaskId(null);
-            setPlanResult(null);
+            if (!selectedSavedPlanId) {
+              setPlanResult(null);
+              setProviderEmail(null);
+              setLastKnownDetails([]);
+              setLastMissingDetails([]);
+            }
           }
+        },
+        onError: () => {
+          toast.error("Task removal failed. Try again.");
         }
       });
     }
@@ -215,7 +377,8 @@ export function CustomerJourney() {
 
   const handleMarkDone = (t: any) => {
     updateTask.mutate({ id: t.id, status: "Done", user_id: buyerId }, {
-      onSuccess: () => toast.success("Task marked as done")
+      onSuccess: () => toast.success("Task marked as done"),
+      onError: () => toast.error("Status update failed. Try again.")
     });
   };
 
@@ -233,11 +396,11 @@ export function CustomerJourney() {
   };
 
   const handleGenerate = (task: any) => {
-    setSelectedTaskId(task.id);
     const gaps = findGaps(task);
     if (gaps.length > 0) {
       setDetectedGaps(gaps);
       setPendingGenerationTask(task);
+      gapReturnFocusRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
       setGapModalOpen(true);
       setActiveStep(4);
       return;
@@ -254,6 +417,9 @@ export function CustomerJourney() {
     
     generatePlan.mutate({ task, mode: "full", user_id: buyerId }, {
       onSuccess: (data) => {
+        setSelectedTaskId(task.id);
+        setSelectedSavedPlanId(null);
+        setPendingGenerationTask(null);
         setPlanResult(data.note.sections);
         setProviderEmail(data.note.provider_email);
         setLastKnownDetails(data.note.known_details || []);
@@ -263,27 +429,43 @@ export function CustomerJourney() {
         setActiveStep(5);
         document.getElementById("output-panel")?.scrollIntoView({ behavior: "smooth" });
       },
-      onError: (err) => {
-        toast.error(`Generation failed: ${err.message}`);
+      onError: () => {
+        setPendingGenerationTask(null);
+        // A failed second generation must not send the visible prior plan backwards.
+        setActiveStep(planResult ? 6 : 4);
+        toast.error("Plan generation failed. Your task is still saved. The previous result is still available.");
       }
     });
   };
 
   const handleEditGaps = () => {
+    const task = pendingGenerationTask;
     setGapModalOpen(false);
-    if (pendingGenerationTask) {
-      handleEditTask(pendingGenerationTask);
+    setPendingGenerationTask(null);
+    if (task) {
+      handleEditTask(task);
     }
   };
 
   const handleAiHandoff = () => {
     const task = tasks.find((t: any) => t.id === selectedTaskId);
-    if (!task || !planResult) return;
-    
+    const savedPlan = savedPlans.find((note: any) => note.id === selectedSavedPlanId);
+    if (!planResult) return;
+    if (!task && !savedPlan) {
+      toast.error("This plan's task details are unavailable. Reopen the saved plan and try again.");
+      return;
+    }
+
+    const taskTitle = task?.title || savedPlan?.title || "Saved household plan";
+    const service = task?.category || "Household bill or payment";
+    const goal = task
+      ? goals.find((g: any) => g.id === task.goal_id)?.label || "Resolve issue"
+      : "Review this saved plan";
+
     const prompt = `I need help with a household admin task.
-Task: ${task.title}
-Service: ${task.category}
-Goal: ${goals.find((g: any) => g.id === task.goal_id)?.label || 'Resolve issue'}
+Task: ${taskTitle}
+Service: ${service}
+Goal: ${goal}
 
 Known Details:
 ${formatDetailList(lastKnownDetails)}
@@ -296,7 +478,7 @@ Next steps:
 ${planResult.next_steps || 'None'}
 
 Provider message:
-${planResult.provider_message || 'None'}
+${providerEmail?.body || planResult.provider_message || 'None'}
 
 Things to check:
 ${planResult.things_to_check || 'None'}
@@ -308,6 +490,7 @@ Do not make the final decision for me. Tell me what I should consider next.`;
 
     setAiPrompt(prompt);
     setAiHandoffMode("review");
+    aiHandoffReturnFocusRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     setAiHandoffOpen(true);
     trackEvent("ai_handoff_opened");
     setActiveStep(6);
@@ -344,18 +527,11 @@ ${planResult.next_steps || "None"}
 
 Please use current web information where available. I want a practical comparison I can use to negotiate or switch.
 
-1. Find at least five realistic alternatives where enough current information is available.
-2. Include current price, introductory period, standard price after the offer, contract length, setup fees, annual price-rise terms, important features and total minimum-term cost.
-3. Link to the official provider page or another reliable source for every option.
-4. Show which option is closest to my existing service and which offers the lowest total cost.
-5. Flag anything that depends on postcode/address availability or eligibility.
-6. Separate confirmed facts from anything still needing verification.
-7. Suggest the three strongest negotiation points I can take back to my current provider.
-8. Give me a short provider-ready negotiation message based on the best evidence.
-9. Do not make the final decision for me. Present the options clearly so I can choose.`;
+${buildComparisonRequirements(task)}`;
 
     setAiPrompt(prompt);
     setAiHandoffMode("compare");
+    aiHandoffReturnFocusRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     setAiHandoffOpen(true);
     trackEvent("ai_comparison_opened");
     setActiveStep(6);
@@ -385,31 +561,80 @@ Please use current web information where available. I want a practical compariso
       setActiveStep(6);
     }
   };
-  const openAiAssistant = async (url: string, name: string) => {
+  const selectAiPromptForManualCopy = () => {
+    const el = aiPromptRef.current;
+    if (!el) return false;
+    el.focus();
+    el.setSelectionRange(0, el.value.length);
+    el.scrollTop = 0;
+    return true;
+  };
+
+  const copyAiPrompt = async () => {
+    if (!aiPrompt.trim()) {
+      toast.error("There is no AI prompt to copy yet.");
+      return;
+    }
     try {
+      if (!navigator.clipboard?.writeText) throw new Error("Clipboard API unavailable");
       await navigator.clipboard.writeText(aiPrompt);
-      toast.success(`Comparison prompt copied. Paste it into ${name}.`);
+      toast.success("Prompt copied to clipboard");
       trackEvent("ai_prompt_copied");
     } catch {
-      toast.info(`Open ${name}, then copy the prompt from this window.`);
+      const selected = selectAiPromptForManualCopy();
+      toast.info(selected
+        ? "Prompt selected. Use your device's Copy command, then paste it into your AI assistant."
+        : "Copy did not work. Select the prompt manually and copy it from your device.");
     }
-    window.open(url, "_blank", "noopener,noreferrer");
+  };
+
+  const openAiAssistant = (url: string, name: string) => {
+    const assistantWindow = window.open("", "_blank");
+    if (!assistantWindow) {
+      toast.error(`Could not open ${name}. Allow pop-ups for LifeAdmin and try again.`);
+      return;
+    }
+    assistantWindow.opener = null;
+    assistantWindow.location.href = url;
+    if (!navigator.clipboard?.writeText) {
+      const promptSelected = selectAiPromptForManualCopy();
+      toast.info(promptSelected
+        ? `Prompt selected in LifeAdmin. Copy it when you return, then paste it into ${name}.`
+        : `Open ${name}, then copy the prompt from this window.`);
+      return;
+    }
+    void navigator.clipboard.writeText(aiPrompt)
+      .then(() => {
+        toast.success(`Comparison prompt copied. Paste it into ${name}.`);
+        trackEvent("ai_prompt_copied");
+      })
+      .catch(() => {
+        const promptSelected = selectAiPromptForManualCopy();
+        toast.info(promptSelected
+          ? `Prompt selected in LifeAdmin. Copy it when you return, then paste it into ${name}.`
+          : `Open ${name}, then copy the prompt from this window.`);
+      });
   };
 
 
   const tabRefs = useRef<(HTMLButtonElement | null)[]>([]);
   const tabIds = ["next_steps", "provider_message", "things_to_check", "approval_checklist"];
   const handleTabKeyDown = (e: React.KeyboardEvent, index: number) => {
-    let nextIndex = index;
+    let nextIndex: number;
     if (e.key === 'ArrowRight') {
       nextIndex = (index + 1) % tabIds.length;
     } else if (e.key === 'ArrowLeft') {
       nextIndex = (index - 1 + tabIds.length) % tabIds.length;
+    } else if (e.key === 'Home') {
+      nextIndex = 0;
+    } else if (e.key === 'End') {
+      nextIndex = tabIds.length - 1;
+    } else {
+      return;
     }
-    if (nextIndex !== index) {
-      setActiveTab(tabIds[nextIndex]);
-      tabRefs.current[nextIndex]?.focus();
-    }
+    e.preventDefault();
+    setActiveTab(tabIds[nextIndex]);
+    tabRefs.current[nextIndex]?.focus();
   };
 
   return (
@@ -425,26 +650,33 @@ Please use current web information where available. I want a practical compariso
           <div className="space-y-6">
             {!selectedCategory ? (
               <div className="space-y-4">
-                <label className="block text-sm font-bold text-slate-800">1. What are you managing?</label>
+                <label htmlFor="bill-search" className="block text-sm font-bold text-slate-800">1. What are you managing?</label>
                 
                 <form onSubmit={handleSearchSubmit} className="relative">
                   <input 
+                    id="bill-search"
                     type="text"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     placeholder="E.g. Renew car insurance"
                     className="w-full bg-white border border-slate-300 rounded-xl pl-11 pr-4 py-3 text-slate-900 focus:ring-2 focus:ring-primary/20 focus:border-primary placeholder:text-slate-400"
                   />
-                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-                  <button type="submit" disabled={suggestMatch.isPending} className="absolute right-2 top-1/2 -translate-y-1/2 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg text-sm font-bold transition-colors disabled:opacity-50">
-                    {suggestMatch.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : "Match"}
+                  <Search aria-hidden="true" className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                  <button
+                    type="submit"
+                    disabled={suggestMatch.isPending}
+                    aria-busy={suggestMatch.isPending}
+                    aria-label={suggestMatch.isPending ? "Matching bill or payment" : "Match bill or payment"}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg text-sm font-bold transition-colors disabled:opacity-50"
+                  >
+                    {suggestMatch.isPending ? <Loader2 aria-hidden="true" className="w-4 h-4 animate-spin" /> : "Match"}
                   </button>
                 </form>
 
                 {suggestedMatch && (
                   <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 animate-in fade-in zoom-in-95">
                     <div className="flex items-center gap-2 mb-2 text-primary font-bold text-sm uppercase tracking-wider">
-                      <Zap className="w-4 h-4" /> Suggested Match
+                      <Zap aria-hidden="true" className="w-4 h-4" /> Suggested Match
                     </div>
                     <p className="text-slate-800 font-bold mb-1">
                       {categories.find((c: any) => c.id === suggestedMatch.category_id)?.label}
@@ -466,10 +698,20 @@ Please use current web information where available. I want a practical compariso
                   </div>
                 )}
 
+                {catalogError && (
+                  <div role="alert" className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">
+                    <p className="font-bold">Categories could not be loaded.</p>
+                    <p className="mt-1">Check your connection, then try again.</p>
+                    <button type="button" onClick={() => void retryCatalog()} aria-label="Retry category loading" className="mt-3 min-h-[44px] px-4 rounded-lg bg-white border border-amber-300 font-bold hover:bg-amber-100">
+                      Try again
+                    </button>
+                  </div>
+                )}
+
                 {popular.length > 0 && !suggestedMatch && (
                   <div className="space-y-2">
-                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Popular choices</label>
-                    <div className="grid grid-cols-2 gap-2">
+                    <p id="popular-choices-label" className="text-xs font-bold text-slate-500 uppercase tracking-wider">Popular choices</p>
+                    <div role="group" aria-labelledby="popular-choices-label" className="grid grid-cols-2 gap-2">
                       {popular.map((p: any) => (
                         <button 
                           key={p.id}
@@ -485,12 +727,12 @@ Please use current web information where available. I want a practical compariso
 
                 <Collapsible.Root open={isBrowseAllOpen} onOpenChange={setIsBrowseAllOpen}>
                   <Collapsible.Trigger className="flex items-center justify-between w-full p-3 bg-white border border-slate-200 rounded-xl text-slate-700 font-bold text-sm hover:bg-slate-50 transition-colors mt-2">
-                    Browse all categories <ChevronDown className={`w-4 h-4 transition-transform ${isBrowseAllOpen ? 'rotate-180' : ''}`} />
+                    Browse all categories <ChevronDown aria-hidden="true" className={`w-4 h-4 transition-transform ${isBrowseAllOpen ? 'rotate-180' : ''}`} />
                   </Collapsible.Trigger>
                   <Collapsible.Content className="pt-3 space-y-2">
                     {catalogLoading ? (
-                      <div className="text-center py-4"><Loader2 className="w-5 h-5 animate-spin text-slate-400 mx-auto" /></div>
-                    ) : (
+                      <div role="status" className="text-center py-4"><Loader2 aria-hidden="true" className="w-5 h-5 animate-spin text-slate-400 mx-auto" /><span className="sr-only">Loading categories...</span></div>
+                    ) : catalogError ? null : (
                       categories.map((c: any) => (
                         <button 
                           key={c.id}
@@ -519,6 +761,7 @@ Please use current web information where available. I want a practical compariso
                   setTitle("");
                   setDynamicFields({});
                   setNotes("");
+                  setPriority("Medium");
                   setActiveStep(1);
                 }} className="min-h-[44px] text-sm font-semibold text-emerald-700 hover:text-emerald-900 px-3 py-1.5 bg-white rounded-lg border border-emerald-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500">
                   Change
@@ -529,9 +772,9 @@ Please use current web information where available. I want a practical compariso
             {selectedCategory && (
               <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2">
                 <div>
-                  <label className="block text-sm font-bold text-slate-800 mb-2">2. What do you want to do?</label>
+                  <p id="goal-choice-label" className="block text-sm font-bold text-slate-800 mb-2">2. What do you want to do?</p>
 
-                  <div className="grid grid-cols-2 gap-2 mb-3">
+                  <div className="grid grid-cols-2 gap-2 mb-3" role="group" aria-labelledby="goal-choice-label">
                     {goals.filter((g: any) => ["reduce_price", "prepare_renewal", "cancel_switch", "check_bill"].includes(g.id)).map((g: any) => (
                       <button
                         key={g.id}
@@ -543,6 +786,7 @@ Please use current web information where available. I want a practical compariso
                           setActiveStep(3);
                           trackEvent("goal_selected", { goal: g.id });
                         }}
+                        aria-pressed={selectedGoal === g.id}
                         className={`min-h-[50px] rounded-xl border px-3 py-2 text-left text-sm font-bold transition-colors ${selectedGoal === g.id ? "border-primary bg-blue-50 text-primary" : "border-slate-200 bg-white text-slate-700 hover:border-blue-300 hover:bg-blue-50"}`}
                       >
                         {g.label}
@@ -576,10 +820,12 @@ Please use current web information where available. I want a practical compariso
 
                 {selectedGoal && <Collapsible.Root>
                   <Collapsible.Trigger className="flex items-center justify-between w-full text-sm font-bold text-slate-600 py-2 hover:text-slate-900 transition-colors">
-                    Change task name (optional) <ChevronDown className="w-4 h-4" />
+                    Change task name (optional) <ChevronDown aria-hidden="true" className="w-4 h-4" />
                   </Collapsible.Trigger>
                   <Collapsible.Content className="pt-2">
-                    <input 
+                    <label htmlFor="task-name" className="sr-only">Task name</label>
+                    <input
+                      id="task-name"
                       value={title}
                       onChange={e => setTitle(e.target.value)}
                       placeholder="Task name"
@@ -595,12 +841,15 @@ Please use current web information where available. I want a practical compariso
                   </div>
                   {formFields.map((f: any) => (
                     <div key={f.id}>
-                      <label className="block text-sm font-semibold text-slate-700 mb-1.5">
-                        {f.label} {f.required && <span className="text-red-500">*</span>}
+                      <label htmlFor={`task-field-${f.id}`} className="block text-sm font-semibold text-slate-700 mb-1.5">
+                        {f.label} {f.required && <span className="text-red-500" aria-hidden="true">*</span>}
                       </label>
                       {f.type === 'select' ? (
                         <select
+                          id={`task-field-${f.id}`}
                           value={dynamicFields[f.id] || ""}
+                          aria-required={f.required || undefined}
+                          aria-describedby={f.recommended && !f.required ? `task-field-${f.id}-hint` : undefined}
                           onChange={e => setDynamicFields(prev => ({...prev, [f.id]: e.target.value}))}
                           className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-slate-800 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
                         >
@@ -609,7 +858,10 @@ Please use current web information where available. I want a practical compariso
                         </select>
                       ) : f.type === 'textarea' ? (
                         <textarea
+                          id={`task-field-${f.id}`}
                           value={dynamicFields[f.id] || ""}
+                          aria-required={f.required || undefined}
+                          aria-describedby={f.recommended && !f.required ? `task-field-${f.id}-hint` : undefined}
                           onChange={e => setDynamicFields(prev => ({...prev, [f.id]: e.target.value}))}
                           placeholder={f.placeholder || f.label}
                           rows={3}
@@ -617,19 +869,23 @@ Please use current web information where available. I want a practical compariso
                         />
                       ) : (
                         <input
+                          id={`task-field-${f.id}`}
                           type={f.type === 'date' ? 'date' : f.type === 'email' ? 'email' : 'text'}
                           value={dynamicFields[f.id] || ""}
+                          aria-required={f.required || undefined}
+                          aria-describedby={f.recommended && !f.required ? `task-field-${f.id}-hint` : undefined}
                           onChange={e => setDynamicFields(prev => ({...prev, [f.id]: e.target.value}))}
                           placeholder={f.placeholder || f.label}
                           className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-slate-800 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
                         />
                       )}
-                      {f.recommended && !f.required && <p className="text-[11px] text-slate-400 mt-1">Useful if you know it</p>}
+                      {f.recommended && !f.required && <p id={`task-field-${f.id}-hint`} className="text-[11px] text-slate-400 mt-1">Useful if you know it</p>}
                     </div>
                   ))}
                   <div>
-                    <label className="block text-sm font-semibold text-slate-700 mb-1.5">Additional notes (optional)</label>
+                    <label htmlFor="task-additional-notes" className="block text-sm font-semibold text-slate-700 mb-1.5">Additional notes (optional)</label>
                     <textarea 
+                      id="task-additional-notes"
                       value={notes}
                       onChange={e => setNotes(e.target.value)}
                       placeholder="Anything else?"
@@ -645,10 +901,11 @@ Please use current web information where available. I want a practical compariso
                 {selectedGoal && <button 
                   onClick={handleSaveTask}
                   disabled={createTask.isPending || updateTask.isPending}
+                  aria-busy={createTask.isPending || updateTask.isPending}
                   className="w-full min-h-[44px] bg-slate-900 hover:bg-slate-800 text-white rounded-xl py-3.5 font-bold transition-colors disabled:opacity-50 flex justify-center items-center gap-2"
                 >
-                  {(createTask.isPending || updateTask.isPending) && <Loader2 className="w-4 h-4 animate-spin" />}
-                  {editingId ? "Update task" : "Review details"}
+                  {(createTask.isPending || updateTask.isPending) && <Loader2 aria-hidden="true" className="w-4 h-4 animate-spin" />}
+                  {createTask.isPending ? "Saving task..." : updateTask.isPending ? "Updating task..." : editingId ? "Update task" : "Review details"}
                 </button>}
               </div>
             )}
@@ -684,9 +941,17 @@ Please use current web information where available. I want a practical compariso
           
           <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2" aria-live="polite">
             {tasksLoading ? (
-              <div className="py-8 text-center text-slate-500 flex flex-col items-center gap-2">
-                <Loader2 className="w-6 h-6 animate-spin text-slate-300" />
+              <div role="status" className="py-8 text-center text-slate-500 flex flex-col items-center gap-2">
+                <Loader2 aria-hidden="true" className="w-6 h-6 animate-spin text-slate-300" />
                 Loading tasks...
+              </div>
+            ) : tasksError ? (
+              <div role="alert" className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-center text-sm text-amber-950">
+                <p className="font-bold">Tasks could not be loaded.</p>
+                <p className="mt-1">Your saved tasks have not been removed. Check your connection and try again.</p>
+                <button type="button" onClick={() => void retryTasks()} aria-label="Retry task loading" className="mt-3 min-h-[44px] px-4 rounded-lg bg-white border border-amber-300 font-bold hover:bg-amber-100">
+                  Try again
+                </button>
               </div>
             ) : tasks.length === 0 ? (
               <div className="py-10 text-center border-2 border-dashed border-slate-200 rounded-xl bg-slate-50">
@@ -694,8 +959,13 @@ Please use current web information where available. I want a practical compariso
                 <p className="text-sm text-slate-400">Create a task from the command centre to get started.</p>
               </div>
             ) : (
-              tasks.map((t: any) => (
-                <div key={t.id} className={`p-4 rounded-xl border transition-all ${selectedTaskId === t.id ? 'border-primary ring-1 ring-primary/20 bg-blue-50/30' : 'border-slate-200 hover:border-slate-300 bg-white'}`}>
+              tasks.map((t: any) => {
+                const isGenerating = generatePlan.isPending && generatePlan.variables?.task?.id === t.id;
+                const isMarkingDone = updateTask.isPending && updateTask.variables?.id === t.id && updateTask.variables?.status === "Done";
+                const isDeleting = deleteTask.isPending && deleteTask.variables?.id === t.id;
+
+                return (
+                  <div key={t.id} className={`p-4 rounded-xl border transition-all ${selectedTaskId === t.id ? 'border-primary ring-1 ring-primary/20 bg-blue-50/30' : 'border-slate-200 hover:border-slate-300 bg-white'}`}>
                   <div className="flex justify-between items-start mb-2">
                     <h3 className={`font-bold text-lg ${t.status === 'Done' ? 'text-slate-400 line-through' : 'text-slate-900'}`}>{t.title}</h3>
                     <div className="flex gap-2">
@@ -704,24 +974,27 @@ Please use current web information where available. I want a practical compariso
                     </div>
                   </div>
                   
-                  <div className="flex flex-wrap gap-2 mt-4">
-                    <button onClick={() => handleGenerate(t)} className="min-h-[44px] px-4 py-1.5 bg-primary hover:bg-blue-600 text-white rounded-lg text-sm font-bold transition-colors">
-                      Generate plan
+                  <div className="flex flex-wrap gap-2 mt-4" aria-live="polite">
+                    <button onClick={() => handleGenerate(t)} disabled={generatePlan.isPending} aria-busy={isGenerating} className="min-h-[44px] px-4 py-1.5 bg-primary hover:bg-blue-600 text-white rounded-lg text-sm font-bold transition-colors disabled:opacity-50 flex items-center gap-2">
+                      {isGenerating && <Loader2 aria-hidden="true" className="w-4 h-4 animate-spin" />}
+                      {isGenerating ? "Generating..." : "Generate plan"}
                     </button>
                     <button onClick={() => handleEditTask(t)} className="min-h-[44px] px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-sm font-bold transition-colors">
                       Edit
                     </button>
                     {t.status !== 'Done' && (
-                      <button onClick={() => handleMarkDone(t)} className="min-h-[40px] px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-sm font-bold transition-colors">
-                        Mark done
+                      <button onClick={() => handleMarkDone(t)} disabled={updateTask.isPending} aria-busy={isMarkingDone} className="min-h-[44px] px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-sm font-bold transition-colors disabled:opacity-50 flex items-center gap-2">
+                        {isMarkingDone && <Loader2 aria-hidden="true" className="w-4 h-4 animate-spin" />}
+                        {isMarkingDone ? "Updating..." : "Mark done"}
                       </button>
                     )}
-                    <button onClick={() => handleDeleteTask(t)} aria-label={`Delete ${t.title}`} className="min-h-[44px] px-3 py-1.5 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg text-sm font-bold transition-colors ml-auto">
-                      <Trash2 className="w-4 h-4" />
+                    <button onClick={() => handleDeleteTask(t)} disabled={deleteTask.isPending} aria-busy={isDeleting} aria-label={isDeleting ? `Deleting ${t.title}` : `Delete ${t.title}`} className="min-h-[44px] px-3 py-1.5 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg text-sm font-bold transition-colors disabled:opacity-50 ml-auto">
+                      {isDeleting ? <Loader2 aria-hidden="true" className="w-4 h-4 animate-spin" /> : <Trash2 aria-hidden="true" className="w-4 h-4" />}
                     </button>
                   </div>
-                </div>
-              ))
+                  </div>
+                );
+              })
             )}
           </div>
         </div>
@@ -735,26 +1008,48 @@ Please use current web information where available. I want a practical compariso
             {savedPlans.length > 0 && <span className="text-xs font-bold text-slate-400">{savedPlans.length} saved</span>}
           </div>
           {notesLoading ? (
-            <div className="py-6 text-center text-slate-500"><Loader2 className="w-5 h-5 animate-spin mx-auto" /></div>
+            <div role="status" className="py-6 text-center text-slate-500"><Loader2 aria-hidden="true" className="w-5 h-5 animate-spin mx-auto" /><span className="sr-only">Loading saved plans...</span></div>
+          ) : notesError ? (
+            <div role="alert" className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-center text-sm text-amber-950">
+              <p className="font-bold">Saved plans could not be loaded.</p>
+              <p className="mt-1">Your plans have not been removed. Check your connection and try again.</p>
+              <button type="button" onClick={() => void retryNotes()} aria-label="Retry saved plan loading" className="mt-3 min-h-[44px] px-4 rounded-lg bg-white border border-amber-300 font-bold hover:bg-amber-100">
+                Try again
+              </button>
+            </div>
           ) : savedPlans.length === 0 ? (
             <p className="text-sm text-slate-500 bg-slate-50 border border-dashed border-slate-200 rounded-xl p-4">Plans you generate will appear here so you can reopen them without starting again.</p>
           ) : (
             <div className="space-y-2 max-h-[240px] overflow-y-auto pr-1">
-              {savedPlans.slice(0, 8).map((note: any) => (
-                <button
-                  key={note.id}
-                  onClick={() => handleOpenSavedPlan(note)}
-                  className="w-full min-h-[54px] text-left px-4 py-3 rounded-xl border border-slate-200 hover:border-primary hover:bg-blue-50 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-                >
-                  <strong className="block text-sm text-slate-800">{note.title || "Saved plan"}</strong>
-                  <span className="block text-xs text-slate-500 mt-1">{formatSavedTime(note.created_at)} · {note.source === "openai" ? "AI-assisted" : "Guided plan"}</span>
-                </button>
-              ))}
+              {savedPlans.map((note: any) => {
+                const isDeleting = deleteNote.isPending && deleteNote.variables?.id === note.id;
+                return (
+                  <div key={note.id} className="flex items-stretch gap-2">
+                    <button
+                      onClick={() => handleOpenSavedPlan(note)}
+                      className="flex-1 min-h-[54px] text-left px-4 py-3 rounded-xl border border-slate-200 hover:border-primary hover:bg-blue-50 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                    >
+                      <strong className="block text-sm text-slate-800">{note.title || "Saved plan"}</strong>
+                      <span className="block text-xs text-slate-500 mt-1">{formatSavedTime(note.created_at)} · {note.source === "openai" ? "AI-assisted" : "Guided plan"}</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteSavedPlan(note)}
+                      disabled={deleteNote.isPending}
+                      aria-busy={isDeleting}
+                      aria-label={isDeleting ? `Deleting ${note.title || "saved plan"}` : `Delete ${note.title || "saved plan"}`}
+                      className="min-h-[54px] min-w-[48px] px-3 rounded-xl border border-red-200 bg-red-50 text-red-700 hover:bg-red-100 transition-colors disabled:opacity-50 flex items-center justify-center"
+                    >
+                      {isDeleting ? <Loader2 aria-hidden="true" className="w-4 h-4 animate-spin" /> : <Trash2 aria-hidden="true" className="w-4 h-4" />}
+                    </button>
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>
 
-        <div id="output-panel" className="bg-[#0f172a] rounded-2xl p-6 shadow-xl text-slate-200 flex flex-col flex-1 min-h-[500px]" aria-live="polite">
+        <div id="output-panel" className="bg-[#0f172a] rounded-2xl p-4 sm:p-6 shadow-xl text-slate-200 flex flex-col flex-1 min-h-[500px]" aria-live="polite">
           <div className="flex flex-col xl:flex-row justify-between items-start xl:items-end gap-4 mb-6">
             <div>
               <p className="text-sm font-bold text-blue-400 tracking-wider uppercase mb-1">Your result</p>
@@ -769,19 +1064,17 @@ Please use current web information where available. I want a practical compariso
                   )} 
                   className="min-h-[44px] flex-1 xl:flex-none px-4 py-2 bg-white text-slate-900 hover:bg-slate-100 rounded-xl text-sm font-bold transition-colors shadow-lg flex items-center justify-center gap-2"
                 >
-                  <Copy className="w-4 h-4" />
+                  <Copy aria-hidden="true" className="w-4 h-4" />
                   {activeTab === "provider_message" && providerEmail?.kind === "bank_query"
                     ? "Copy bank query message"
                     : `Copy ${activeTab.replace(/_/g, " ")}`}
                 </button>
-                {(tasks.find((t: any) => t.id === selectedTaskId)?.category_id === "tv_broadband_mobile" ||
-                  tasks.find((t: any) => t.id === selectedTaskId)?.goal_id === "reduce_price" ||
-                  tasks.find((t: any) => t.id === selectedTaskId)?.goal_id === "prepare_renewal") && (
+                {shouldOfferAlternativeComparison(tasks.find((t: any) => t.id === selectedTaskId)) && (
                   <button
                     onClick={handleCompareWithAi}
                     className="min-h-[44px] flex-1 xl:flex-none px-4 py-2 bg-cyan-400 hover:bg-cyan-300 text-slate-950 rounded-xl text-sm font-extrabold transition-colors shadow-lg flex items-center justify-center gap-2"
                   >
-                    <Bot className="w-4 h-4" />
+                    <Bot aria-hidden="true" className="w-4 h-4" />
                     Compare alternatives with AI
                   </button>
                 )}
@@ -789,28 +1082,28 @@ Please use current web information where available. I want a practical compariso
                 <DropdownMenu.Root>
                   <DropdownMenu.Trigger asChild>
                     <button aria-label="More result actions" className="min-h-[44px] px-3 py-2 bg-white/10 hover:bg-white/20 text-white rounded-xl text-sm font-bold transition-colors flex items-center justify-center gap-2">
-                      <MoreHorizontal className="w-5 h-5" />
+                      <MoreHorizontal aria-hidden="true" className="w-5 h-5" />
                     </button>
                   </DropdownMenu.Trigger>
                   <DropdownMenu.Portal>
                     <DropdownMenu.Content className="min-w-[220px] bg-white rounded-xl p-2 shadow-2xl z-50 border border-slate-200 animate-in fade-in zoom-in-95" align="end" sideOffset={8}>
                       <DropdownMenu.Item className="flex items-center gap-2 px-3 py-2.5 outline-none rounded-lg cursor-pointer hover:bg-slate-100 text-slate-700 font-semibold text-sm" onSelect={() => {
-                        const fullPlan = `${planResult.next_steps}\n\n${planResult.provider_message}\n\n${planResult.things_to_check}\n\n${planResult.approval_checklist}`;
+                        const fullPlan = `${planResult.next_steps}\n\n${providerEmail?.body || planResult.provider_message}\n\n${planResult.things_to_check}\n\n${planResult.approval_checklist}`;
                         copyToClipboard(fullPlan, "section_copied");
                       }}>
-                        <Copy className="w-4 h-4" /> Copy full plan
+                        <Copy aria-hidden="true" className="w-4 h-4" /> Copy full plan
                       </DropdownMenu.Item>
                       {providerEmail?.subject && providerEmail?.body && (
                         <DropdownMenu.Item className="flex items-center gap-2 px-3 py-2.5 outline-none rounded-lg cursor-pointer hover:bg-slate-100 text-slate-700 font-semibold text-sm" onSelect={openEmailDraft}>
-                          <Mail className="w-4 h-4" /> {providerEmail?.kind === "bank_query" ? "Open bank query draft" : "Open email draft"}
+                          <Mail aria-hidden="true" className="w-4 h-4" /> {providerEmail?.kind === "bank_query" ? "Open bank query draft" : "Open email draft"}
                         </DropdownMenu.Item>
                       )}
                       <DropdownMenu.Item className="flex items-center gap-2 px-3 py-2.5 outline-none rounded-lg cursor-pointer hover:bg-slate-100 text-slate-700 font-semibold text-sm" onSelect={() => copyToClipboard(planResult.things_to_check, "section_copied")}>
-                        <Copy className="w-4 h-4" /> Copy things to check
+                        <Copy aria-hidden="true" className="w-4 h-4" /> Copy things to check
                       </DropdownMenu.Item>
                       <DropdownMenu.Separator className="h-px bg-slate-100 my-1" />
                       <DropdownMenu.Item className="flex items-center gap-2 px-3 py-2.5 outline-none rounded-lg cursor-pointer hover:bg-blue-50 text-primary font-semibold text-sm" onSelect={handleAiHandoff}>
-                        <Bot className="w-4 h-4" /> Continue with AI
+                        <Bot aria-hidden="true" className="w-4 h-4" /> Continue with AI
                       </DropdownMenu.Item>
                     </DropdownMenu.Content>
                   </DropdownMenu.Portal>
@@ -837,7 +1130,7 @@ Please use current web information where available. I want a practical compariso
                     onClick={handleCompareWithAi}
                     className="min-h-[44px] px-4 py-2.5 rounded-xl bg-cyan-300 hover:bg-cyan-200 text-slate-950 font-extrabold text-sm flex items-center justify-center gap-2 shrink-0"
                   >
-                    <Bot className="w-4 h-4" />
+                    <Bot aria-hidden="true" className="w-4 h-4" />
                     Find current alternatives with AI
                   </button>
                 </div>
@@ -845,10 +1138,19 @@ Please use current web information where available. I want a practical compariso
             );
           })()}
 
-          <div className="flex-1 bg-[#1e293b] border border-slate-700 rounded-xl p-6">
+          {planResult && (
+            <div className="mb-4 rounded-xl border border-slate-600 bg-slate-800 p-4">
+              <p className="text-sm font-bold text-white">Review before acting</p>
+              <p className="mt-1 text-sm leading-6 text-slate-200">Check the next steps, edit your message, then review the approval checklist before contacting anyone.</p>
+              {lastMissingDetails.length > 0 && (
+                <p className="mt-2 text-sm leading-6 text-amber-200">Details still needed: {lastMissingDetails.join(" · ")}. Add these to your task for a more specific plan.</p>
+              )}
+            </div>
+          )}
+          <div className="flex-1 bg-[#1e293b] border border-slate-700 rounded-xl p-4 sm:p-6">
             {generatePlan.isPending ? (
-              <div className="h-full flex flex-col items-center justify-center text-slate-400 gap-3 min-h-[250px]">
-                <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
+              <div role="status" className="h-full flex flex-col items-center justify-center text-slate-400 gap-3 min-h-[250px]">
+                <Loader2 aria-hidden="true" className="w-8 h-8 animate-spin text-blue-500" />
                 <p className="font-semibold">Generating your custom admin plan...</p>
               </div>
             ) : !planResult ? (
@@ -871,14 +1173,34 @@ Please use current web information where available. I want a practical compariso
                       onKeyDown={(e) => handleTabKeyDown(e, idx)}
                       className={`min-h-[44px] px-4 py-2 rounded-lg text-sm font-bold transition-colors whitespace-nowrap focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 ${activeTab === id ? 'bg-blue-500/20 text-blue-300' : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'}`}
                     >
-                      {id.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                      {id === 'provider_message' && providerEmail?.kind === 'bank_query' ? 'Bank query' : id.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
                     </button>
                   ))}
                 </div>
                 
                 <div id={`panel-${activeTab}`} aria-labelledby={`tab-${activeTab}`} className="prose prose-invert prose-blue max-w-none text-slate-300" role="tabpanel" tabIndex={0}>
                   <p className="not-prose text-xs font-semibold text-slate-400 mb-4">{sectionHelperText(activeTab)}</p>
-                  {planResult[activeTab]?.trim() ? (
+                  {activeTab === "provider_message" && providerEmail ? (
+                    <div className="not-prose space-y-3">
+                      <label htmlFor="result-message-editor" className="block text-sm font-bold text-white">
+                        {providerEmail.kind === "bank_query" ? "Review and edit your bank query" : "Review and edit your provider message"}
+                      </label>
+                      <p className="text-sm text-slate-200">Subject: {providerEmail.subject}</p>
+                      <textarea
+                        id="result-message-editor"
+                        value={providerEmail.body}
+                        onChange={(event) => {
+                          const body = event.target.value;
+                          setPlanResult((current: any) => ({ ...current, provider_message: body }));
+                          setProviderEmail(current => current ? { ...current, body } : current);
+                        }}
+                        rows={12}
+                        aria-describedby="result-message-help"
+                        className="w-full min-h-[240px] rounded-xl border border-slate-500 bg-slate-950 p-4 text-base leading-7 text-slate-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300"
+                      />
+                      <p id="result-message-help" className="text-sm text-slate-300">Copy and email actions use your edited wording. Edits last while this result is open; copy before leaving. Nothing is sent automatically.</p>
+                    </div>
+                  ) : planResult[activeTab]?.trim() ? (
                     <div dangerouslySetInnerHTML={{ __html: formatResultText(planResult[activeTab]) }} />
                   ) : (
                     <p className="not-prose text-sm text-slate-400">{activeTab === "provider_message" ? "Provider message not ready. Add who you want to contact and what you want to ask, then generate again." : "No additional content is needed for this section."}</p>
@@ -892,25 +1214,34 @@ Please use current web information where available. I want a practical compariso
 
       {/* Modals */}
       {gapModalOpen && (
-        <div 
-          className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
-          onKeyDown={e => e.key === 'Escape' && setGapModalOpen(false)}
-        >
-          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl animate-in fade-in zoom-in-95 duration-200" role="dialog" aria-modal="true" aria-labelledby="gapTitle">
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-2 sm:p-4">
+          <div
+            ref={gapDialogRef}
+            tabIndex={-1}
+            style={{ maxHeight: "calc(100dvh - 1rem)" }}
+            className="bg-white rounded-2xl max-w-md w-full p-4 sm:p-6 shadow-2xl animate-in fade-in zoom-in-95 duration-200 overflow-y-auto focus:outline-none"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="gapTitle"
+            aria-describedby="gapDescription"
+          >
             <h3 id="gapTitle" className="text-xl font-extrabold text-slate-900 mb-2">Missing key details</h3>
-            <p className="text-slate-600 mb-4">Your task is missing some details that help the AI generate a precise plan. You can proceed without them, but the output may be less specific.</p>
+            <p id="gapDescription" className="text-slate-600 mb-4">Your task is missing some details that help the AI generate a precise plan. You can proceed without them, but the output may be less specific.</p>
             
             <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-6">
               <ul className="space-y-2">
                 {detectedGaps.map(g => (
                   <li key={g} className="flex gap-2 text-amber-900 font-semibold text-sm">
-                    <Info className="w-4 h-4 shrink-0 mt-0.5 text-amber-600" /> {g}
+                    <Info aria-hidden="true" className="w-4 h-4 shrink-0 mt-0.5 text-amber-600" /> {g}
                   </li>
                 ))}
               </ul>
             </div>
             
-            <div className="flex justify-end gap-3">
+            <div className="flex flex-col sm:flex-row sm:justify-end gap-3">
+              <button type="button" onClick={cancelGapReview} className="min-h-[44px] px-4 py-2 rounded-xl text-sm font-bold bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary">
+                Cancel review
+              </button>
               <button onClick={handleEditGaps} className="min-h-[44px] px-4 py-2 rounded-xl text-sm font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary">
                 Edit task
               </button>
@@ -923,18 +1254,24 @@ Please use current web information where available. I want a practical compariso
       )}
 
       {aiHandoffOpen && (
-        <div 
-          className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
-          onKeyDown={e => e.key === 'Escape' && setAiHandoffOpen(false)}
-        >
-          <div className="bg-white rounded-2xl max-w-2xl w-full p-6 shadow-2xl animate-in fade-in zoom-in-95 duration-200 max-h-[90vh] flex flex-col" role="dialog" aria-modal="true" aria-labelledby="aiHandoffTitle">
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-2 sm:p-4">
+          <div
+            ref={aiHandoffDialogRef}
+            tabIndex={-1}
+            style={{ maxHeight: "calc(100dvh - 1rem)" }}
+            className="bg-white rounded-2xl max-w-2xl w-full p-4 sm:p-6 shadow-2xl animate-in fade-in zoom-in-95 duration-200 overflow-y-auto flex flex-col focus:outline-none"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="aiHandoffTitle"
+            aria-describedby="aiHandoffDescription"
+          >
             <h3 id="aiHandoffTitle" className="text-xl font-extrabold text-slate-900 mb-2">{aiHandoffMode === "compare" ? "Find current alternatives with AI" : "Continue with an AI assistant"}</h3>
             
             <div className="bg-orange-50 border border-orange-200 text-orange-900 p-3 rounded-xl text-sm font-medium mb-4">
               <strong>Check before copying:</strong> remove account numbers, payment-card details, passwords and any sensitive information you do not want to share.
             </div>
             
-            <p className="text-slate-600 text-sm mb-4">
+            <p id="aiHandoffDescription" className="text-slate-600 text-sm mb-4">
               {aiHandoffMode === "compare"
                 ? "This prompt asks a web-enabled AI assistant to research current alternatives, prices and source links. Nothing is sent automatically."
                 : "The text below is not sent anywhere automatically. Review it, then choose how you want to copy it or open an assistant separately."}
@@ -942,7 +1279,7 @@ Please use current web information where available. I want a practical compariso
 
             {aiHandoffMode === "compare" && (
               <>
-                <div className="grid grid-cols-3 gap-2 mb-4 text-center">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mb-4 text-center">
                   <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-3">
                     <strong className="block text-slate-900 text-sm">5 alternatives</strong>
                     <span className="text-xs text-slate-500">Like-for-like options</span>
@@ -980,21 +1317,21 @@ Please use current web information where available. I want a practical compariso
 
             <div className="mb-3">
               <p className="text-xs font-black uppercase tracking-wider text-slate-500 mb-2">Recommended free options</p>
-              <div className="grid grid-cols-2 gap-3">
-                <button onClick={() => openAiAssistant("https://gemini.google.com/", "Google Gemini")} className="min-h-[48px] px-4 py-2 bg-blue-600 hover:bg-blue-500 rounded-xl text-sm font-extrabold text-white text-center flex items-center justify-center gap-2">Copy & open Gemini <ExternalLink className="w-4 h-4" /></button>
-                <button onClick={() => openAiAssistant("https://copilot.microsoft.com/", "Microsoft Copilot")} className="min-h-[48px] px-4 py-2 bg-slate-900 hover:bg-slate-800 rounded-xl text-sm font-extrabold text-white text-center flex items-center justify-center gap-2">Copy & open Copilot <ExternalLink className="w-4 h-4" /></button>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <button onClick={() => openAiAssistant("https://gemini.google.com/", "Google Gemini")} className="min-h-[48px] px-4 py-2 bg-blue-600 hover:bg-blue-500 rounded-xl text-sm font-extrabold text-white text-center flex items-center justify-center gap-2">Copy & open Gemini <ExternalLink aria-hidden="true" className="w-4 h-4" /></button>
+                <button onClick={() => openAiAssistant("https://copilot.microsoft.com/", "Microsoft Copilot")} className="min-h-[48px] px-4 py-2 bg-slate-900 hover:bg-slate-800 rounded-xl text-sm font-extrabold text-white text-center flex items-center justify-center gap-2">Copy & open Copilot <ExternalLink aria-hidden="true" className="w-4 h-4" /></button>
               </div>
             </div>
 
             <p className="text-xs font-black uppercase tracking-wider text-slate-500 mb-2">Other popular AI assistants</p>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-3">
-              <button onClick={() => openAiAssistant("https://chatgpt.com/", "ChatGPT")} className="min-h-[44px] px-3 py-2 bg-[#10a37f] hover:bg-[#0e906f] rounded-lg text-sm font-bold text-white flex items-center justify-center gap-2">ChatGPT <ExternalLink className="w-4 h-4" /></button>
-              <button onClick={() => openAiAssistant("https://claude.ai/new", "Claude")} className="min-h-[44px] px-3 py-2 bg-[#d97757] hover:bg-[#c4684a] rounded-lg text-sm font-bold text-white flex items-center justify-center gap-2">Claude <ExternalLink className="w-4 h-4" /></button>
-              <button onClick={() => openAiAssistant("https://www.perplexity.ai/", "Perplexity")} className="min-h-[44px] px-3 py-2 bg-slate-100 hover:bg-slate-200 rounded-lg text-sm font-bold text-slate-800 flex items-center justify-center gap-2">Perplexity <ExternalLink className="w-4 h-4" /></button>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mb-3">
+              <button onClick={() => openAiAssistant("https://chatgpt.com/", "ChatGPT")} className="min-h-[44px] px-3 py-2 bg-[#10a37f] hover:bg-[#0e906f] rounded-lg text-sm font-bold text-white flex items-center justify-center gap-2">ChatGPT <ExternalLink aria-hidden="true" className="w-4 h-4" /></button>
+              <button onClick={() => openAiAssistant("https://claude.ai/new", "Claude")} className="min-h-[44px] px-3 py-2 bg-[#d97757] hover:bg-[#c4684a] rounded-lg text-sm font-bold text-white flex items-center justify-center gap-2">Claude <ExternalLink aria-hidden="true" className="w-4 h-4" /></button>
+              <button onClick={() => openAiAssistant("https://www.perplexity.ai/", "Perplexity")} className="min-h-[44px] px-3 py-2 bg-slate-100 hover:bg-slate-200 rounded-lg text-sm font-bold text-slate-800 flex items-center justify-center gap-2">Perplexity <ExternalLink aria-hidden="true" className="w-4 h-4" /></button>
             </div>
 
             <div className="grid grid-cols-2 gap-2">
-              <button onClick={() => copyToClipboard(aiPrompt, "ai_prompt_copied")} className="min-h-[44px] px-3 py-2 bg-slate-100 hover:bg-slate-200 rounded-lg text-sm font-bold text-slate-700">Copy prompt only</button>
+              <button onClick={copyAiPrompt} className="min-h-[44px] px-3 py-2 bg-slate-100 hover:bg-slate-200 rounded-lg text-sm font-bold text-slate-700">Copy prompt only</button>
               <button onClick={() => setAiHandoffOpen(false)} className="min-h-[44px] px-3 py-2 border border-slate-200 hover:bg-slate-50 rounded-lg text-sm font-bold text-slate-700">Close</button>
             </div>
 
@@ -1003,6 +1340,77 @@ Please use current web information where available. I want a practical compariso
       )}
     </section>
   );
+}
+
+function buildComparisonRequirements(task: any): string {
+  const utilityType = String(task?.details?.utility_type || "").toLowerCase();
+  const tariffType = String(task?.details?.tariff || "").toLowerCase();
+  const isWater = task?.category_id === "energy_water" && (utilityType === "water" || tariffType === "water tariff");
+
+  if (isWater) {
+    return `1. Treat this as a water-bill review, not an energy supplier-switching search.
+2. Check the current water provider, region, billing basis and whether the account is metered, unmetered or assessed.
+3. Explain the current tariff or charging basis, fixed charges, usage charges and any seasonal or wastewater elements using current official information.
+4. Identify practical bill-reduction routes relevant to my region, including meter eligibility, assessed charges, social tariffs or support schemes, water-efficiency schemes and correction of inaccurate household details where relevant.
+5. Do not invent five supplier alternatives or imply household water supplier switching is available when local rules do not support it.
+6. Link to the official water-company or regulator page for each route and state when the information was checked.
+7. Separate confirmed savings from estimates and show any eligibility, evidence or application requirements.
+8. Suggest the three strongest questions I should ask my current water provider.
+9. Give me a short provider-ready message based on the best evidence.
+10. Do not make the final decision for me. Present the options clearly so I can choose.`;
+  }
+
+  if (task?.category_id === "energy_water") {
+    return `1. Find at least five realistic energy tariff options where enough current information is available.
+2. For each option include supplier, tariff name and type, unit rate(s), standing charge(s), tariff end date, exit fee, payment method and any smart-meter or eligibility requirement.
+3. Estimate annual cost using the annual usage I supplied. For dual fuel, calculate electricity and gas separately using their own usage, unit rate and standing charge. If either fuel is missing a required value, mark the comparison incomplete instead of guessing.
+4. Compare every option using the same supplied usage rather than the monthly direct-debit amount. Show current estimated annual cost, renewal annual cost when supplied, first-year switch cost after exit fees, ongoing annual cost, first-year saving and ongoing annual saving.
+5. Link to the official supplier page or another reliable source for every option and state when the price information was checked.
+6. Compare electricity, gas or dual-fuel options matching the supply type I supplied. Do not include water tariffs.
+7. Flag anything dependent on postcode or region, meter type, smart-meter status, payment method, EV ownership or other eligibility.
+8. Show the lowest estimated annual cost and the option closest to my current tariff.
+9. Separate confirmed facts from anything still needing verification.
+10. Suggest the three strongest negotiation points I can take back to my current supplier.
+11. Give me a short supplier-ready negotiation message based on the best evidence.
+12. Do not make the final decision for me. Present the options clearly so I can choose.`;
+  }
+
+  if (task?.category_id === "insurance") {
+    return `1. Find at least five realistic policy alternatives where enough current information is available.
+2. Compare them on the same cover basis. Include annual premium, monthly-payment interest or fees, compulsory and voluntary excess, cover limits, major exclusions, add-ons, policy term and renewal terms.
+3. Use the cover details and priorities I supplied. If a like-for-like comparison is not possible, state what is missing instead of guessing.
+4. Show the current and renewal premium when supplied, the first-year total cost for each option, and any material cover trade-offs.
+5. Link to the insurer's official policy or product information where available and state when the information was checked.
+6. Separate confirmed facts from estimates, assumptions or details that still need verification.
+7. Flag eligibility, postcode, claims-history, vehicle/property, occupation or other factors that might change the quoted price.
+8. Identify the closest like-for-like option and the lowest total-cost option without treating price alone as better cover.
+9. Suggest the three strongest negotiation points I can take back to my current insurer.
+10. Give me a short insurer-ready negotiation message based on the evidence.
+11. Do not make the final decision for me. Present the options clearly so I can choose.`;
+  }
+
+  if (task?.category_id === "subscriptions_memberships") {
+    return `1. Find at least five realistic ways to reduce or replace this subscription where enough current information is available.
+2. Include the plan or tier, monthly and annual price, introductory and standard price, minimum term, cancellation route, important features and any bundle or add-on requirements.
+3. Compare staying on a cheaper tier, annual billing, removing unused extras, eligible bundles and a lower-cost replacement where those routes exist.
+4. Show the total cost over the relevant minimum term and flag any cancellation fee, notice period, renewal rule or price-rise term.
+5. Link to the official provider page or another reliable source for every option and state when the information was checked.
+6. Separate confirmed facts from anything still needing verification.
+7. Show which option preserves the features I said I must keep and which has the lowest total cost.
+8. Suggest the three strongest retention or cancellation points I can take back to my current provider.
+9. Give me a short provider-ready negotiation or cancellation message based on the best evidence.
+10. Do not make the final decision for me. Present the options clearly so I can choose.`;
+  }
+
+  return `1. Find at least five realistic alternatives where enough current information is available.
+2. Include current price, introductory period, standard price after the offer, contract length, setup fees, annual price-rise terms, important features and total minimum-term cost.
+3. Link to the official provider page or another reliable source for every option.
+4. Show which option is closest to my existing service and which offers the lowest total cost.
+5. Flag anything that depends on postcode/address availability or eligibility.
+6. Separate confirmed facts from anything still needing verification.
+7. Suggest the three strongest negotiation points I can take back to my current provider.
+8. Give me a short provider-ready negotiation message based on the best evidence.
+9. Do not make the final decision for me. Present the options clearly so I can choose.`;
 }
 
 function buildAiNarrative(task: any, details: Record<string, unknown> | string[], goals: any[]): string {
@@ -1021,13 +1429,32 @@ function buildAiNarrative(task: any, details: Record<string, unknown> | string[]
   return `I want to ${goal.toLowerCase()} for ${task.category}. My priority is ${priority.toLowerCase()}. Switching preference: ${switching}.${amount}${mustKeep} I want current alternatives, source links, full-term costs and negotiation points before I decide.`;
 }
 
+const ALTERNATIVE_COMPARISON_CATEGORIES = new Set([
+  "tv_broadband_mobile",
+  "energy_water",
+  "insurance",
+  "subscriptions_memberships",
+  "home_security_maintenance",
+]);
+
+function shouldOfferAlternativeComparison(task: any): boolean {
+  if (!task || !ALTERNATIVE_COMPARISON_CATEGORIES.has(task.category_id)) return false;
+  if (task.goal_id === "reduce_price" || task.goal_id === "prepare_renewal") return true;
+  return task.goal_id === "cancel_switch" && task?.details?.desired_outcome === "Switch provider";
+}
+
 function potentialAlternatives(task: any): string[] {
-  if (!task) return [];
+  if (!shouldOfferAlternativeComparison(task)) return [];
   const category = task.category_id;
   if (category === "tv_broadband_mobile") {
     return ["Virgin Media", "BT / EE", "NOW", "Full-fibre broadband + separate streaming"];
   }
   if (category === "energy_water") {
+    const utilityType = String(task?.details?.utility_type || "").toLowerCase();
+    const tariffType = String(task?.details?.tariff || "").toLowerCase();
+    if (utilityType === "water" || tariffType === "water tariff") {
+      return ["Current water tariff review", "Meter or assessed-charge options", "Social tariff / support scheme", "Water-efficiency bill reduction"];
+    }
     return ["Current supplier retention tariff", "Alternative fixed tariff", "Flexible / standard tariff", "Accredited comparison-market options"];
   }
   if (category === "insurance") {

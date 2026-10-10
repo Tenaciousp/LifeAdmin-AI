@@ -1,5 +1,6 @@
 import { LandingHero } from "@/components/LandingHero";
 import { CustomerJourney } from "@/components/CustomerJourney";
+import { useAuthMe } from "@/hooks/use-api";
 import { PricingPanel } from "@/components/PricingPanel";
 import { AccountPanel } from "@/components/AccountPanel";
 import { AnalyticsConsent, resetAnalyticsConsent } from "@/components/AnalyticsConsent";
@@ -21,12 +22,21 @@ const faqs = [
   ["Does LifeAdmin contact providers for me?", "No. It prepares plans, provider messages and checklists. You review and send anything yourself."],
   ["Does it connect to my bank or email?", "No bank connection or mailbox access is required for the core workflow. You enter only the details you choose to use."],
   ["What happens if I do not know all the details?", "Leave them blank. LifeAdmin highlights useful missing information before it generates a plan, without blocking you."],
-  ["Is it a subscription?", "No. Core is a one-time 99p/99c purchase. All Access is an additional one-time £1.99/$1.99 purchase."],
+  ["How much does LifeAdmin cost worldwide?", "LifeAdmin AI Complete has proposed one-time prices of £1.99 in the UK, $1.99 in the US, €1.99 in the eurozone, C$2.99 in Canada, A$3.99 in Australia and ₹199 in India. These are indicative until matching local checkout prices are configured. Other markets will be added after payment and tax checks."],
+  ["Which currency will I actually pay in?", "Choose a country or region in the pricing section to view a proposed local price. The selector does not detect or change your billing country. Checkout is disabled for markets without a configured price. Before paying, check the final amount, currency and any applicable taxes."],
+  ["Is there a monthly subscription or recurring charge?", "No. LifeAdmin AI Complete is a single one-time purchase. There is no recurring subscription or separate All Access upgrade."],
   ["Can I try it before creating an account?", "Yes. You can use the planning flow first and create an account later if you want to save plans and purchases across sessions."],
   ["Is this legal or financial advice?", "No. LifeAdmin provides general admin guidance and draft wording. For regulated or high-stakes issues, check official information or seek qualified advice."],
 ];
 
 export function LandingPage() {
+  const { data: auth, isError: authError, isFetching: authChecking, refetch: retryAuth } = useAuthMe();
+  // Mount only after initial verification; hide, rather than unmount, during
+  // rechecks so harmless focus/connection changes never erase a draft.
+  const sessionReady = !!auth;
+  const sessionBlocked = authChecking || authError;
+  // Remount private in-memory work when the signed-in account changes.
+  const workspaceKey = auth?.authenticated && auth.user?.id ? auth.user.id : "guest";
   return (
     <div className="min-h-screen bg-slate-50 selection:bg-primary/20 selection:text-primary">
       <nav className="fixed top-0 inset-x-0 z-50 bg-[#0f172a]/90 backdrop-blur-xl border-b border-white/10">
@@ -83,7 +93,30 @@ export function LandingPage() {
         </section>
 
         <div className="bg-slate-100 border-b border-slate-200 py-4 md:py-8">
-          <CustomerJourney />
+          {(!sessionReady || sessionBlocked) && (
+            <section id={!sessionReady ? "app" : undefined} role={authError ? "alert" : "status"} aria-live="polite" className="max-w-3xl mx-auto px-5 py-12">
+              <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+                <h2 className="text-xl font-bold text-slate-900">
+                  {authError ? "We could not check your session" : "Checking your session"}
+                </h2>
+                <p className="mt-2 text-slate-600">
+                  {authError
+                    ? "Your work has not been changed. Check your connection and try again before continuing."
+                    : "We are checking which workspace to open before loading your tasks and saved plans."}
+                </p>
+                {authError && (
+                  <button type="button" onClick={() => void retryAuth()} className="mt-4 min-h-[44px] rounded-xl bg-slate-900 px-5 py-2.5 font-bold text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2">
+                    Try session check again
+                  </button>
+                )}
+              </div>
+            </section>
+          )}
+          {sessionReady && (
+            <div hidden={sessionBlocked}>
+              <CustomerJourney key={workspaceKey} workspaceId={workspaceKey} />
+            </div>
+          )}
         </div>
 
         <section id="benefits" className="max-w-6xl mx-auto px-5 sm:px-6 py-16 md:py-20">
@@ -97,7 +130,7 @@ export function LandingPage() {
               ["Privacy-light by design", "No bank connection or mailbox access is required for the core workflow."],
               ["Approval before action", "The app prepares drafts and checklists. It does not send, cancel or purchase for you."],
               ["Household-bill specific", "Twelve categories and seven goals guide the questions and output."],
-              ["Simple one-time pricing", "Core is 99p/99c once. All Access adds £1.99/$1.99 once. No subscription."],
+              ["Simple one-time pricing", "One complete package with regional prices shown in GBP, USD, EUR, CAD, AUD and INR. No subscription."],
             ].map(([title, text]) => (
               <div key={title} className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm">
                 <ShieldCheck className="w-8 h-8 text-primary mb-5" />
@@ -113,7 +146,15 @@ export function LandingPage() {
         </div>
 
         <div className="bg-slate-50">
-          <PricingPanel />
+          {sessionReady ? (
+            <div hidden={sessionBlocked}>
+              <PricingPanel key={workspaceKey} workspaceId={workspaceKey} />
+            </div>
+          ) : (
+            <div role="status" className="max-w-3xl mx-auto px-5 py-10 text-sm text-slate-600">
+              Pricing and checkout will be available once your session is checked.
+            </div>
+          )}
         </div>
 
         <section id="privacy" className="max-w-6xl mx-auto px-5 sm:px-6 py-16 md:py-20 grid md:grid-cols-2 gap-6">

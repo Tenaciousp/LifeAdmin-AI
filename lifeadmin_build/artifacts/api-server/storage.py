@@ -420,6 +420,18 @@ def list_notes(user_id: str) -> list[dict[str, Any]]:
     return [json.loads(row[0]) for row in rows]
 
 
+def delete_note(user_id: str, note_id: str) -> bool:
+    if backend() == "postgresql":
+        with connect() as conn:
+            with conn.cursor() as cur:
+                cur.execute("DELETE FROM adminpilot_notes WHERE user_id = %s AND id = %s", (user_id, note_id))
+                return cur.rowcount > 0
+    ensure_schema()
+    with sqlite_connect() as conn:
+        cur = conn.execute("DELETE FROM adminpilot_notes WHERE user_id = ? AND id = ?", (user_id, note_id))
+        return cur.rowcount > 0
+
+
 def get_purchases(user_id: str) -> dict[str, bool]:
     if backend() == "postgresql":
         with connect() as conn:

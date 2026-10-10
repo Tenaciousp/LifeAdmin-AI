@@ -10,6 +10,8 @@ For development, use the built-in SQLite database. For a public service, use eit
 
 The included Dockerfile builds the React frontend and then starts the Python service, which serves both the SPA and `/api` routes.
 
+Build from the `lifeadmin_build` directory with `docker build -t lifeadmin-ai .`. CI, local setup and the container use `npm ci` with the committed lockfile. Local dependency folders, build output, environment files and SQLite runtime data are excluded from the Docker build context. After an intentional dependency change, run `npm install` and commit the updated lockfile.
+
 Production environment requirements:
 
 - `APP_ENV=production`

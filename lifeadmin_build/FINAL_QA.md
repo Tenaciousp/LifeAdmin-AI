@@ -1,56 +1,107 @@
-# LifeAdmin AI final local QA
+# LifeAdmin AI owner-review QA
 
-Date: 22 September 2026
+Updated: 10 October 2026
 
-## Build status
+This branch is an owner-review candidate. Automated checks cover the application contracts and build, but they do not replace hands-on browser, iPad or phone testing.
 
-The source is now portable and does not require Replit Agent or a Replit runtime. It uses a standard npm/Vite frontend, a Python API, and SQLite by default with optional PostgreSQL.
+## Scope ready for review
 
-## Functional scope present
+- Responsive household-bill assistant with 12 categories and seven goals
+- Savings-first popular choices, smart search suggestions and goal dropdowns
+- Category-specific plans with next steps, provider messages, things to check and approval checklists
+- Energy-renewal comparison inputs for provider, tariff, rates, usage, renewal date and preferences
+- Provider and customer details preserved from search through task creation and plan output
+- Dedicated unknown-payment help with a bank-query draft
+- Editable manual comparison handoff to Gemini, Microsoft Copilot, ChatGPT, Claude and Perplexity
+- Guest and account data isolation, saved-plan reopening and owner-scoped deletion
+- Protected administrator dashboard with explicit access and recovery states
+- One complete purchase at £1.99 UK / $1.99 US, all planning modes included
+- Accessible loading, error, retry, dialog, status and keyboard interaction states
 
-- Modern responsive landing page
-- Search-first household bill/payment flow
-- 12 bill categories and seven goals
-- Popular choices and smart suggested routing
-- Dynamic category/goal fields and useful missing-detail review
-- Dedicated unknown-payment journey
-- Four stable plan sections: Next steps, Provider message, Things to check, Approval checklist
-- Provider-message validation and email gating
-- Manual privacy-safe AI handoff
-- Saved-plan reopening
-- Guest use before account creation
-- Registration, sign-in, sign-out and permanent account deletion
-- Core and All Access one-time pricing model
-- Stripe checkout integration points and verified checkout-return handling
-- Protected administrator dashboard with metrics, charts, filters and recent activity
-- Explicit analytics consent and privacy-safe event sanitisation
-- Responsive/mobile-first controls and accessibility-oriented interaction states
-- Safety escalation for fraud, energy-payment hardship/disconnection, housing repossession/eviction risk and urgent insurance incidents
+## Automated verification
 
-## Automated validation
+The pull-request workflow installs dependencies in a clean environment and runs:
 
-- GitHub Actions clean-environment CI passed on 22 September 2026
-- 42 automated tests passed, 0 failed
-- TypeScript type checks passed
-- API smoke test passes for health and the 12-category / seven-goal catalog
-- Production Vite frontend build passed
-- Python dependency installation and compile validation passed
-- API smoke and contract coverage includes health, task creation, structured plans and all nine approved household scenarios
-- Zero-configuration SQLite account/task/note/purchase lifecycle covered by tests
-- Live AI output is rejected unless it follows the exact four-section result contract
-- Result rendering formats headings, lists, numbered steps and checklists without exposing raw markdown markers
+```text
+npm ci
+npm test
+npm run typecheck
+npm run dev:api
+npm run build:web
+```
 
-## External items still required for a public paid launch
+CI #124 passed against the exact browser-tested application revision `00762a39046031ef46f944a059492301601cab37`. CI #125 then passed against documentation-only head `868dea9359980b83dcccfe1810c55ba90f43498c`:
 
-These are owner/service setup items rather than unfinished application logic:
+- At that historical checkpoint: 162 automated API, domain, storage, privacy, payment-safety, backup and frontend-contract tests; later commits added further regression tests
+- TypeScript type checking and Python compile validation
+- A live API smoke journey covering health, catalog, preview-only pricing, guest energy-task creation, provider/reference preservation, structured plan generation, cross-guest isolation, guest-to-account migration, sign-out/sign-in isolation, saved-plan/task deletion and permanent account deletion
+- A production Vite frontend build
 
-- Hosting and production domain
-- Strong production session secret
-- Persistent database choice for the selected host
-- Stripe live account, Core/All Access price IDs and webhook secret if paid checkout is enabled
-- Production AI API key only if live-model output is wanted; deterministic guided plans work without it
-- Administrator email allowlist
-- Final business identity, support contact, privacy/terms wording and retention decisions
-- Analytics/ads identifiers only after production privacy and consent review
+At the 10 October checkpoint, CI #200 through #203 completed successfully. CI #204 and #205 were still in progress; **do not treat them as passed** until GitHub reports a successful conclusion. Recent automated regressions cover real synthetic admin login/allowlist revocation, cross-account deletion isolation, saved-plan retention after source-task deletion, retryable admin database errors, and missing-details review cancellation. These are not browser tests.
 
-Apple App Store and Google Play distribution remain a later native-packaging phase requiring the respective developer accounts, native billing, signing and device/store QA.
+Use the pull request's latest workflow result as the source of truth for the current head commit. A green workflow does not prove browser, clipboard, popup, responsive-layout or physical-device behaviour.
+
+## Supported-browser QA — completed 7 October 2026
+
+- A temporary GitHub Codespaces HTTPS preview exposed frontend port 5173 only; API port 8000 remained private and the preview was returned to Private after testing.
+- Synthetic browser QA passed the core energy-renewal journey, provider/reference preservation, structured result tabs, editable provider message, saved-plan save/reopen/delete, unknown-payment Bank query, clipboard feedback and the editable manual handoff to all five supported assistants.
+- Application revision exercised: `00762a39046031ef46f944a059492301601cab37`; CI #124 passed for that exact revision.
+- Two initial findings were rejected after focused follow-up: the fish icon was the automation cursor, and missing-detail labels were present. Neither was recorded as an application defect.
+- Protected-admin browser behaviour and physical iPad/touch/clipboard behaviour remain pending. Automated protection checks are not a substitute for the browser-admin pass.
+
+## Portable-build checkpoint
+
+- JavaScript dependencies are committed in `package-lock.json`; CI, container builds and the documented setup use `npm ci`.
+- Docker build inputs now reference the existing `tsconfig.base.json` only. The previous `COPY` referenced a missing root `tsconfig.json`.
+- Docker context exclusions also cover generated frontend output and environment-file variants.
+- A clean install, 162 tests, type checks and live API smoke passed before the initial browser evidence update. Production frontend builds have subsequently passed in CI #200 through #203. Test counts and exact results should be taken from the latest completed CI run.
+- On 8 October, the owner provided Codespaces evidence that `scripts/verify_docker_release.sh` completed its one-time Docker image build, container start/restart, persistence and packaged-backup checks. This is **not** approval to deploy or change the existing Render service.
+- On 9–10 October, the owner verified test-only Google Drive OAuth access and a synthetic encrypted backup upload with offline restore. No production backup schedule or key custody has been approved.
+
+## Owner hands-on checklist
+
+### Highest-priority customer path
+
+- [x] On a phone-sized viewport, search for an electricity or gas renewal.
+- [x] Confirm the suggested provider and renewal goal remain selected when the task is created.
+- [x] Enter tariff, standing charge, unit rate, usage, renewal date and any customer reference.
+- [x] Confirm the plan uses supplied values and identifies missing details rather than inventing figures.
+- [x] Confirm the provider message is editable and includes the supplied synthetic provider/reference context.
+- [x] Open the editable manual handoff and confirm Gemini, Microsoft Copilot, ChatGPT, Claude and Perplexity remain separate user-controlled actions.
+
+### Alternative and recovery paths
+
+- [x] Try an unknown card or bank payment and confirm the result is a bank-query workflow, not a provider email.
+- [ ] Try cancellation, dispute, price-reduction and bill-checking goals in different categories; confirm alternatives match the selected goal.
+- [ ] Force category, task, saved-plan and pricing requests to fail; confirm failures are not presented as empty data and retry controls work.
+- [ ] While one plan is open, start a different task’s generation and cancel the missing-details review or force generation to fail; confirm the previous result still uses its original task context.
+- [ ] Use keyboard-only navigation through search, missing-details review, result tabs, saved plans, account forms and pricing.
+- [ ] At 200% zoom and on an iPad-sized viewport, confirm dialogs remain usable and important copy/actions are not clipped.
+
+### Privacy and administration
+
+- [ ] Create plans as two separate guests and confirm neither can view, change or delete the other's task or saved plan.
+- [ ] Create an account, sign out and sign back in; confirm only that account's plans appear.
+- [x] Delete a saved plan and confirm its private content disappears from the open result.
+- [ ] Reopen a saved plan after its original task is unavailable and confirm “Continue with AI” opens an editable review prompt rather than doing nothing.
+- [ ] Complete permanent account deletion and confirm the former credentials no longer work.
+- [ ] Confirm a non-admin receives the protected-dashboard access message and an allowed admin can load, filter and retry dashboard data.
+
+## Outstanding distribution gates
+
+- **P0 browser:** authenticated administrator/non-administrator dashboard access, filters and retry; category/task/saved-plan/pricing error recovery; cancellation, dispute, price-reduction and bill-checking flows; two-browser guest/account isolation, deletion and saved-plan AI handoff after source-task deletion; keyboard and 200% zoom.
+- **P1 owner configuration:** final domain, legal/publisher identity, privacy/terms/refund/support/retention text, admin allowlist, stable session secret, persistent storage, backup key custody and alerting; Stripe **sandbox** checkout, cancellation, failure, webhook replay and entitlement verification. Keep live payments off.
+- **P2 last:** physical iPad Safari touch, clipboard, keyboard, responsive dialogs, account screens, AI handoff and checkout-return layout. Obtain separate explicit owner approval before merging, deploying, releasing, enabling live Stripe or scheduling production backups.
+- Browser automation through the previously attempted connected service is blocked by insufficient credits; do not purchase credits or claim browser coverage without owner approval.
+
+## Release guards
+
+- Checkout must remain in preview until the owner separately approves live payments and configures the one-time complete product.
+- The five external assistants are manual handoffs; the app must not send customer details automatically or incur paid AI usage.
+- Do not publish, deploy, advertise or submit to app stores from this review branch.
+- Do not place secrets, production customer data or private account details in test fixtures, issue comments or the pull request.
+- Administrator access, production session secrets, persistence, legal wording, support details and any hosting choice require owner-supplied production decisions.
+
+## Review record
+
+Record the browser/device, viewport, scenario and exact failed step for every manual defect. Keep security, privacy and payment changes isolated from general usability fixes and validate them separately.
