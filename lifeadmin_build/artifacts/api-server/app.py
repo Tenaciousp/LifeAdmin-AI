@@ -1568,9 +1568,11 @@ def admin_overview(user):
     if storage.available():
         try:
             return storage.admin_overview()
-        except Exception:
-            # Fall back to aggregate guest/demo metrics without exposing a database error.
-            pass
+        except Exception as exc:
+            # A failed database query must not be reported as empty demo metrics.
+            raise storage.StorageUnavailable("Administrator statistics unavailable") from exc
+    if os.environ.get("DATABASE_URL"):
+        raise storage.StorageUnavailable("Administrator statistics unavailable")
     store = read_json(TASKS_FILE, {})
     tasks = [task for values in (store.get("users", {}).values() if isinstance(store, dict) else []) for task in (values if isinstance(values, list) else [])]
     note_store = read_json(NOTES_FILE, {})
@@ -1710,8 +1712,13 @@ class AdminPilotHandler(SimpleHTTPRequestHandler):
         if path == "/api/catalog":
             return json_response(self, domain.catalog())
         if path == "/api/admin/overview":
-            overview = admin_overview(user)
-            return json_response(self, overview if overview is not None else {"error": "Admin access required"}, 200 if overview is not None else 403)
+            if not is_admin(user):
+                return json_response(self, {"error": "Admin access required"}, 403)
+            try:
+                overview = admin_overview(user)
+            except storage.StorageUnavailable:
+                return json_response(self, {"error": "Administrator statistics are temporarily unavailable. Please retry."}, 503)
+            return json_response(self, overview)
         if path == "/api/qa-report":
             return json_response(self, QA_REPORT)
         if path == "/api/checkout/status":
