@@ -156,6 +156,65 @@ class AccountDeletionHTTPTests(unittest.TestCase):
         self.assertEqual([note["id"] for note in storage.list_notes(kept_user)], ["note-1"])
         self.assertEqual(storage.get_purchases(kept_user), {"core_app": True})
 
+    def test_real_sessions_enforce_admin_allowlist_and_logout(self):
+        """Exercise protected admin HTTP access with real disposable sessions."""
+        with patch.dict(os.environ, {"ADMIN_EMAILS": "admin@example.test"}):
+            sessions = {}
+            for email in ("admin@example.test", "customer@example.test"):
+                status, result, set_cookie = self.request(
+                    "/api/auth/register",
+                    {"email": email, "password": "synthetic-password-123"},
+                )
+                self.assertEqual(status, 201)
+                self.assertTrue(result["authenticated"])
+                cookie = SimpleCookie()
+                cookie.load(set_cookie)
+                sessions[email] = f"adminpilot_session={cookie['adminpilot_session'].value}"
+
+            status, denied, _ = self.request("/api/admin/overview")
+            self.assertEqual(status, 403)
+            self.assertEqual(denied["error"], "Admin access required")
+
+            status, denied, _ = self.request(
+                "/api/admin/overview", cookie=sessions["customer@example.test"]
+            )
+            self.assertEqual(status, 403)
+            self.assertEqual(denied["error"], "Admin access required")
+
+            status, allowed, _ = self.request(
+                "/api/admin/overview", cookie=sessions["admin@example.test"]
+            )
+            self.assertEqual(status, 200)
+            self.assertEqual(allowed["users"]["total"], 2)
+            self.assertIn("recent_activity", allowed)
+            self.assertNotIn("password_hash", json.dumps(allowed))
+
+            status, _, cleared = self.request(
+                "/api/auth/logout", {}, sessions["admin@example.test"]
+            )
+            self.assertEqual(status, 200)
+            self.assertIn("Max-Age=0", cleared)
+            status, denied, _ = self.request(
+                "/api/admin/overview", cookie=sessions["admin@example.test"]
+            )
+            self.assertEqual(status, 403)
+            self.assertEqual(denied["error"], "Admin access required")
+
+            status, logged_in, set_cookie = self.request(
+                "/api/auth/login",
+                {"email": "admin@example.test", "password": "synthetic-password-123"},
+            )
+            self.assertEqual(status, 200)
+            self.assertTrue(logged_in["authenticated"])
+            cookie = SimpleCookie()
+            cookie.load(set_cookie)
+            new_session = f"adminpilot_session={cookie['adminpilot_session'].value}"
+            status, allowed_again, _ = self.request(
+                "/api/admin/overview", cookie=new_session
+            )
+            self.assertEqual(status, 200)
+            self.assertEqual(allowed_again["users"]["total"], 2)
+
 
 if __name__ == "__main__":
     unittest.main()
