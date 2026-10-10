@@ -1,6 +1,6 @@
 # LifeAdmin AI owner-review QA
 
-Updated: 8 October 2026
+Updated: 10 October 2026
 
 This branch is an owner-review candidate. Automated checks cover the application contracts and build, but they do not replace hands-on browser, iPad or phone testing.
 
@@ -32,10 +32,12 @@ npm run build:web
 
 CI #124 passed against the exact browser-tested application revision `00762a39046031ef46f944a059492301601cab37`. CI #125 then passed against documentation-only head `868dea9359980b83dcccfe1810c55ba90f43498c`:
 
-- 162 automated API, domain, storage, privacy, payment-safety, backup and frontend-contract tests
+- At that historical checkpoint: 162 automated API, domain, storage, privacy, payment-safety, backup and frontend-contract tests; later commits added further regression tests
 - TypeScript type checking and Python compile validation
 - A live API smoke journey covering health, catalog, preview-only pricing, guest energy-task creation, provider/reference preservation, structured plan generation, cross-guest isolation, guest-to-account migration, sign-out/sign-in isolation, saved-plan/task deletion and permanent account deletion
 - A production Vite frontend build
+
+At the 10 October checkpoint, CI #200 through #203 completed successfully. CI #204 and #205 were still in progress; **do not treat them as passed** until GitHub reports a successful conclusion. Recent automated regressions cover real synthetic admin login/allowlist revocation, cross-account deletion isolation, saved-plan retention after source-task deletion, retryable admin database errors, and missing-details review cancellation. These are not browser tests.
 
 Use the pull request's latest workflow result as the source of truth for the current head commit. A green workflow does not prove browser, clipboard, popup, responsive-layout or physical-device behaviour.
 
@@ -52,8 +54,9 @@ Use the pull request's latest workflow result as the source of truth for the cur
 - JavaScript dependencies are committed in `package-lock.json`; CI, container builds and the documented setup use `npm ci`.
 - Docker build inputs now reference the existing `tsconfig.base.json` only. The previous `COPY` referenced a missing root `tsconfig.json`.
 - Docker context exclusions also cover generated frontend output and environment-file variants.
-- Local clean install, 162 tests, type checks and live API smoke passed before the browser evidence update. The production frontend build is validated by CI #124 and #125.
-- Docker, Podman, Buildah and nerdctl are unavailable in the current automation environment. `scripts/verify_docker_release.sh` now provides one bounded build/start/restart/backup check for the existing Codespace or another authorised Docker host; it has passed shell syntax validation but has not yet been executed with Docker.
+- A clean install, 162 tests, type checks and live API smoke passed before the initial browser evidence update. Production frontend builds have subsequently passed in CI #200 through #203. Test counts and exact results should be taken from the latest completed CI run.
+- On 8 October, the owner provided Codespaces evidence that `scripts/verify_docker_release.sh` completed its one-time Docker image build, container start/restart, persistence and packaged-backup checks. This is **not** approval to deploy or change the existing Render service.
+- On 9–10 October, the owner verified test-only Google Drive OAuth access and a synthetic encrypted backup upload with offline restore. No production backup schedule or key custody has been approved.
 
 ## Owner hands-on checklist
 
@@ -83,6 +86,13 @@ Use the pull request's latest workflow result as the source of truth for the cur
 - [ ] Reopen a saved plan after its original task is unavailable and confirm “Continue with AI” opens an editable review prompt rather than doing nothing.
 - [ ] Complete permanent account deletion and confirm the former credentials no longer work.
 - [ ] Confirm a non-admin receives the protected-dashboard access message and an allowed admin can load, filter and retry dashboard data.
+
+## Outstanding distribution gates
+
+- **P0 browser:** authenticated administrator/non-administrator dashboard access, filters and retry; category/task/saved-plan/pricing error recovery; cancellation, dispute, price-reduction and bill-checking flows; two-browser guest/account isolation, deletion and saved-plan AI handoff after source-task deletion; keyboard and 200% zoom.
+- **P1 owner configuration:** final domain, legal/publisher identity, privacy/terms/refund/support/retention text, admin allowlist, stable session secret, persistent storage, backup key custody and alerting; Stripe **sandbox** checkout, cancellation, failure, webhook replay and entitlement verification. Keep live payments off.
+- **P2 last:** physical iPad Safari touch, clipboard, keyboard, responsive dialogs, account screens, AI handoff and checkout-return layout. Obtain separate explicit owner approval before merging, deploying, releasing, enabling live Stripe or scheduling production backups.
+- Browser automation through the previously attempted connected service is blocked by insufficient credits; do not purchase credits or claim browser coverage without owner approval.
 
 ## Release guards
 
