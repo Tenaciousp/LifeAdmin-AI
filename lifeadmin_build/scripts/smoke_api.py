@@ -50,9 +50,9 @@ def main():
 
     products = request_json(client, "/api/products")
     assert products["core"]["id"] == "core_app"
-    assert products["core"]["price"] == "£0.99 / $0.99"
-    assert [item["id"] for item in products["addons"]] == ["all_access"]
-    assert products["addons"][0]["price"] == "£1.99 / $1.99"
+    assert products["core"]["price"] == "£1.99 / $1.99"
+    assert products["addons"] == []
+    assert products["core"]["name"] == "LifeAdmin AI Complete"
     assert products["payments_live"] is False
     assert products["payment_provider"] == "preview"
 
