@@ -15,7 +15,7 @@ This branch is an owner-review candidate. Automated checks cover the application
 - Editable manual comparison handoff to Gemini, Microsoft Copilot, ChatGPT, Claude and Perplexity
 - Guest and account data isolation, saved-plan reopening and owner-scoped deletion
 - Protected administrator dashboard with explicit access and recovery states
-- Core at £0.99 / $0.99 plus All Access at an additional £1.99 / $1.99
+- One complete purchase at £1.99 UK / $1.99 US, all planning modes included
 - Accessible loading, error, retry, dialog, status and keyboard interaction states
 
 ## Automated verification
@@ -86,7 +86,7 @@ Use the pull request's latest workflow result as the source of truth for the cur
 
 ## Release guards
 
-- Checkout must remain in preview until the owner separately approves live payments and configures both one-time products.
+- Checkout must remain in preview until the owner separately approves live payments and configures the one-time complete product.
 - The five external assistants are manual handoffs; the app must not send customer details automatically or incur paid AI usage.
 - Do not publish, deploy, advertise or submit to app stores from this review branch.
 - Do not place secrets, production customer data or private account details in test fixtures, issue comments or the pull request.
