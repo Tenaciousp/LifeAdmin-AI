@@ -44,9 +44,9 @@ export function useSuggestMatch() {
 }
 
 // GET /api/notes
-export function useNotes(userId: string) {
+export function useNotes(userId: string, workspaceId: string) {
   return useQuery({
-    queryKey: ["/api/notes", userId],
+    queryKey: ["/api/notes", userId, workspaceId],
     queryFn: () => fetcher("/api/notes"),
     enabled: !!userId,
   });
@@ -66,9 +66,9 @@ export function useDeleteNote() {
 }
 
 // GET /api/tasks
-export function useTasks(userId: string) {
+export function useTasks(userId: string, workspaceId: string) {
   return useQuery({
-    queryKey: ["/api/tasks", userId],
+    queryKey: ["/api/tasks", userId, workspaceId],
     queryFn: () => fetcher("/api/tasks"),
     enabled: !!userId,
   });
@@ -142,12 +142,15 @@ export function useAuthMe() {
     queryKey: ["/api/auth/me"],
     queryFn: () => fetcher("/api/auth/me"),
     retry: false,
+    // A different browser tab may have signed out or changed account.
+    refetchOnWindowFocus: "always",
+    refetchOnReconnect: "always",
   });
 }
 
-export function useProducts(userId: string) {
+export function useProducts(userId: string, workspaceId: string) {
   return useQuery({
-    queryKey: ["/api/products", userId],
+    queryKey: ["/api/products", userId, workspaceId],
     queryFn: () => fetcher("/api/products"),
     enabled: !!userId,
   });
