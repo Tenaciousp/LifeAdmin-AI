@@ -267,6 +267,12 @@ def pending_import_guest(user_id):
     return load_purchase_store().get("pending_guest_imports", {}).get(str(user_id))
 
 
+def pending_import_owner(guest_id):
+    """Prevent a second account from claiming the same unfinished guest import."""
+    pending = load_purchase_store().get("pending_guest_imports", {})
+    return next((user_id for user_id, bound_guest in pending.items() if bound_guest == guest_id), None)
+
+
 def set_pending_import_guest(user_id, guest_id=None):
     with _JSON_LOCK:
         store = load_purchase_store()
@@ -1823,6 +1829,8 @@ class AdminPilotHandler(SimpleHTTPRequestHandler):
                 return json_response(self, {"error": "Too many account attempts. Please wait and try again."}, 429, {"Retry-After": "60"})
             try:
                 guest_id = None if user else guest_session(self)
+                if guest_id and pending_import_owner(guest_id):
+                    return json_response(self, {"error": "This browser has unfinished guest work linked to an existing account. Sign in to that account and retry the transfer before creating another."}, 409)
                 user = storage.create_user(body.get("email"), body.get("password"))
                 pending = False
                 if guest_id and guest_import_pending(guest_id):
@@ -1870,6 +1878,9 @@ class AdminPilotHandler(SimpleHTTPRequestHandler):
                 return json_response(self, {"error": "Sign in before deleting an account"}, 401)
             try:
                 storage.delete_account(user["id"], body.get("password"))
+                # The account no longer exists; never leave a stale claim blocking
+                # this browser's guest records from future recovery.
+                set_pending_import_guest(user["id"])
                 return json_response(self, {"deleted": True}, headers={"Set-Cookie": session_cookie(self, "", 0)})
             except ValueError as exc:
                 return json_response(self, {"error": str(exc)}, 403)
