@@ -16,14 +16,16 @@ class AccountSwitchFrontendPrivacyTests(unittest.TestCase):
         self.assertIn('<PricingPanel key={workspaceKey} />', LANDING)
 
     def test_account_transition_clears_old_queries_before_identity_update(self):
-        start = ACCOUNT.index("const refreshAccountQueries = (nextAuth:")
+        start = ACCOUNT.index("const refreshAccountQueries = async (nextAuth:")
         end = ACCOUNT.index("\n  };", start)
         refresh = ACCOUNT[start:end]
+        self.assertLess(refresh.index('await queryClient.cancelQueries({ queryKey: ["/api/auth/me"] })'), refresh.index("queryClient.setQueryData"))
+        self.assertLess(refresh.index("await queryClient.cancelQueries({ queryKey: [...queryKey] })"), refresh.index("queryClient.removeQueries"))
         self.assertLess(refresh.index("queryClient.removeQueries"), refresh.index("queryClient.setQueryData"))
         self.assertIn('queryClient.setQueryData(["/api/auth/me"], nextAuth)', refresh)
         self.assertIn('queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] })', refresh)
-        self.assertIn("refreshAccountQueries(data)", ACCOUNT)
-        self.assertEqual(ACCOUNT.count("refreshAccountQueries({ authenticated: false })"), 2)
+        self.assertIn("await refreshAccountQueries(data)", ACCOUNT)
+        self.assertEqual(ACCOUNT.count("await refreshAccountQueries({ authenticated: false })"), 2)
 
     def test_checkout_email_is_replaced_on_login_and_cleared_on_exit(self):
         self.assertIn("if (data.user?.email) saveBuyerEmail(data.user.email)", ACCOUNT)
