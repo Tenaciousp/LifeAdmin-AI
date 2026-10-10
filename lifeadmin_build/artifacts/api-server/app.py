@@ -211,12 +211,28 @@ def migrate_guest_workspace(guest_id, user_id):
     """Claim guest work without discarding items that fail to migrate."""
     if not storage.available():
         return True
-    for path, writer in ((TASKS_FILE, storage.create_task), (NOTES_FILE, storage.add_note)):
+    for path, writer, reader in (
+        (TASKS_FILE, storage.create_task, storage.list_tasks),
+        (NOTES_FILE, storage.add_note, storage.list_notes),
+    ):
         items = anonymous_items(path, guest_id)
+        if not items:
+            continue
+        try:
+            # A previous write may have committed before its response failed.
+            # Match by stable item ID so retries never duplicate that work.
+            existing_ids = {str(item.get("id")) for item in reader(user_id)}
+        except Exception:
+            # Never discard the guest copy if the destination cannot be checked.
+            continue
         remaining = []
         for item in items:
+            item_id = str(item.get("id"))
+            if item_id in existing_ids:
+                continue
             try:
                 writer(user_id, item)
+                existing_ids.add(item_id)
             except Exception:
                 # A temporary DB failure must not erase the guest's only copy.
                 remaining.append(item)
