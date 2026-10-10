@@ -14,9 +14,9 @@ Use a single application instance with SQLite. The disk preserves the entire API
 
 ## Payment setup, still without live sales
 
-Core access is £0.99/$0.99 once; All Access is an additional £1.99/$1.99 once. Confirm launch currency and final entitlement wording before creating payment products. Review processor fees against these low prices.
+LifeAdmin AI Complete is £1.99 UK / $1.99 US once, with all current planning features included. Existing purchasers retain full access. Verify actual checkout currency and amount for each market before enabling payments; the selector changes display only. Review processor fees against these low prices.
 
-In an authorised private preview, use Stripe sandbox credentials and sandbox price IDs only. Follow MONETISATION.md for supported environment variables and checkout configuration. Test purchase, cancellation, failed payment, return verification, duplicate confirmation and account entitlement persistence. Never accept a browser return alone as proof of payment. Verify entitlement enforcement against the final paid feature boundaries. Preview safeguards passed automated tests; no real Stripe transaction was tested in this workspace.
+In an authorised private preview, use Stripe sandbox credentials and a complete-product sandbox Price ID only. Follow MONETISATION.md for supported environment variables and checkout configuration. Test purchase, cancellation, failed payment, return verification, duplicate confirmation and account entitlement persistence. Never accept a browser return alone as proof of payment. Verify entitlement enforcement against the final paid feature boundaries. Preview safeguards passed automated tests; no real Stripe transaction was tested in this workspace.
 
 Prepare privacy, terms, refund policy, support contact and accurate product descriptions for owner review. Confirm deletion, billing-record retention and analytics consent wording. Do not enable live credentials, publish, merge the draft PR or submit this configuration during preparation.
 
