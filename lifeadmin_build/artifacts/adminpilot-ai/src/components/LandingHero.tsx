@@ -1,8 +1,10 @@
 import { ArrowRight, ShieldCheck, Lock, CheckCircle2, Sparkles } from "lucide-react";
 import { trackEvent } from "@/lib/analytics";
+import { MARKET_PRICES, initialMarket } from "@/lib/market-pricing";
 
 export function LandingHero() {
-  const headlinePrice = typeof navigator !== "undefined" && navigator.language.toLowerCase().startsWith("en-us") ? "$1.99" : "£1.99";
+  const market = initialMarket();
+  const headlinePrice = market === "OTHER" ? "View prices" : MARKET_PRICES[market].price;
   const scrollToApp = (event: React.MouseEvent) => {
     event.preventDefault();
     trackEvent("start_flow", { location: "hero_cta" });
@@ -71,7 +73,7 @@ export function LandingHero() {
 
               <div className="mt-5 rounded-xl bg-slate-900 text-white p-4 flex items-center justify-between gap-3">
                 <div>
-                  <p className="text-xs text-slate-300 font-semibold">Complete one-time price</p>
+                  <p className="text-xs text-slate-300 font-semibold">One-time regional price guide</p>
                   <p className="text-sm text-slate-200">No subscription</p>
                 </div>
                 <strong className="text-2xl">{headlinePrice}</strong>
