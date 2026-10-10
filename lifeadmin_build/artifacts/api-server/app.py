@@ -208,28 +208,33 @@ def save_anonymous_items(path, user_id, items):
 
 
 def migrate_guest_workspace(guest_id, user_id):
-    """Claim guest work and entitlements when a visitor creates an account."""
+    """Claim guest work without discarding items that fail to migrate."""
     if not storage.available():
         return
     for path, writer in ((TASKS_FILE, storage.create_task), (NOTES_FILE, storage.add_note)):
         items = anonymous_items(path, guest_id)
+        remaining = []
         for item in items:
             try:
                 writer(user_id, item)
             except Exception:
-                continue
-        save_anonymous_items(path, guest_id, [])
+                # A temporary DB failure must not erase the guest's only copy.
+                remaining.append(item)
+        if len(remaining) != len(items):
+            save_anonymous_items(path, guest_id, remaining)
 
     guest_entitlements = get_user_purchases(guest_id)
+    purchases_migrated = True
     for product_id, enabled in guest_entitlements.items():
         if enabled and product_id in VALID_PRODUCTS:
             try:
                 storage.unlock_purchase(user_id, product_id, "guest_migration")
             except Exception:
-                continue
-    purchase_store = load_purchase_store()
-    purchase_store.get("users", {}).pop(safe_user_id(guest_id), None)
-    write_json(PURCHASES_FILE, purchase_store)
+                purchases_migrated = False
+    if purchases_migrated:
+        purchase_store = load_purchase_store()
+        purchase_store.get("users", {}).pop(safe_user_id(guest_id), None)
+        write_json(PURCHASES_FILE, purchase_store)
 
 
 def migrate_purchases():
