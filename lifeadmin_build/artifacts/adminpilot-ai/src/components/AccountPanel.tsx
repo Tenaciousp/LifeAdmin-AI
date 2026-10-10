@@ -184,10 +184,16 @@ export function AccountPanel() {
             {auth.guest_import_pending && (
               <div role="status" aria-live="polite" className="mb-5 rounded-xl border border-amber-300 bg-amber-50 p-4 text-amber-950">
                 <strong className="block">Some guest work is waiting to transfer</strong>
-                <p className="mt-1 text-sm">Your account was created, but not everything could be copied. The remaining work is still saved in this browser's guest workspace. Retry here before signing out or changing browsers.</p>
-                <button type="button" onClick={handleRetryGuestImport} disabled={isBusy} aria-busy={busyAction === "retry-import"} className="mt-3 min-h-[44px] rounded-lg bg-amber-900 px-4 py-2.5 font-bold text-white hover:bg-amber-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2 disabled:opacity-50">
-                  {busyAction === "retry-import" ? "Retrying transfer..." : "Retry transferring my work"}
-                </button>
+                <p className="mt-1 text-sm">
+                  {auth.guest_import_retry_available
+                    ? "Your remaining guest work is still saved in this browser. Retry here before signing out or changing browsers."
+                    : "Your remaining guest work is linked to the browser where you created this account. Return to that browser, sign in and retry the transfer there."}
+                </p>
+                {auth.guest_import_retry_available && (
+                  <button type="button" onClick={handleRetryGuestImport} disabled={isBusy} aria-busy={busyAction === "retry-import"} className="mt-3 min-h-[44px] rounded-lg bg-amber-900 px-4 py-2.5 font-bold text-white hover:bg-amber-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2 disabled:opacity-50">
+                    {busyAction === "retry-import" ? "Retrying transfer..." : "Retry transferring my work"}
+                  </button>
+                )}
               </div>
             )}
 
