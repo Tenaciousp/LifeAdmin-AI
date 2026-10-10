@@ -2,6 +2,7 @@ import { ArrowRight, ShieldCheck, Lock, CheckCircle2, Sparkles } from "lucide-re
 import { trackEvent } from "@/lib/analytics";
 
 export function LandingHero() {
+  const headlinePrice = typeof navigator !== "undefined" && navigator.language.toLowerCase().startsWith("en-us") ? "$1.99" : "£1.99";
   const scrollToApp = (event: React.MouseEvent) => {
     event.preventDefault();
     trackEvent("start_flow", { location: "hero_cta" });
@@ -73,7 +74,7 @@ export function LandingHero() {
                   <p className="text-xs text-slate-300 font-semibold">Complete one-time price</p>
                   <p className="text-sm text-slate-200">No subscription</p>
                 </div>
-                <strong className="text-2xl">£1.99</strong>
+                <strong className="text-2xl">{headlinePrice}</strong>
               </div>
             </div>
           </div>
