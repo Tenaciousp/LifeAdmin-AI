@@ -51,7 +51,7 @@ class AccountPanelAccessibilityTests(unittest.TestCase):
         self.assertIn('disabled={isBusy || deleteConfirm !== "DELETE"}', SOURCE)
 
     def test_account_status_failure_is_not_treated_as_signed_out(self):
-        self.assertIn('queryFn: () => fetcher("/api/auth/me"),', HOOK_SOURCE)
+        self.assertIn('queryFn: ({ signal }) => fetcher("/api/auth/me", { signal }),', HOOK_SOURCE)
         self.assertNotIn('fetcher("/api/auth/me").catch', HOOK_SOURCE)
         self.assertIn('isError, refetch: retryAuth', SOURCE)
         self.assertLess(SOURCE.index('isError ? ('), SOURCE.index('auth?.authenticated ? ('))
