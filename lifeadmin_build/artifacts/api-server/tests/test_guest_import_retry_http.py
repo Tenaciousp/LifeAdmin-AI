@@ -92,6 +92,8 @@ class GuestImportRetryTests(unittest.TestCase):
              patch.object(app.storage, "create_user", return_value={"id": "account-a", "email": "synthetic@example.test"}), \
              patch.object(app.storage, "create_session", return_value="synthetic-token"), \
              patch.object(app.storage, "available", return_value=True), \
+             patch.object(app.storage, "list_tasks", return_value=[]), \
+             patch.object(app.storage, "list_notes", return_value=[]), \
              patch.object(app.storage, "create_task", side_effect=RuntimeError("synthetic outage")):
             app.AdminPilotHandler._do_POST(handler)
         self.assertEqual(handler.status, 201)
