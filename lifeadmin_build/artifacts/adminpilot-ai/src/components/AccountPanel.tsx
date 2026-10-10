@@ -30,11 +30,14 @@ export function AccountPanel() {
     setShowDelete(false);
   };
 
-  const refreshAccountQueries = (nextAuth: { authenticated: boolean; user?: { id: string; email?: string } }) => {
+  const refreshAccountQueries = async (nextAuth: { authenticated: boolean; user?: { id: string; email?: string } }) => {
+    // Prevent stale account-status and private-data requests from racing the new session.
+    await queryClient.cancelQueries({ queryKey: ["/api/auth/me"] });
     for (const queryKey of ACCOUNT_SCOPED_QUERY_KEYS) {
+      await queryClient.cancelQueries({ queryKey: [...queryKey] });
       queryClient.removeQueries({ queryKey: [...queryKey] });
     }
-    // Update identity before refetch so previous account's open plans unmount.
+    // Publish the new identity only after old requests are cancelled.
     queryClient.setQueryData(["/api/auth/me"], nextAuth);
     void queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
   };
@@ -57,7 +60,7 @@ export function AccountPanel() {
       clearCredentialState();
       if (path === "/api/auth/register") trackEvent("account_created");
       if (data.user?.email) saveBuyerEmail(data.user.email);
-      refreshAccountQueries(data);
+      await refreshAccountQueries(data);
     } catch (err: any) {
       toast.error(err.message || "Authentication failed");
     } finally {
@@ -73,7 +76,7 @@ export function AccountPanel() {
       toast.success("Signed out");
       clearCredentialState();
       clearBuyerEmail();
-      refreshAccountQueries({ authenticated: false });
+      await refreshAccountQueries({ authenticated: false });
     } catch (err: any) {
       toast.error(err.message || "Could not sign out");
     } finally {
@@ -102,7 +105,7 @@ export function AccountPanel() {
       toast.success("Account deleted");
       clearCredentialState();
       clearBuyerEmail();
-      refreshAccountQueries({ authenticated: false });
+      await refreshAccountQueries({ authenticated: false });
     } catch (err: any) {
       toast.error(err.message || "Could not delete account");
     } finally {
