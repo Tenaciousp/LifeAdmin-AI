@@ -38,6 +38,19 @@ class AdminDashboardErrorStateTests(unittest.TestCase):
         self.assertIn('href="/#account"', DASHBOARD)
         self.assertIn('role="alert"', DASHBOARD)
 
+    def test_charts_have_screen_reader_data_tables(self):
+        """Screen readers must access chart values without Recharts graphics."""
+        start = DASHBOARD.index("function MetricChart(")
+        end = DASHBOARD.index("function BreakdownCard(", start)
+        chart = DASHBOARD[start:end]
+        self.assertIn('<table className="sr-only">', chart)
+        self.assertIn("<caption>{title} values</caption>", chart)
+        self.assertIn('scope="row"', chart)
+        self.assertIn("{item.name}", chart)
+        self.assertIn("{item.count}", chart)
+        self.assertIn("colSpan={2}>{empty}", chart)
+        self.assertIn('aria-hidden="true"', chart)
+
     def test_activity_table_has_caption_and_column_scopes(self):
         self.assertIn("<caption", DASHBOARD)
         self.assertIn("Recent privacy-light operational activity", DASHBOARD)

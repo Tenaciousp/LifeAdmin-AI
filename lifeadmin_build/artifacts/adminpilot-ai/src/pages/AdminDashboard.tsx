@@ -251,7 +251,16 @@ function MetricChart({ title, icon, data, empty }: { title: string; icon: React.
   return (
     <article className="bg-white border border-slate-200 rounded-2xl p-5 sm:p-6 shadow-sm">
       <h2 className="text-lg font-extrabold mb-6 flex items-center gap-2 text-slate-900">{icon}{title}</h2>
-      <div className="h-[270px] w-full" aria-label={`${title} chart`}>
+      <table className="sr-only">
+        <caption>{title} values</caption>
+        <thead><tr><th scope="col">Category or goal</th><th scope="col">Tasks</th></tr></thead>
+        <tbody>
+          {data.length ? data.map((item) => (
+            <tr key={item.name}><th scope="row">{item.name}</th><td>{item.count}</td></tr>
+          )) : <tr><td colSpan={2}>{empty}</td></tr>}
+        </tbody>
+      </table>
+      <div className="h-[270px] w-full" aria-hidden="true">
         {data.length ? (
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={data} layout="vertical" margin={{ top: 0, right: 20, left: 25, bottom: 0 }}>
