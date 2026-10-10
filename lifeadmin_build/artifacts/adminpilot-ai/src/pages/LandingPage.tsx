@@ -92,7 +92,7 @@ export function LandingPage() {
 
         <div className="bg-slate-100 border-b border-slate-200 py-4 md:py-8">
           {sessionReady ? (
-            <CustomerJourney key={workspaceKey} />
+            <CustomerJourney key={workspaceKey} workspaceId={workspaceKey} />
           ) : (
             <section id="app" role={authError ? "alert" : "status"} aria-live="polite" className="max-w-3xl mx-auto px-5 py-12">
               <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
@@ -141,7 +141,7 @@ export function LandingPage() {
         </div>
 
         <div className="bg-slate-50">
-          {sessionReady ? <PricingPanel key={workspaceKey} /> : (
+          {sessionReady ? <PricingPanel key={workspaceKey} workspaceId={workspaceKey} /> : (
             <div role="status" className="max-w-3xl mx-auto px-5 py-10 text-sm text-slate-600">
               Pricing and checkout will be available once your session is checked.
             </div>
