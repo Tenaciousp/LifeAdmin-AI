@@ -21,8 +21,8 @@ const faqs = [
   ["Does LifeAdmin contact providers for me?", "No. It prepares plans, provider messages and checklists. You review and send anything yourself."],
   ["Does it connect to my bank or email?", "No bank connection or mailbox access is required for the core workflow. You enter only the details you choose to use."],
   ["What happens if I do not know all the details?", "Leave them blank. LifeAdmin highlights useful missing information before it generates a plan, without blocking you."],
-  ["How much does LifeAdmin cost in the UK and US?", "LifeAdmin AI Complete is £1.99 once in the UK or $1.99 once in the US. All available planning features are included, with no separate upgrade or subscription."],
-  ["Which currency will I actually pay in?", "Use the UK/US selector in the pricing section to compare the advertised prices. It does not change your billing country or checkout currency. Before paying, check the final amount and currency shown at checkout. Pricing in other countries may differ."],
+  ["How much does LifeAdmin cost worldwide?", "LifeAdmin AI Complete has proposed one-time prices of £1.99 in the UK, $1.99 in the US, €1.99 in the eurozone, C$2.99 in Canada, A$3.99 in Australia and ₹199 in India. These are indicative until matching local checkout prices are configured. Other markets will be added after payment and tax checks."],
+  ["Which currency will I actually pay in?", "Choose a country or region in the pricing section to view a proposed local price. The selector does not detect or change your billing country. Checkout is disabled for markets without a configured price. Before paying, check the final amount, currency and any applicable taxes."],
   ["Is there a monthly subscription or recurring charge?", "No. LifeAdmin AI Complete is a single one-time purchase. There is no recurring subscription or separate All Access upgrade."],
   ["Can I try it before creating an account?", "Yes. You can use the planning flow first and create an account later if you want to save plans and purchases across sessions."],
   ["Is this legal or financial advice?", "No. LifeAdmin provides general admin guidance and draft wording. For regulated or high-stakes issues, check official information or seek qualified advice."],
@@ -99,7 +99,7 @@ export function LandingPage() {
               ["Privacy-light by design", "No bank connection or mailbox access is required for the core workflow."],
               ["Approval before action", "The app prepares drafts and checklists. It does not send, cancel or purchase for you."],
               ["Household-bill specific", "Twelve categories and seven goals guide the questions and output."],
-              ["Simple one-time pricing", "£1.99 once in the UK or $1.99 once in the US. All planning features included. No subscription."],
+              ["Simple one-time pricing", "One complete package with regional prices shown in GBP, USD, EUR, CAD, AUD and INR. No subscription."],
             ].map(([title, text]) => (
               <div key={title} className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm">
                 <ShieldCheck className="w-8 h-8 text-primary mb-5" />
