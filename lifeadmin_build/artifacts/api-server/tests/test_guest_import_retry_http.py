@@ -45,9 +45,13 @@ class GuestImportRetryTests(unittest.TestCase):
         other = SimpleNamespace(headers={"Cookie": self.cookie("guest-b")})
         bad = SimpleNamespace(headers={"Cookie": "lifeadmin_guest=guest-a.forged"})
         self.assertTrue(app.guest_import_status(good, user))
-        self.assertFalse(app.guest_import_status(other, user))
-        self.assertFalse(app.guest_import_status(bad, user))
+        self.assertTrue(app.guest_import_status(other, user))
+        self.assertTrue(app.guest_import_status(bad, user))
         self.assertFalse(app.guest_import_status(good, {"id": "account-b"}))
+        self.assertTrue(app.guest_import_retry_available(good, user))
+        self.assertFalse(app.guest_import_retry_available(other, user))
+        self.assertFalse(app.guest_import_retry_available(bad, user))
+        self.assertFalse(app.guest_import_retry_available(good, {"id": "account-b"}))
 
     def test_retry_denies_other_accounts_and_other_guest_browsers(self):
         app.set_pending_import_guest("account-a", "guest-a")
