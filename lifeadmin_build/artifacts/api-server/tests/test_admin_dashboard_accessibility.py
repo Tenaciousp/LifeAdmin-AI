@@ -52,9 +52,10 @@ class AdminDashboardErrorStateTests(unittest.TestCase):
         self.assertIn('aria-hidden="true"', chart)
 
     def test_activity_table_has_caption_and_column_scopes(self):
-        self.assertIn("<caption", DASHBOARD)
-        self.assertIn("Recent privacy-light operational activity", DASHBOARD)
-        self.assertEqual(DASHBOARD.count('scope="col"'), 3)
+        caption = '<caption className="sr-only">Recent privacy-light operational activity</caption>'
+        self.assertIn(caption, DASHBOARD)
+        activity_table = DASHBOARD.split(caption, 1)[1].split("</table>", 1)[0]
+        self.assertEqual(activity_table.count('scope="col"'), 3)
 
 
 if __name__ == "__main__":
