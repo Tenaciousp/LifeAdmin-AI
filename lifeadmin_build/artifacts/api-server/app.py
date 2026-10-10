@@ -221,18 +221,22 @@ def migrate_guest_workspace(guest_id, user_id):
         try:
             # A previous write may have committed before its response failed.
             # Match by stable item ID so retries never duplicate that work.
-            existing_ids = {str(item.get("id")) for item in reader(user_id)}
+            existing_by_id = {str(item.get("id")): item for item in reader(user_id)}
         except Exception:
             # Never discard the guest copy if the destination cannot be checked.
             continue
         remaining = []
         for item in items:
             item_id = str(item.get("id"))
-            if item_id in existing_ids:
+            if item_id in existing_by_id:
+                if existing_by_id[item_id] != item:
+                    # A matching ID with different content is not a completed
+                    # import. Keep the guest original for explicit recovery.
+                    remaining.append(item)
                 continue
             try:
                 writer(user_id, item)
-                existing_ids.add(item_id)
+                existing_by_id[item_id] = item
             except Exception:
                 # A temporary DB failure must not erase the guest's only copy.
                 remaining.append(item)
