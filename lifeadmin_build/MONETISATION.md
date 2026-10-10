@@ -2,26 +2,21 @@
 
 ## One-time pricing
 
-**Core: £0.99 UK / $0.99 US once**
+**LifeAdmin AI Complete: £1.99 UK / $1.99 US once.**
 
-Includes the complete everyday household-admin workflow: 12 categories, seven goals, next steps, provider messages, things to check, approval checklists, unknown-payment support and manual AI handoff.
+One purchase includes 12 household categories, seven goals, next steps, provider messages, checklists, unknown-payment support, manual AI handoff, advanced negotiation, switching, complaint/escalation support and all advanced planning modes in this release.
 
-**All Access: an additional £1.99 UK / $1.99 US once**
-
-Adds deeper negotiation support, complaint and escalation help, switching guidance, comparison prompts and advanced planning modes.
-
-Core + All Access is £2.98 / $2.98 total. There is no subscription. Native stores can use an equivalent attractive local price tier where their pricing system requires it.
+There is no subscription, separate upgrade or second payment. Existing Core and All Access purchasers retain complete access under the migration rule. The displayed currency selector is informational; the Stripe checkout amount and currency must match the approved market price before payment is enabled.
 
 ## Web payments
 
-Live Stripe checkout is enabled only when both the Stripe secret and the matching product price ID are configured. The customer UI remains in preview mode when payment configuration is incomplete. A purchase entitlement is granted only after Stripe reports a paid session.
+Live Stripe checkout is enabled only when both the Stripe secret and the matching product price ID are configured. The customer UI remains in preview mode when payment configuration is incomplete. A purchase entitlement is granted only after Stripe reports a paid session. Do not activate checkout until the actual Stripe Price currency and amount match the displayed market pricing; the UI currency selector does not select a Stripe Price.
 
 Required production secrets:
 
 - `STRIPE_SECRET_KEY`
 - `STRIPE_WEBHOOK_SECRET`
-- `STRIPE_PRICE_CORE_APP`
-- `STRIPE_PRICE_ALL_ACCESS`
+- `STRIPE_PRICE_LIFEADMIN_COMPLETE` (one-time Stripe Price for the complete product; verify market/currency before launch)
 
 Never place live secrets in client code or source control.
 
