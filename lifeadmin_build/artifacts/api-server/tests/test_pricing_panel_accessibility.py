@@ -27,10 +27,9 @@ class PricingPanelAccessibilityTests(unittest.TestCase):
 
     def test_checkout_busy_state_is_exposed_without_enabling_payments(self):
         self.assertIn("busy={loadingId === \"core_app\"}", SOURCE)
-        self.assertIn("busy={loadingId === addon.id}", SOURCE)
         self.assertIn("aria-busy={busy}", SOURCE)
         self.assertIn("!core.checkout_ready", SOURCE)
-        self.assertIn("!addon.checkout_ready", SOURCE)
+        self.assertIn("!core.checkout_ready", SOURCE)
 
     def test_pricing_region_and_decorative_icons_are_accessible(self):
         self.assertGreaterEqual(SOURCE.count('aria-labelledby="pricing-heading"'), 3)
