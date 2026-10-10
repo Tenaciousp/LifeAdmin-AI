@@ -31,7 +31,7 @@ class AccountSessionPrivacyRegressionTests(unittest.TestCase):
         self.assertIn('queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] })', SOURCE)
 
     def test_successful_authentication_clears_credential_fields_after_response(self):
-        block = function_block("handleAction", "handleLogout")
+        block = function_block("handleAction", "handleRetryGuestImport")
         self.assertLess(block.index("if (!res.ok)"), block.index("clearCredentialState()"))
         self.assertEqual(block.count("clearCredentialState()"), 1)
         self.assertLess(block.index("clearCredentialState()"), block.index("refreshAccountQueries(data)"))
