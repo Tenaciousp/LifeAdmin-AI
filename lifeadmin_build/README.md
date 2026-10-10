@@ -26,8 +26,7 @@ The product includes 12 household categories, seven action-based goals, savings-
 
 ## Pricing
 
-- **Core:** £0.99 / $0.99 one time
-- **All Access:** an additional £1.99 / $1.99 one time
+- **LifeAdmin AI Complete:** £1.99 UK / $1.99 US one time, all planning modes included
 - No subscription
 
 Equivalent local store tiers can be considered later only as part of a separately approved native release.
@@ -65,14 +64,14 @@ Copy `.env.example` and configure only services that the owner has approved. Imp
 - `SESSION_SECRET`
 - `APP_BASE_URL`
 - `DATABASE_URL` for PostgreSQL, if used
-- Stripe credentials and both one-time price IDs, only if live payments are approved
+- Stripe credentials and the one-time complete-product Price ID, only if live payments are approved
 - `ADMIN_EMAILS`
 
 Never commit live credentials.
 
 ## Payments
 
-Checkout is not live by default. The interface remains in preview until both one-time products and Stripe credentials are configured. Enabling live checkout, hosting or any paid service requires explicit owner approval.
+Checkout is not live by default. The interface remains in preview until the complete-product Stripe Price ID and Stripe credentials are configured. Enabling live checkout, hosting or any paid service requires explicit owner approval.
 
 ## Manual AI comparison
 
