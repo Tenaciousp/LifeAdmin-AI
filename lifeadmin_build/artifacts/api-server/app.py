@@ -521,6 +521,8 @@ def product_payload(user_id="demo"):
         "core": public_product(CORE_PRODUCT),
         "addons": [],
         "purchases": purchases,
+        "paid_access_required": env_bool("PAID_ACCESS_REQUIRED", False),
+        "planning_access": not env_bool("PAID_ACCESS_REQUIRED", False) or bool(purchases.get("core_app")),
         "payment_provider": "stripe" if payments_live else "preview",
         "payments_live": payments_live,
         "regional_checkout_ready": {
@@ -530,6 +532,24 @@ def product_payload(user_id="demo"):
         # Backward-compatible name for the current client. It now means fully checkout-ready.
         "stripe_configured": payments_live,
     }
+
+
+def enforce_paid_access(handler, user_id):
+    """Return True only after responding to a blocked planning request."""
+    if not env_bool("PAID_ACCESS_REQUIRED", False):
+        return False
+    try:
+        allowed = bool(get_user_purchases(user_id).get("core_app"))
+    except Exception:
+        json_response(handler, {"error": "Access verification is temporarily unavailable. Please retry."}, 503)
+        return True
+    if allowed:
+        return False
+    json_response(handler, {
+        "error": "Purchase required before using the planning tools.",
+        "code": "purchase_required",
+    }, 402)
+    return True
 
 
 def is_mode_unlocked(mode, user_id="demo"):
@@ -787,6 +807,8 @@ def handle_stripe_webhook(handler):
 
 
 def demo_purchase(handler, body):
+    if env_bool("PAID_ACCESS_REQUIRED", False):
+        return json_response(handler, {"error": "Test purchases are disabled when paid access is required."}, 403)
     if os.environ.get("APP_ENV", "development").lower() == "production":
         return json_response(handler, {"error": "Test purchases are disabled in production"}, 403)
     if not env_bool("DEMO_PAYMENTS", False):
@@ -1903,6 +1925,8 @@ class AdminPilotHandler(SimpleHTTPRequestHandler):
                 self.path = "/index.html"
                 return super().do_GET()
             return json_response(self, {"error": "Web app has not been built yet. Run the frontend build first."}, 503)
+        if path in {"/api/tasks", "/api/notes"} and enforce_paid_access(self, user_id):
+            return
         if path == "/api/tasks":
             tasks = storage.list_tasks(user_id) if user else anonymous_items(TASKS_FILE, user_id, DEFAULT_TASKS)
             return json_response(self, {"tasks": tasks, "storage": storage.backend() if user else "browser"})
@@ -1919,7 +1943,10 @@ class AdminPilotHandler(SimpleHTTPRequestHandler):
             payload["guest_import_retry_available"] = guest_import_retry_available(self, user)
             return json_response(self, payload)
         if path == "/api/products":
-            return json_response(self, product_payload(user_id))
+            try:
+                return json_response(self, product_payload(user_id))
+            except Exception:
+                return json_response(self, {"error": "Access verification is temporarily unavailable. Please retry."}, 503)
         if path == "/api/catalog":
             return json_response(self, domain.catalog())
         if path == "/api/admin/overview":
@@ -2024,12 +2051,18 @@ class AdminPilotHandler(SimpleHTTPRequestHandler):
             except Exception:
                 return json_response(self, {"error": "Account deletion is temporarily unavailable. Please retry."}, 503)
         if path == "/api/checkout":
+            if env_bool("PAID_ACCESS_REQUIRED", False) and not user:
+                return json_response(self, {"error": "Sign in before purchasing access."}, 401)
             try:
+                if env_bool("PAID_ACCESS_REQUIRED", False) and get_user_purchases(user_id).get("core_app"):
+                    return json_response(self, {"error": "Access is already purchased for this account."}, 409)
                 return create_checkout_session(self, body)
             except Exception:
                 return json_response(self, {"error": "Checkout is temporarily unavailable. Please try again."}, 503)
         if path == "/api/demo-purchase":
             return demo_purchase(self, body)
+        if path in {"/api/suggest", "/api/tasks", "/api/tasks/update", "/api/tasks/delete", "/api/notes/delete", "/api/agent"} and enforce_paid_access(self, user_id):
+            return
         if path == "/api/suggest":
             return json_response(self, domain.suggest(body.get("query", "")))
         if path == "/api/tasks":
@@ -2146,6 +2179,10 @@ def main():
     ensure_data()
     if os.environ.get("APP_ENV", "development").lower() == "production" and not os.environ.get("SESSION_SECRET"):
         raise RuntimeError("SESSION_SECRET must be set in production")
+    if (os.environ.get("APP_ENV", "development").lower() == "production"
+            and os.environ.get("STRIPE_SECRET_KEY", "").startswith(("sk_live_", "rk_live_"))
+            and not env_bool("PAID_ACCESS_REQUIRED", False)):
+        raise RuntimeError("Live payment configuration requires PAID_ACCESS_REQUIRED=true.")
     if storage.available():
         try:
             storage.ensure_schema()
