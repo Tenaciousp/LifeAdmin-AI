@@ -44,3 +44,9 @@ The generated named-subscription draft omitted the supplied reference and reason
 Three focused semantic regressions passed locally: cancellation reference/reason/billing preservation, dispute amount/date/issue preservation, and absent optional details. Browser regeneration against the patched isolated backend verified QA-CANCEL-004, payment description, cancellation reason, amount 12 and Direct with provider in the editable message. The existing QA store and private ports were retained; original tracked data files were not changed by this work. Saved plans from earlier versions retain their original wording; regenerate deliberately to produce the repaired draft.
 
 Full CI on this change is required before release signoff. Two-account/browser isolation, partial guest imports and deletion, genuine cross-tab focus, authenticated non-admin denial, verified zoom, owner operations/payment gates, independent user validation and final physical iPad Safari QA are still open. No merge, deployment, production data, live Stripe, new charges or recurring automation.
+
+## AI review dialog focus repair: 11 October 2026
+
+Native keyboard testing reproduced a menu-to-dialog focus race: Continue with AI opened the review overlay, but dropdown dismissal returned focus to the page behind it. The result menu now defers its close autofocus to the open AI dialog. The dialog return target is the persistent More result actions button rather than the removed menu item. Existing dialog Tab trapping and Escape handlers are retained.
+
+Browser verification passed: opening through Enter, End, Enter focuses the dialog; Tab reaches the editable prompt; Shift+Tab wraps from the prompt to Close; Tab wraps back to the prompt; Escape closes the overlay and restores More result actions. No external assistant or message was opened. These are specific browser focus checks; complete app accessibility and verified 200% zoom are still pending.

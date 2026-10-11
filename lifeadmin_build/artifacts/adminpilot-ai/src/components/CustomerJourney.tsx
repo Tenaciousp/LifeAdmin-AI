@@ -58,6 +58,7 @@ export function CustomerJourney({ workspaceId }: { workspaceId: string }) {
   const aiPromptRef = useRef<HTMLTextAreaElement | null>(null);
   const aiHandoffDialogRef = useRef<HTMLDivElement | null>(null);
   const aiHandoffReturnFocusRef = useRef<HTMLElement | null>(null);
+  const resultActionsTriggerRef = useRef<HTMLButtonElement | null>(null);
   const gapDialogRef = useRef<HTMLDivElement | null>(null);
   const gapReturnFocusRef = useRef<HTMLElement | null>(null);
 
@@ -1081,12 +1082,18 @@ ${buildComparisonRequirements(task)}`;
                 
                 <DropdownMenu.Root>
                   <DropdownMenu.Trigger asChild>
-                    <button aria-label="More result actions" className="min-h-[44px] px-3 py-2 bg-white/10 hover:bg-white/20 text-white rounded-xl text-sm font-bold transition-colors flex items-center justify-center gap-2">
+                    <button ref={resultActionsTriggerRef} aria-label="More result actions" className="min-h-[44px] px-3 py-2 bg-white/10 hover:bg-white/20 text-white rounded-xl text-sm font-bold transition-colors flex items-center justify-center gap-2">
                       <MoreHorizontal aria-hidden="true" className="w-5 h-5" />
                     </button>
                   </DropdownMenu.Trigger>
                   <DropdownMenu.Portal>
-                    <DropdownMenu.Content className="min-w-[220px] bg-white rounded-xl p-2 shadow-2xl z-50 border border-slate-200 animate-in fade-in zoom-in-95" align="end" sideOffset={8}>
+                    <DropdownMenu.Content onCloseAutoFocus={(event) => {
+                      const dialog = aiHandoffDialogRef.current;
+                      if (dialog) {
+                        event.preventDefault();
+                        dialog.focus();
+                      }
+                    }} className="min-w-[220px] bg-white rounded-xl p-2 shadow-2xl z-50 border border-slate-200 animate-in fade-in zoom-in-95" align="end" sideOffset={8}>
                       <DropdownMenu.Item className="flex items-center gap-2 px-3 py-2.5 outline-none rounded-lg cursor-pointer hover:bg-slate-100 text-slate-700 font-semibold text-sm" onSelect={() => {
                         const fullPlan = `${planResult.next_steps}\n\n${providerEmail?.body || planResult.provider_message}\n\n${planResult.things_to_check}\n\n${planResult.approval_checklist}`;
                         copyToClipboard(fullPlan, "section_copied");
@@ -1102,7 +1109,10 @@ ${buildComparisonRequirements(task)}`;
                         <Copy aria-hidden="true" className="w-4 h-4" /> Copy things to check
                       </DropdownMenu.Item>
                       <DropdownMenu.Separator className="h-px bg-slate-100 my-1" />
-                      <DropdownMenu.Item className="flex items-center gap-2 px-3 py-2.5 outline-none rounded-lg cursor-pointer hover:bg-blue-50 text-primary font-semibold text-sm" onSelect={handleAiHandoff}>
+                      <DropdownMenu.Item className="flex items-center gap-2 px-3 py-2.5 outline-none rounded-lg cursor-pointer hover:bg-blue-50 text-primary font-semibold text-sm" onSelect={() => {
+                        handleAiHandoff();
+                        aiHandoffReturnFocusRef.current = resultActionsTriggerRef.current;
+                      }}>
                         <Bot aria-hidden="true" className="w-4 h-4" /> Continue with AI
                       </DropdownMenu.Item>
                     </DropdownMenu.Content>
