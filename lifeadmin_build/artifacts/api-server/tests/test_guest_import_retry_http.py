@@ -129,11 +129,13 @@ class GuestImportRetryTests(unittest.TestCase):
         store["users"]["guest-a"] = {"core_app": True}
         store["users"]["guest-b"] = {"core_app": True}
         app.write_json(app.PURCHASES_FILE, store)
-        with patch.object(app.storage, "delete_account") as delete:
+        with patch.object(app.storage, "delete_account",
+                          side_effect=lambda user_id, password, *, before_delete: before_delete()) as delete:
             status, result = self.request("/api/auth/delete", {"id": "account-a"}, body={"password": "synthetic"})
         self.assertEqual(status, 200)
         self.assertTrue(result["deleted"])
-        delete.assert_called_once_with("account-a", "synthetic")
+        delete.assert_called_once()
+        self.assertEqual(delete.call_args.args, ("account-a", "synthetic"))
         self.assertIsNone(app.pending_import_guest("account-a"))
         self.assertEqual(app.pending_import_guest("account-b"), "guest-b")
         for path in (app.TASKS_FILE, app.NOTES_FILE):
@@ -193,3 +195,4 @@ class GuestImportRetryTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+

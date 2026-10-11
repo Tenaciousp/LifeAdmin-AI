@@ -156,6 +156,147 @@ class AccountDeletionHTTPTests(unittest.TestCase):
         self.assertEqual([note["id"] for note in storage.list_notes(kept_user)], ["note-1"])
         self.assertEqual(storage.get_purchases(kept_user), {"core_app": True})
 
+    def test_guest_cleanup_failure_keeps_account_and_session_for_retry(self):
+        """A disk failure must not delete the identity needed to retry erasure."""
+        password = "synthetic-deletion-retry-password"
+        status, created, set_cookie = self.request(
+            "/api/auth/register",
+            {"email": "cleanup-retry@example.test", "password": password},
+        )
+        self.assertEqual(status, 201)
+        user_id = created["user"]["id"]
+        cookie = SimpleCookie()
+        cookie.load(set_cookie)
+        session = f"adminpilot_session={cookie['adminpilot_session'].value}"
+        storage.create_task(user_id, {"id": "owned-task", "title": "Synthetic private task"})
+        storage.add_note(user_id, {"id": "owned-plan", "title": "Synthetic private plan"})
+        storage.unlock_purchase(user_id, "core_app", "synthetic-test")
+        for guest in ("pending-guest", "unrelated-guest"):
+            app.save_anonymous_items(app.TASKS_FILE, guest, [{"id": guest + "-task"}])
+            app.save_anonymous_items(app.NOTES_FILE, guest, [{"id": guest + "-plan"}])
+        app.set_pending_import_guest(user_id, "pending-guest")
+        writer = app.write_json
+
+        def fail_notes_write(path, data):
+            if path == app.NOTES_FILE:
+                raise OSError("synthetic private filesystem detail")
+            return writer(path, data)
+
+        with patch.object(app, "write_json", side_effect=fail_notes_write):
+            status, failed, cleared = self.request(
+                "/api/auth/delete", {"password": password}, session
+            )
+        self.assertEqual(status, 503)
+        self.assertNotIn("synthetic private filesystem detail", json.dumps(failed))
+        self.assertIsNone(cleared)
+        status, auth, _ = self.request("/api/auth/me", cookie=session)
+        self.assertTrue(auth["authenticated"])
+        self.assertEqual([t["id"] for t in storage.list_tasks(user_id)], ["owned-task"])
+        self.assertEqual([n["id"] for n in storage.list_notes(user_id)], ["owned-plan"])
+        self.assertEqual(storage.get_purchases(user_id), {"core_app": True})
+        self.assertEqual(app.pending_import_guest(user_id), "pending-guest")
+        self.assertIn("pending-guest", app.read_json(app.NOTES_FILE, {})["users"])
+
+        status, result, cleared = self.request(
+            "/api/auth/delete", {"password": password}, session
+        )
+        self.assertEqual(status, 200)
+        self.assertEqual(result, {"deleted": True})
+        self.assertIn("Max-Age=0", cleared)
+        self.assertEqual(storage.list_tasks(user_id), [])
+        self.assertEqual(storage.list_notes(user_id), [])
+        self.assertEqual(storage.get_purchases(user_id), {})
+        self.assertIsNone(app.pending_import_guest(user_id))
+        for path in (app.TASKS_FILE, app.NOTES_FILE):
+            users = app.read_json(path, {})["users"]
+            self.assertNotIn("pending-guest", users)
+            self.assertIn("unrelated-guest", users)
+        _, auth, _ = self.request("/api/auth/me", cookie=session)
+        self.assertFalse(auth["authenticated"])
+
+    def test_wrong_password_does_not_purge_pending_guest_work(self):
+        password = "synthetic-password-protected"
+        _, created, set_cookie = self.request(
+            "/api/auth/register",
+            {"email": "protected-delete@example.test", "password": password},
+        )
+        cookie = SimpleCookie()
+        cookie.load(set_cookie)
+        session = f"adminpilot_session={cookie['adminpilot_session'].value}"
+        app.set_pending_import_guest(created["user"]["id"], "protected-guest")
+        with patch.object(app, "purge_deleted_accounts_pending_guest") as purge:
+            status, _, _ = self.request(
+                "/api/auth/delete", {"password": "incorrect-password"}, session
+            )
+        self.assertEqual(status, 403)
+        purge.assert_not_called()
+        self.assertEqual(app.pending_import_guest(created["user"]["id"]), "protected-guest")
+
+    def test_guest_store_read_errors_do_not_hide_pending_data(self):
+        password = "synthetic-read-retry-password"
+        _, created, set_cookie = self.request(
+            "/api/auth/register",
+            {"email": "read-retry@example.test", "password": password},
+        )
+        cookie = SimpleCookie()
+        cookie.load(set_cookie)
+        session = f"adminpilot_session={cookie['adminpilot_session'].value}"
+        user_id = created["user"]["id"]
+        app.save_anonymous_items(app.TASKS_FILE, "pending-read-guest", [{"id": "guest-task"}])
+        app.save_anonymous_items(app.NOTES_FILE, "pending-read-guest", [{"id": "guest-plan"}])
+        app.set_pending_import_guest(user_id, "pending-read-guest")
+        opener = open
+
+        for failed_path in (app.PURCHASES_FILE, app.TASKS_FILE, app.NOTES_FILE):
+            with self.subTest(store=os.path.basename(failed_path)):
+                def fail_read(path, *args, **kwargs):
+                    if os.fspath(path) == failed_path:
+                        raise PermissionError("synthetic private read detail")
+                    return opener(path, *args, **kwargs)
+                with patch("builtins.open", side_effect=fail_read):
+                    status, result, cleared = self.request(
+                        "/api/auth/delete", {"password": password}, session
+                    )
+                self.assertEqual(status, 503)
+                self.assertNotIn("synthetic private read detail", json.dumps(result))
+                self.assertIsNone(cleared)
+                _, auth, _ = self.request("/api/auth/me", cookie=session)
+                self.assertTrue(auth["authenticated"])
+                self.assertEqual(app.pending_import_guest(user_id), "pending-read-guest")
+                for path in (app.TASKS_FILE, app.NOTES_FILE):
+                    self.assertIn("pending-read-guest", app.read_json(path, {})["users"])
+
+    def test_malformed_guest_store_blocks_deletion_until_repaired(self):
+        password = "synthetic-malformed-password"
+        _, created, set_cookie = self.request(
+            "/api/auth/register",
+            {"email": "malformed-retry@example.test", "password": password},
+        )
+        cookie = SimpleCookie()
+        cookie.load(set_cookie)
+        session = f"adminpilot_session={cookie['adminpilot_session'].value}"
+        user_id = created["user"]["id"]
+        app.save_anonymous_items(app.TASKS_FILE, "pending-malformed-guest", [{"id": "guest-task"}])
+        app.save_anonymous_items(app.NOTES_FILE, "pending-malformed-guest", [{"id": "guest-plan"}])
+        app.set_pending_import_guest(user_id, "pending-malformed-guest")
+        original = Path(app.NOTES_FILE).read_text(encoding="utf-8")
+        Path(app.NOTES_FILE).write_text("{malformed-private-data", encoding="utf-8")
+        status, result, _ = self.request(
+            "/api/auth/delete", {"password": password}, session
+        )
+        self.assertEqual(status, 503)
+        self.assertNotIn("malformed-private-data", json.dumps(result))
+        _, auth, _ = self.request("/api/auth/me", cookie=session)
+        self.assertTrue(auth["authenticated"])
+        self.assertEqual(app.pending_import_guest(user_id), "pending-malformed-guest")
+        self.assertIn("pending-malformed-guest", app.read_json(app.TASKS_FILE, {})["users"])
+        Path(app.NOTES_FILE).write_text(original, encoding="utf-8")
+        status, result, _ = self.request(
+            "/api/auth/delete", {"password": password}, session
+        )
+        self.assertEqual(status, 200)
+        self.assertTrue(result["deleted"])
+
     def test_real_sessions_enforce_admin_allowlist_and_logout(self):
         """Exercise protected admin HTTP access with real disposable sessions."""
         with patch.dict(os.environ, {"ADMIN_EMAILS": "admin@example.test"}):
@@ -238,3 +379,4 @@ class AccountDeletionHTTPTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+

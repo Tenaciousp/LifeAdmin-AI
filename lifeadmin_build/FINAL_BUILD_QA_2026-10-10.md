@@ -50,3 +50,16 @@ Full CI on this change is required before release signoff. Two-account/browser i
 Native keyboard testing reproduced a menu-to-dialog focus race: Continue with AI opened the review overlay, but dropdown dismissal returned focus to the page behind it. The result menu now defers its close autofocus to the open AI dialog. The dialog return target is the persistent More result actions button rather than the removed menu item. Existing dialog Tab trapping and Escape handlers are retained.
 
 Browser verification passed: opening through Enter, End, Enter focuses the dialog; Tab reaches the editable prompt; Shift+Tab wraps from the prompt to Close; Tab wraps back to the prompt; Escape closes the overlay and restores More result actions. No external assistant or message was opened. These are specific browser focus checks; complete app accessibility and verified 200% zoom are still pending.
+
+## Account-deletion cleanup failure repair — 11 October 2026
+
+A new disposable SQLite + loopback HTTP fault test reproduced an existing failure: a notes-file write error during unfinished guest cleanup occurred after the account/session had already been erased and closed the HTTP response without a retryable error.
+
+The deletion storage operation now verifies the password, runs the pending guest cleanup callback, then erases the account. A cleanup exception leaves the registered account and session available for retry. The API returns a generic 503 without filesystem details. Deletion-specific reads distinguish absent files from unreadable/malformed stores and validate all stores before cleanup starts, preventing failed reads from being treated as proof of no private records.
+
+Four new HTTP regressions cover write failure followed by successful retry, wrong-password protection, read errors across purchases/tasks/notes, and malformed-store repair followed by deletion. Together with existing account lifecycle and guest-import route tests, 16 focused tests passed locally. The earlier unchanged three account HTTP tests passed before the new fault reproduced the defect. The existing route mock now invokes the verified cleanup callback; no production credentials or records were used.
+
+Limits: JSON files and the account database are not one atomic transaction. A cleanup write can remove some guest records before a later write fails, but the binding and authenticated retry identity remain available. A database commit failure after successful guest cleanup can leave the account present with guest records already removed; the request returns a generic 503. These changes do not establish a complete distributed erasure guarantee or a live PostgreSQL fault test. The real-browser deletion and independent-browser privacy gates remain open, and the prepared QA-user deletion has not been submitted.
+
+Full CI on the new head must pass before signoff. Feature freeze, draft PR, Render maintenance, disabled auto-deploy, preview-only payments, no production backups, no new charges and disabled recurring automation remain unchanged.
+

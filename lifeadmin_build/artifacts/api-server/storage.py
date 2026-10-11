@@ -15,7 +15,7 @@ import sqlite3
 import uuid
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Any, Iterator
+from typing import Any, Callable, Iterator
 from contextlib import contextmanager
 
 try:  # PostgreSQL is optional for local/free deployments.
@@ -317,7 +317,8 @@ def delete_session(token: str | None) -> None:
             conn.execute("DELETE FROM adminpilot_sessions WHERE token_hash = ?", (token_hash,))
 
 
-def delete_account(user_id: str, password: str) -> None:
+def delete_account(user_id: str, password: str, *, before_delete: Callable[[], None] | None = None) -> None:
+    """Verify first; allow cleanup to fail before erasing the retry identity."""
     if backend() == "postgresql":
         with connect() as conn:
             with conn.cursor() as cur:
@@ -325,6 +326,8 @@ def delete_account(user_id: str, password: str) -> None:
                 row = cur.fetchone()
                 if not row or not _password_matches(password or "", row[0]):
                     raise ValueError("Password is incorrect")
+                if before_delete is not None:
+                    before_delete()
                 cur.execute("DELETE FROM adminpilot_users WHERE id = %s", (user_id,))
     else:
         ensure_schema()
@@ -332,6 +335,8 @@ def delete_account(user_id: str, password: str) -> None:
             row = conn.execute("SELECT password_hash FROM adminpilot_users WHERE id = ?", (user_id,)).fetchone()
             if not row or not _password_matches(password or "", row[0]):
                 raise ValueError("Password is incorrect")
+            if before_delete is not None:
+                before_delete()
             conn.execute("DELETE FROM adminpilot_users WHERE id = ?", (user_id,))
 
 
@@ -522,3 +527,4 @@ def admin_overview() -> dict[str, Any]:
         "goals": goals,
         "recent_activity": recent_activity,
     }
+

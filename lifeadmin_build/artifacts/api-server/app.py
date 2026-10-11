@@ -289,26 +289,43 @@ def set_pending_import_guest(user_id, guest_id=None):
 
 
 def purge_deleted_accounts_pending_guest(user_id):
-    """Erase unclaimed guest work linked to a permanently deleted account.
+    """Erase unclaimed guest work linked to an account being deleted.
 
     Do not touch any other guest or account; clear the binding last so
     a partial filesystem failure remains detectable for follow-up.
     """
-    guest_id = pending_import_guest(user_id)
-    if not guest_id:
-        return
-    key = safe_user_id(guest_id)
+    def read_for_deletion(path):
+        # A failed read is not evidence that no private guest records exist.
+        try:
+            with open(path, "r", encoding="utf-8") as handle:
+                store = json.load(handle)
+        except FileNotFoundError:
+            return {}
+        except (json.JSONDecodeError, UnicodeDecodeError) as exc:
+            raise OSError("Guest store could not be read") from exc
+        if not isinstance(store, dict) or any(
+            name in store and not isinstance(store[name], dict)
+            for name in ("users", "pending_guest_imports")
+        ):
+            raise OSError("Guest store is invalid")
+        return store
+
     with _JSON_LOCK:
-        for path in (TASKS_FILE, NOTES_FILE):
-            store = read_json(path, {})
+        purchases = read_for_deletion(PURCHASES_FILE)
+        guest_id = purchases.get("pending_guest_imports", {}).get(str(user_id))
+        if not guest_id:
+            return
+        key = safe_user_id(guest_id)
+        # Validate every store before starting a potentially partial cleanup.
+        stores = [(path, read_for_deletion(path)) for path in (TASKS_FILE, NOTES_FILE)]
+        for path, store in stores:
             if isinstance(store, dict) and isinstance(store.get("users"), dict):
                 if key in store["users"]:
                     store["users"].pop(key)
                     write_json(path, store)
-        store = load_purchase_store()
-        store.get("users", {}).pop(key, None)
-        store.setdefault("pending_guest_imports", {}).pop(str(user_id), None)
-        write_json(PURCHASES_FILE, store)
+        purchases.get("users", {}).pop(key, None)
+        purchases.setdefault("pending_guest_imports", {}).pop(str(user_id), None)
+        write_json(PURCHASES_FILE, purchases)
 
 
 def verified_guest_cookie(handler):
@@ -1983,13 +2000,17 @@ class AdminPilotHandler(SimpleHTTPRequestHandler):
             if not user:
                 return json_response(self, {"error": "Sign in before deleting an account"}, 401)
             try:
-                storage.delete_account(user["id"], body.get("password"))
-                # Permanent account deletion must also erase unfinished guest
-                # records bound to this account, not orphan their private contents.
-                purge_deleted_accounts_pending_guest(user["id"])
+                # Verify the password before cleanup, and preserve the account
+                # and session if guest-file cleanup fails so deletion is retryable.
+                storage.delete_account(
+                    user["id"], body.get("password"),
+                    before_delete=lambda: purge_deleted_accounts_pending_guest(user["id"]),
+                )
                 return json_response(self, {"deleted": True}, headers={"Set-Cookie": session_cookie(self, "", 0)})
             except ValueError as exc:
                 return json_response(self, {"error": str(exc)}, 403)
+            except Exception:
+                return json_response(self, {"error": "Account deletion is temporarily unavailable. Please retry."}, 503)
         if path == "/api/checkout":
             try:
                 return create_checkout_session(self, body)
@@ -2130,3 +2151,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
