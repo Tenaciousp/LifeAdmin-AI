@@ -477,15 +477,10 @@ def stripe_configured():
     return bool(os.environ.get("STRIPE_SECRET_KEY"))
 
 
-# Proposed one-time regional prices. Enable a market only after creating and
-# verifying its matching Stripe Price. Amounts are in minor currency units.
+# One launch price: the complete app for GBP 1.99, paid once.
+# Keep the response shape stable for existing clients.
 REGIONAL_PRICES = {
     "GBP": {"amount": 199, "env": "STRIPE_PRICE_LIFEADMIN_COMPLETE_GBP"},
-    "USD": {"amount": 199, "env": "STRIPE_PRICE_LIFEADMIN_COMPLETE_USD"},
-    "EUR": {"amount": 199, "env": "STRIPE_PRICE_LIFEADMIN_COMPLETE_EUR"},
-    "CAD": {"amount": 299, "env": "STRIPE_PRICE_LIFEADMIN_COMPLETE_CAD"},
-    "AUD": {"amount": 399, "env": "STRIPE_PRICE_LIFEADMIN_COMPLETE_AUD"},
-    "INR": {"amount": 19900, "env": "STRIPE_PRICE_LIFEADMIN_COMPLETE_INR"},
 }
 
 
