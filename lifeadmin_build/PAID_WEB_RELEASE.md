@@ -16,9 +16,23 @@ Use a single application instance with SQLite. The disk preserves the entire API
 
 LifeAdmin AI Complete is one one-time purchase, with all current planning features included. Proposed prices: UK £1.99, US $1.99, eurozone €1.99, Canada C$2.99, Australia A$3.99, India ₹199. Other countries show availability rather than an invented local quote. Existing purchasers retain full access. Each enabled market needs a matching Stripe Price ID; the server verifies its currency, active one-time status and exact amount before checkout. The selector is not a billing-country detector. Review regional tax compliance, customer-country handling, processor fees and sandbox transactions before enabling live sales.
 
-In an authorised private preview, use Stripe sandbox credentials and a complete-product sandbox Price ID only. Follow MONETISATION.md for supported environment variables and checkout configuration. Test purchase, cancellation, failed payment, return verification, duplicate confirmation and account entitlement persistence. Never accept a browser return alone as proof of payment. Verify entitlement enforcement against the final paid feature boundaries. Preview safeguards passed automated tests; no real Stripe transaction was tested in this workspace.
+In an authorised private preview, use Stripe sandbox credentials and a complete-product sandbox Price ID only. Follow MONETISATION.md for supported environment variables and checkout configuration. Test purchase, cancellation, failed payment, return verification, duplicate confirmation and account entitlement persistence. Never accept a browser return alone as proof of payment. Verify entitlement enforcement against the final paid feature boundaries. Preview safeguards passed automated tests. The 11 October private sandbox checkpoint below supersedes the earlier absence of real Stripe test-mode transaction evidence.
 
 Prepare privacy, terms, refund policy, support contact and accurate product descriptions for owner review. Confirm deletion, billing-record retention and analytics consent wording. Do not enable live credentials, publish, merge the draft PR or submit this configuration during preparation.
+
+## Private sandbox and publisher checkpoint, 11 October 2026
+
+The following evidence is from the authorised private Codespaces QA runtime using synthetic customers. No live Stripe keys or customer payments were used.
+
+- Product `prod_VQFszq8dcJwoUa` and Price `price_1UPPN79CaxwiJ3dkCKahitbB` were verified as active, one-time GBP 199. The product and Price identifiers are not credentials.
+- A successful Stripe sandbox payment returned to the signed-in synthetic account, a signed webhook received HTTP 200, and the Complete entitlement persisted after reload.
+- A separate guest checkout was cancelled through the hosted payment page; the app returned without an entitlement and retained the existing guest tasks and plans.
+- Provider-decline entry was blocked by automatic browser approval review because workspace credits were exhausted. No declined-payment outcome was captured. Do not bypass the blocked action through another interface.
+- Duplicate webhook delivery, complete failed-payment recovery, the remaining return cases, refund lifecycle and other markets still require evidence. API regressions and one successful payment do not close the entire payment gate.
+- CI #254 completed successfully at application head `7b23ba6f83589a3ce3a271f308adf71b1f7dbc22`. Later documentation commits are not new browser or transaction evidence.
+- Publisher identity is Paul Lonergan trading as Tenaciouspl; customer support is `tenaciouspl@icloud.com`. The purchased promotional domain is `tenaciouspl.co.uk`. Domain purchase and publisher details do not establish approved legal/refund/retention terms or a production app origin.
+
+Keep the private testing environment separate from the promotional landing page. The landing page collects no payments. Its publication is not approval to merge, deploy the app, leave maintenance mode or activate live Stripe.
 
 ## Backup and restore
 
@@ -54,9 +68,9 @@ The owner completed the private `lifeadmin-drive:` rclone OAuth flow in Codespac
 2. Test the current revision on a physical iPad **as the final acceptance gate**, after the independent admin, recovery, security and sandbox-payment checks. Include touch, keyboard, clipboard fallback, account screens and payment-return layout. Browser emulation is not physical-device evidence.
 3. Provide one authorised non-admin account and one allowlisted admin account through secure configuration, then verify both protected-admin browser outcomes without sharing credentials.
 4. Choose the paid-web host, domain/public URL, billing owner, data region and acceptable total recurring cost after reviewing the provider's current checkout quote. Do not purchase until approved.
-5. Supply publisher/legal identity, support contact, privacy/terms/refund content, analytics-consent wording, and account/billing data-retention rules.
+5. Publisher/legal identity and support contact have been supplied as recorded above. Finish privacy/terms/refund content, analytics-consent wording, and account/billing data-retention rules; these are not approved merely by supplying a name and email.
 6. Approve the production administrator allowlist, stable secret handling, persistent SQLite or PostgreSQL storage, off-host encrypted backup destination, retention schedule, restore rehearsal and responsible recovery owner.
-7. After the above decisions, supply Stripe sandbox credentials and sandbox Price IDs through the host's private secret store for test-mode purchase, cancellation, failure, return, webhook and entitlement checks. Live credentials and activation require separate explicit approval.
+7. Private sandbox credentials and the UK Complete Price are configured in the authorised QA environment. Finish the outstanding test-mode failure, return, replay, refund and entitlement checks listed above. Additional enabled markets require their own matching Prices. Live credentials and activation require separate explicit approval.
 
 Until these actions are complete, keep the preview private and the release unpublished.
 
