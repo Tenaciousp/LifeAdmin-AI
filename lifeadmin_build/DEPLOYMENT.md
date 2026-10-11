@@ -28,7 +28,7 @@ Optional integrations:
 
 - `DATABASE_URL` for PostgreSQL
 - OpenAI API credentials for live AI output. Deterministic playbooks remain available without them.
-- Stripe sandbox credentials and one matching Complete-product Price ID per enabled market for approved private payment testing. Live payment configuration requires separate approval.
+- Stripe sandbox credentials and the matching £1.99 GBP Complete-product Price ID for approved private payment testing. Live payment configuration requires separate approval.
 - analytics identifiers after privacy/legal review
 
 ## Database
@@ -40,7 +40,7 @@ SQLite is suitable for local development, private testing and modest single-inst
 Before turning on paid checkout:
 
 1. Use one **LifeAdmin AI Complete** product, with all current planning features included. No separate Core purchase or All Access upgrade is part of this release.
-2. Configure one active, one-time Price per enabled market: `STRIPE_PRICE_LIFEADMIN_COMPLETE_GBP`, `_USD`, `_EUR`, `_CAD`, `_AUD` or `_INR`. These are suffixes of the same full environment-variable prefix. Proposed amounts are GBP 199, USD 199, EUR 199, CAD 299, AUD 399 and INR 19900 in minor units. Unsupported or unconfigured markets retain disabled checkout. The backend verifies currency, amount, active status and one-time type before creating a session.
+2. Configure one active, one-time GBP Price at 199 pence using `STRIPE_PRICE_LIFEADMIN_COMPLETE_GBP`. Checkout uses British pounds only. The backend verifies currency, amount, active status and one-time type before creating a session.
 3. Set the webhook secret and point the Stripe webhook to `/api/stripe/webhook`.
 4. Finish checkout success, failed/cancelled checkout, return verification, duplicate-webhook handling and persistent owner-scoped entitlement checks in Stripe sandbox mode. A successful purchase and a guest cancellation have been observed in the private sandbox; provider decline and replay evidence are still pending.
 5. Confirm production terms, refund wording, support information and business identity.
