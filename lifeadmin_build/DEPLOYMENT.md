@@ -19,6 +19,7 @@ Build from the `lifeadmin_build` directory with `docker build -t lifeadmin-ai .`
 Production environment requirements:
 
 - `APP_ENV=production`
+- `PAID_ACCESS_REQUIRED=true` for paid public launch; explicit `false` only for authorised private QA. Production startup refuses live payment keys unless paid access is required.
 - a strong `SESSION_SECRET`
 - `APP_BASE_URL=https://your-domain.example`
 - `ADMIN_EMAILS` containing only authorised administrator addresses
@@ -34,6 +35,14 @@ Optional integrations:
 ## Database
 
 SQLite is suitable for local development, private testing and modest single-instance hosting when the database file lives on persistent storage. PostgreSQL is preferable when running multiple application instances or when the hosting platform does not guarantee a persistent local filesystem.
+
+## Upfront access
+
+The web launch requires a signed-in account and verified Complete purchase before task access, suggestions or plan generation. Planning API routes enforce this server-side; hiding controls is not the security boundary. Account sign-in, deletion, product/access checks, payment return and webhook delivery stay available.
+
+There is no app working-screen price card or free public planning tier. The pre-access screen links to the website offer and opens secure Stripe checkout without repeating the price in the app. Account purchase access is restored by sign-in. Existing paid guest access is honoured, but new paid-mode checkout requires an account.
+
+Private QA uses `PAID_ACCESS_REQUIRED=false`; this is not a public launch configuration. Set `PAID_ACCESS_REQUIRED=true` before release and verify unpurchased access is denied, unpaid/cancelled sessions stay denied, paid return enables only the purchaser, and sign-out/relogin preserve the boundary. Do not publish a website purchase link until the final HTTPS app origin and this flow are verified.
 
 ## Stripe launch checklist
 
@@ -65,4 +74,4 @@ Do not start paid acquisition until conversion events, purchase attribution, pay
 
 ## Native stores
 
-The current deliverable is a web application. Apple App Store and Google Play release work remains a separate phase requiring developer accounts, native packaging, in-app purchase implementation, signing, device QA, store assets and platform declarations.
+The current deliverable is a web application. Apple App Store and Google Play release work remains a separate phase requiring developer accounts, native packaging, signing, device QA, store assets and platform declarations. The intended native offer is an upfront paid download at £1.99 or a store-local equivalent; store billing and acceptance must be reviewed during that separate phase.
