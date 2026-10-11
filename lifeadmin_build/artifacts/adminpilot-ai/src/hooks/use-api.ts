@@ -153,5 +153,7 @@ export function useProducts(userId: string, workspaceId: string) {
     queryKey: ["/api/products", userId, workspaceId],
     queryFn: ({ signal }) => fetcher("/api/products", { signal }),
     enabled: !!userId,
+    refetchOnWindowFocus: "always",
+    refetchOnReconnect: "always",
   });
 }
