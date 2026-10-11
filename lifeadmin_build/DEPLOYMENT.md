@@ -1,5 +1,9 @@
 # LifeAdmin AI deployment guide
 
+Status, 11 October 2026: release preparation only. Draft PR #2 is unmerged, the existing Render service retains maintenance mode and disabled automatic deployment, and live sales are not approved. Use [issue #3](https://github.com/Tenaciousp/LifeAdmin-AI/issues/3) for the current release gates. The promotional website is separate from the app and does not establish app readiness.
+
+Publisher: Paul Lonergan trading as Tenaciouspl. Support: tenaciouspl@icloud.com. The purchased promotional domain is tenaciouspl.co.uk; do not use its origin as APP_BASE_URL unless the app is deliberately hosted there and its HTTPS origin has been verified.
+
 ## Recommended path
 
 LifeAdmin AI now runs as a standard React/Vite frontend plus Python HTTP API. Replit is not required.
@@ -24,7 +28,7 @@ Optional integrations:
 
 - `DATABASE_URL` for PostgreSQL
 - OpenAI API credentials for live AI output. Deterministic playbooks remain available without them.
-- Stripe credentials and both one-time price IDs for paid checkout
+- Stripe sandbox credentials and one matching Complete-product Price ID per enabled market for approved private payment testing. Live payment configuration requires separate approval.
 - analytics identifiers after privacy/legal review
 
 ## Database
@@ -35,13 +39,15 @@ SQLite is suitable for local development, private testing and modest single-inst
 
 Before turning on paid checkout:
 
-1. Create the Core and All Access one-time products in Stripe.
-2. Configure the application price IDs.
+1. Use one **LifeAdmin AI Complete** product, with all current planning features included. No separate Core purchase or All Access upgrade is part of this release.
+2. Configure one active, one-time Price per enabled market: `STRIPE_PRICE_LIFEADMIN_COMPLETE_GBP`, `_USD`, `_EUR`, `_CAD`, `_AUD` or `_INR`. These are suffixes of the same full environment-variable prefix. Proposed amounts are GBP 199, USD 199, EUR 199, CAD 299, AUD 399 and INR 19900 in minor units. Unsupported or unconfigured markets retain disabled checkout. The backend verifies currency, amount, active status and one-time type before creating a session.
 3. Set the webhook secret and point the Stripe webhook to `/api/stripe/webhook`.
-4. Verify checkout success, failed/cancelled checkout and webhook replay behaviour in Stripe test mode.
+4. Finish checkout success, failed/cancelled checkout, return verification, duplicate-webhook handling and persistent owner-scoped entitlement checks in Stripe sandbox mode. A successful purchase and a guest cancellation have been observed in the private sandbox; provider decline and replay evidence are still pending.
 5. Confirm production terms, refund wording, support information and business identity.
 
-Never treat the browser redirect alone as proof of payment. LifeAdmin AI verifies checkout status with the server.
+Never treat the browser redirect alone as proof of payment. LifeAdmin AI verifies checkout status with the server and requires a paid session belonging to the current customer. Keep sandbox secret keys and webhook signing secrets in private runtime configuration. The webhook signing secret is separate from the API secret key.
+
+The UK sandbox product and Price have been verified as active, one-time GBP 1.99. This is not evidence of live setup, tax compliance, refund processing or approval to accept customer payments. See [PAID_WEB_RELEASE.md](PAID_WEB_RELEASE.md) for the bounded evidence and remaining gates.
 
 ## AI configuration
 
