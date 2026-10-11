@@ -704,6 +704,17 @@ def stripe_retrieve_session(session_id):
     return stripe_api_request("GET", "/v1/checkout/sessions/" + safe_session, None)
 
 
+def checkout_owner(session):
+    metadata_owner = (session.get("metadata") or {}).get("user_id")
+    reference_owner = session.get("client_reference_id")
+    if metadata_owner and reference_owner and metadata_owner != reference_owner:
+        return None
+    owner = metadata_owner or reference_owner
+    if not isinstance(owner, str) or not owner or safe_user_id(owner) != owner:
+        return None
+    return owner
+
+
 def checkout_status(handler, query):
     if not stripe_configured():
         return json_response(handler, {"error": "Stripe is not configured"}, 400)
@@ -711,10 +722,10 @@ def checkout_status(handler, query):
     session = stripe_retrieve_session(session_id)
     metadata = session.get("metadata") or {}
     product_id = metadata.get("product_id")
-    user_id = metadata.get("user_id") or effective_user_id(handler)
+    user_id = checkout_owner(session)
     current = current_user(handler)
     browser_user_id = current["id"] if current else guest_session(handler)
-    if user_id != browser_user_id:
+    if not user_id or user_id != browser_user_id:
         return json_response(handler, {"error": "Checkout session does not belong to this browser or account"}, 403)
     paid = session.get("payment_status") == "paid"
     if paid and product_id in VALID_PRODUCTS:
@@ -766,10 +777,10 @@ def handle_stripe_webhook(handler):
     if event_type in {"checkout.session.completed", "checkout.session.async_payment_succeeded"}:
         metadata = obj.get("metadata") or {}
         product_id = metadata.get("product_id")
-        user_id = metadata.get("user_id") or obj.get("client_reference_id") or "demo"
+        user_id = checkout_owner(obj)
         session_id = obj.get("id")
         paid = event_type == "checkout.session.async_payment_succeeded" or obj.get("payment_status") == "paid"
-        if paid and product_id in VALID_PRODUCTS:
+        if paid and user_id and product_id in VALID_PRODUCTS:
             unlock_purchase(user_id, product_id, "stripe_webhook", session_id)
     return json_response(handler, {"received": True})
 
