@@ -145,9 +145,9 @@ export function LandingPage() {
           {sessionReady && (
             <div hidden={sessionBlocked}>
               {accessBlocked && (
-                <section role={accessError ? "alert" : "status"} className="max-w-3xl mx-auto px-5 py-10">
-                  <h2 className="text-xl font-bold">{accessError ? "Access check unavailable" : "Checking your access"}</h2>
-                  {accessError && <button type="button" onClick={() => void retryAccess()} className="mt-3 min-h-[44px] rounded-xl bg-slate-900 px-5 py-3 font-bold text-white">Retry access check</button>}
+                <section id={!planningAllowed ? "app" : undefined} role={accessError ? "alert" : "status"} aria-labelledby="access-check-heading" className="max-w-3xl mx-auto px-5 py-10">
+                  <h2 id="access-check-heading" className="text-xl font-bold">{accessError ? "Access check unavailable" : "Checking your access"}</h2>
+                  {accessError && <button type="button" onClick={() => void retryAccess()} className="mt-3 min-h-[44px] rounded-xl bg-slate-900 px-5 py-3 font-bold text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2">Retry access check</button>}
                 </section>
               )}
               {planningAllowed ? (
@@ -155,12 +155,19 @@ export function LandingPage() {
                   <CustomerJourney key={workspaceKey} workspaceId={workspaceKey} />
                 </div>
               ) : !accessBlocked && (
-                <section aria-labelledby="purchase-access-heading" className="max-w-3xl mx-auto px-5 py-10">
+                <section id="app" aria-labelledby="purchase-access-heading" className="max-w-3xl mx-auto px-5 py-10">
                   <h2 id="purchase-access-heading" className="text-2xl font-bold">Your account. Your planning tools.</h2>
                   <p className="mt-3 text-slate-600">{auth?.authenticated ? "Purchase access before creating tasks or generating plans." : "Create an account or sign in below before purchasing access. Already purchased? Use the same account."}</p>
+                  {!auth?.authenticated && <a href="#account" className="mt-4 block min-h-[44px] w-fit rounded-xl bg-slate-900 px-5 py-3 font-bold text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2">Sign in or create an account</a>}
+                  {pendingPaymentReturn && (
+                    <div role="status" className="mt-4 rounded-xl border border-blue-200 bg-blue-50 p-4 text-blue-950">
+                      <p>Your payment is awaiting verification. Verify the existing payment before starting another checkout.</p>
+                      <button type="button" onClick={() => window.location.reload()} className="mt-3 min-h-[44px] rounded-xl border border-blue-300 bg-white px-5 py-3 font-bold focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2">Verify payment again</button>
+                    </div>
+                  )}
                   <a href="https://tenaciouspl.co.uk/#pricing" target="_blank" rel="noopener noreferrer" className="mt-4 inline-flex min-h-[44px] items-center font-semibold underline">View the offer on our website</a>
                   {auth?.authenticated && (
-                    <button type="button" onClick={() => void beginPurchase()} disabled={pendingPaymentReturn || openingCheckout || !access?.core?.checkout_ready || !access?.regional_checkout_ready?.GBP} aria-busy={openingCheckout} className="mt-4 block min-h-[44px] rounded-xl bg-slate-900 px-5 py-3 font-bold text-white disabled:opacity-60">
+                    <button type="button" onClick={() => void beginPurchase()} disabled={pendingPaymentReturn || openingCheckout || !access?.core?.checkout_ready || !access?.regional_checkout_ready?.GBP} aria-busy={openingCheckout} className="mt-4 block min-h-[44px] rounded-xl bg-slate-900 px-5 py-3 font-bold text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 disabled:opacity-60">
                       {pendingPaymentReturn ? "Verify your existing payment first" : openingCheckout ? "Opening secure checkout…" : access?.core?.checkout_ready && access?.regional_checkout_ready?.GBP ? "Continue to secure payment" : "Purchases are not open yet"}
                     </button>
                   )}
