@@ -4,13 +4,13 @@ import { getBuyerId, getBuyerEmail, saveBuyerEmail } from "@/lib/auth";
 import { toast } from "sonner";
 import { Check, Lock, ShieldCheck } from "lucide-react";
 import { trackEvent } from "@/lib/analytics";
-import { MARKET_PRICES, initialMarket, type MarketCurrency, type MarketSelection } from "@/lib/market-pricing";
+
 
 export function PricingPanel({ workspaceId }: { workspaceId: string }) {
   const buyerId = getBuyerId();
   const { data: productsData, isLoading: productsLoading, isError: productsError, refetch: retryProducts } = useProducts(buyerId, workspaceId);
   const [email, setEmail] = useState("");
-  const [currency, setCurrency] = useState<MarketSelection>(initialMarket);
+  const currency = "GBP";
   const [loadingId, setLoadingId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -18,8 +18,8 @@ export function PricingPanel({ workspaceId }: { workspaceId: string }) {
   }, []);
 
   const handleCheckout = async (productId: string) => {
-    if (currency === "OTHER" || !productsData?.regional_checkout_ready?.[currency]) {
-      toast.error("Checkout is not yet available in the selected currency.");
+    if (!productsData?.regional_checkout_ready?.[currency]) {
+      toast.error("Checkout is not yet available.");
       return;
     }
     if (email) saveBuyerEmail(email);
@@ -72,30 +72,21 @@ export function PricingPanel({ workspaceId }: { workspaceId: string }) {
   const { core, purchases, payments_live, stripe_configured } = productsData;
   const completeUnlocked = !!purchases?.core_app || !!purchases?.all_access;
   const paymentsLive = payments_live ?? stripe_configured ?? false;
-  const displayPrice = currency === "OTHER" ? "See checkout availability" : MARKET_PRICES[currency].price;
-  const selectedCheckoutReady = currency !== "OTHER" && !!productsData.regional_checkout_ready?.[currency];
+  const displayPrice = "£1.99";
+  const selectedCheckoutReady = !!productsData.regional_checkout_ready?.[currency];
 
   return (
     <section id="addons" aria-labelledby="pricing-heading" className="max-w-6xl mx-auto px-5 sm:px-6 py-16 md:py-20">
       <div className="max-w-3xl mb-10">
         <p className="text-sm font-bold text-primary tracking-wider uppercase mb-2">One price. Everything included.</p>
-        <h2 id="pricing-heading" className="text-3xl md:text-4xl font-extrabold text-slate-900 mb-4">Try it free. Unlock everything for one small payment.</h2>
-        <div className="flex flex-wrap items-center gap-3 mb-5">
-          <span className="font-semibold text-slate-700">Show prices in</span>
-          <select aria-label="Country or region for indicative price" value={currency} onChange={(event) => setCurrency(event.target.value as MarketSelection)} className="min-h-[44px] rounded-xl border border-slate-300 bg-white px-4 py-2 font-semibold text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary">
-            <option value="OTHER">Other country / region</option>
-            {(Object.keys(MARKET_PRICES) as MarketCurrency[]).map((code) => (
-              <option key={code} value={code}>{MARKET_PRICES[code].label} · {code} ({MARKET_PRICES[code].price})</option>
-            ))}
-          </select>
-        </div>
-        <p className="text-lg text-slate-600"><strong>{currency === "OTHER" ? "One complete package." : `${displayPrice} once (proposed regional price).`}</strong> All planning features included, with no subscription or upgrade fee.</p>
-        <p className="mt-3 text-sm text-slate-500">Select a market to view proposed local pricing. Your billing country is not detected or changed by this selector. Regional checkout is available only after the matching Stripe price is verified. The final amount, currency and any taxes must be confirmed before payment.</p>
+        <h2 id="pricing-heading" className="text-3xl md:text-4xl font-extrabold text-slate-900 mb-4">The complete app. £1.99 once.</h2>
+        <p className="text-lg text-slate-600"><strong>£1.99 GBP, paid once.</strong> All planning features included. No subscription or upgrade fee.</p>
+        <p className="mt-3 text-sm text-slate-500">Checkout is charged in British pounds. Review the final total before payment.</p>
       </div>
 
       {(!paymentsLive || !selectedCheckoutReady) && !completeUnlocked && (
         <div className="mb-6 bg-blue-50 border border-blue-200 rounded-2xl p-4 text-blue-900 font-medium">
-          {paymentsLive && !selectedCheckoutReady ? "Checkout is not yet available for this selected region. You can still try the planning flow." : "Payments are not live yet. You are viewing the complete product in preview mode."}
+          {paymentsLive && !selectedCheckoutReady ? "Checkout is not yet available. Try the planning flow while launch testing continues." : "Payments are not live yet. You are viewing the complete product in preview mode."}
         </div>
       )}
 
@@ -108,7 +99,7 @@ export function PricingPanel({ workspaceId }: { workspaceId: string }) {
           unlocked={completeUnlocked}
           highlighted
           disabled={completeUnlocked || !core.checkout_ready || !selectedCheckoutReady || loadingId === "core_app"}
-          buttonLabel={completeUnlocked ? "Complete access unlocked" : loadingId === "core_app" ? "Opening checkout..." : !core.checkout_ready || !selectedCheckoutReady ? "Checkout not available in this region yet" : "Unlock everything"}
+          buttonLabel={completeUnlocked ? "Complete access unlocked" : loadingId === "core_app" ? "Opening checkout..." : !core.checkout_ready || !selectedCheckoutReady ? "Checkout not available yet" : "Get the app for £1.99"}
           busy={loadingId === "core_app"}
           onClick={() => handleCheckout("core_app")}
         />
