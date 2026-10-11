@@ -12,11 +12,11 @@ AUTH = (SRC / "lib" / "auth.ts").read_text(encoding="utf-8")
 
 
 class AccountSwitchFrontendPrivacyTests(unittest.TestCase):
-    def test_account_change_remounts_private_workspace_and_checkout(self):
+    def test_account_change_remounts_private_workspace(self):
         self.assertIn('const { data: auth, isError: authError, isFetching: authChecking, refetch: retryAuth } = useAuthMe()', LANDING)
         self.assertIn('auth?.authenticated && auth.user?.id ? auth.user.id : "guest"', LANDING)
         self.assertIn('<CustomerJourney key={workspaceKey} workspaceId={workspaceKey} />', LANDING)
-        self.assertIn('<PricingPanel key={workspaceKey} workspaceId={workspaceKey} />', LANDING)
+        self.assertIn("<AppHelpPanel />", LANDING)
 
     def test_private_workspace_waits_for_successful_session_check(self):
         self.assertIn("const sessionReady = !!auth", LANDING)
@@ -24,8 +24,7 @@ class AccountSwitchFrontendPrivacyTests(unittest.TestCase):
         self.assertIn("{sessionReady && (", LANDING)
         self.assertIn("<div hidden={sessionBlocked}>", LANDING)
         self.assertIn("{(!sessionReady || sessionBlocked) && (", LANDING)
-        self.assertIn("{sessionReady ? (", LANDING)
-        self.assertIn("<PricingPanel key={workspaceKey} workspaceId={workspaceKey} />", LANDING)
+        self.assertNotIn("<PricingPanel", LANDING)
         self.assertIn("We could not check your session", LANDING)
         self.assertIn("Your work has not been changed.", LANDING)
         self.assertIn("Checking your session", LANDING)
@@ -40,7 +39,7 @@ class AccountSwitchFrontendPrivacyTests(unittest.TestCase):
             self.assertIn(f'queryKey: ["{prefix}", userId, workspaceId]', HOOKS)
         self.assertIn('useTasks(buyerId, workspaceId)', JOURNEY)
         self.assertIn('useNotes(buyerId, workspaceId)', JOURNEY)
-        self.assertIn('useProducts(buyerId, workspaceId)', PRICING)
+        self.assertNotIn('useProducts', PRICING)  # Public help links have no account data.
         # Cancellation must abort actual HTTP requests, not only discard cached results.
         for endpoint in ('/api/auth/me', '/api/tasks', '/api/notes', '/api/products'):
             self.assertIn(f'queryFn: ({{ signal }}) => fetcher("{endpoint}", {{ signal }})', HOOKS)
