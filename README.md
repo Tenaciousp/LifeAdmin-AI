@@ -40,12 +40,14 @@ npm start
 - Structured Next steps, Provider message, Things to check and Approval checklist
 - Account creation, saved plans and account deletion
 - Privacy-safe manual AI handoff
-- One-time Core and All Access pricing model
+- One LifeAdmin AI Complete package, with a proposed £1.99 UK one-time price and no subscription or separate upgrade
 - Protected admin dashboard
 - Opt-in analytics readiness
 - Automated GitHub Actions validation for tests, type checks and production frontend build
 
-See [FINAL_QA.md](lifeadmin_build/FINAL_QA.md) for the latest verification status and [DEPLOYMENT.md](lifeadmin_build/DEPLOYMENT.md) for production setup.
+The app is in final testing. Draft PR #2 remains unmerged, live sales are not approved, and the existing Render service retains maintenance mode with automatic deployment disabled. [Issue #3](https://github.com/Tenaciousp/LifeAdmin-AI/issues/3) is the current completion tracker; [FINAL_QA.md](lifeadmin_build/FINAL_QA.md) retains historical QA evidence and [DEPLOYMENT.md](lifeadmin_build/DEPLOYMENT.md) describes release preparation.
+
+Publisher: Paul Lonergan trading as Tenaciouspl. Customer support: tenaciouspl@icloud.com. The promotional website and its purchased domain, tenaciouspl.co.uk, are separate from the app release. A published landing page does not establish app availability or payment readiness.
 
 ## Privacy model
 
