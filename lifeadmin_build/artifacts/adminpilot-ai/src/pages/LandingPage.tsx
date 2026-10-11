@@ -7,7 +7,8 @@ import { AnalyticsConsent, resetAnalyticsConsent } from "@/components/AnalyticsC
 import { CheckCircle2, ChevronDown, ShieldCheck, Sparkles, Search, FileCheck2, MailCheck, MousePointerClick } from "lucide-react";
 import * as Accordion from "@radix-ui/react-accordion";
 
-const publisherName = "Paul Lonergan";
+const publisherName = "Tenaciouspl";
+const legalPublisherName = "Paul Lonergan trading as Tenaciouspl";
 const supportEmail = "tenaciouspl@icloud.com";
 
 const examples = [
@@ -218,7 +219,8 @@ export function LandingPage() {
 
       <footer className="bg-slate-900 text-slate-400 py-10 text-center text-sm border-t border-slate-800">
         <div className="max-w-4xl mx-auto px-6">
-          <p className="mb-2 text-slate-300">Legal publisher: {publisherName}</p>
+          <p className="mb-2 text-slate-300">Publisher: {publisherName}</p>
+          <p className="mb-2 text-slate-300">Legal publisher: {legalPublisherName}</p>
           <p className="mb-4">
             Customer support:{" "}
             <a href={`mailto:${supportEmail}`} className="inline-flex min-h-[44px] items-center break-all text-slate-200 underline underline-offset-4 rounded hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300">
