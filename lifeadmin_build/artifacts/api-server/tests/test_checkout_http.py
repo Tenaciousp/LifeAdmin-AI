@@ -154,6 +154,48 @@ class CheckoutHTTPTests(unittest.TestCase):
         self.assertEqual(status, 201)
         self.owner_id = data["user"]["id"]
 
+    def test_checkout_provider_failure_is_private_and_retryable(self):
+        payload = json.dumps({"product_id": "core_app", "currency": "GBP"}).encode()
+        price = {"currency": "gbp", "unit_amount": 199, "active": True, "type": "one_time"}
+        private_detail = "synthetic-private-provider-detail"
+        with patch.dict(os.environ, {"STRIPE_PRICE_LIFEADMIN_COMPLETE_GBP": "price_synthetic"}):
+            for responses in ([RuntimeError(private_detail)], [price, RuntimeError(private_detail)]):
+                with self.subTest(stage=len(responses)), patch.object(app, "stripe_api_request", side_effect=responses):
+                    status, data = self.request(self.owner_client, "/api/checkout", payload)
+                    self.assertEqual(status, 503)
+                    self.assertNotIn(private_detail, json.dumps(data))
+                    self.assertIn("try again", data["error"].lower())
+                    self.assert_no_access(self.owner_client)
+            with patch.object(app, "stripe_api_request", side_effect=[price, {
+                "url": "https://checkout.example.test/synthetic", "id": "cs_test_retry"
+            }]):
+                status, data = self.request(self.owner_client, "/api/checkout", payload)
+                self.assertEqual(status, 200)
+                self.assertEqual(data["id"], "cs_test_retry")
+            self.assert_no_access(self.owner_client)
+
+    def test_payment_verification_failure_preserves_safe_retry(self):
+        private_detail = "synthetic-private-verification-detail"
+        path = "/api/checkout/status?session_id=cs_test_synthetic_http"
+        with patch.object(app, "stripe_retrieve_session", side_effect=RuntimeError(private_detail)):
+            status, data = self.request(self.owner_client, path)
+            self.assertEqual(status, 503)
+            self.assertNotIn(private_detail, json.dumps(data))
+            self.assertIn("retry", data["error"].lower())
+            self.assertIn("do not pay again", data["error"].lower())
+        self.assert_no_access(self.owner_client)
+        with patch.object(app, "stripe_retrieve_session", return_value=self.event()["data"]["object"]):
+            status, data = self.request(self.owner_client, path)
+            self.assertEqual(status, 200)
+            self.assertTrue(data["paid"])
+        self.assert_no_access(self.other_client)
+
+    def test_invalid_checkout_session_is_a_validation_error(self):
+        status, data = self.request(self.owner_client, "/api/checkout/status?session_id=invalid")
+        self.assertEqual(status, 400)
+        self.assertIn("Invalid", data["error"])
+        self.assert_no_access(self.owner_client)
+
     def test_registered_async_purchase_replay_keeps_one_database_entitlement(self):
         self.register_owner()
         event = self.event()
