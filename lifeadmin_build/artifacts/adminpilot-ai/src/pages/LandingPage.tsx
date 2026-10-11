@@ -1,6 +1,8 @@
 import { LandingHero } from "@/components/LandingHero";
 import { CustomerJourney } from "@/components/CustomerJourney";
-import { useAuthMe } from "@/hooks/use-api";
+import { useAuthMe, useProducts } from "@/hooks/use-api";
+import { getBuyerId } from "@/lib/auth";
+import { useState } from "react";
 import { AppHelpPanel } from "@/components/PricingPanel";
 import { AccountPanel } from "@/components/AccountPanel";
 import { AnalyticsConsent, resetAnalyticsConsent } from "@/components/AnalyticsConsent";
@@ -26,7 +28,7 @@ const faqs = [
   ["Does LifeAdmin contact providers for me?", "No. It prepares plans, provider messages and checklists. You review and send anything yourself."],
   ["Does it connect to my bank or email?", "No bank connection or mailbox access is required for the core workflow. You enter only the details you choose to use."],
   ["What happens if I do not know all the details?", "Leave them blank. LifeAdmin highlights useful missing information before it generates a plan, without blocking you."],
-  ["Can I try it before creating an account?", "Yes. You can use the planning flow first and create an account later if you want to save plans and purchases across sessions."],
+  ["How do I access my plans?", "Sign in with your purchasing account. Your purchase gives access to the planning tools and saved work."],
   ["Is this legal or financial advice?", "No. LifeAdmin provides general admin guidance and draft wording. For regulated or high-stakes issues, check official information or seek qualified advice."],
 ];
 
@@ -38,6 +40,33 @@ export function LandingPage() {
   const sessionBlocked = authChecking || authError;
   // Remount private in-memory work when the signed-in account changes.
   const workspaceKey = auth?.authenticated && auth.user?.id ? auth.user.id : "guest";
+  const { data: access, isFetching: accessChecking, isError: accessError, refetch: retryAccess } = useProducts(sessionReady ? getBuyerId() : "", workspaceKey);
+  const [openingCheckout, setOpeningCheckout] = useState(false);
+  const [checkoutError, setCheckoutError] = useState("");
+  const planningAllowed = access?.planning_access === true;
+  const pendingPaymentReturn = new URLSearchParams(window.location.search).has("session_id");
+  const accessBlocked = accessChecking || accessError || !access;
+  const beginPurchase = async () => {
+    if (new URLSearchParams(window.location.search).has("session_id")) {
+      setCheckoutError("Verify your existing payment or contact support before starting another checkout.");
+      return;
+    }
+    setCheckoutError("");
+    setOpeningCheckout(true);
+    try {
+      const response = await fetch("/api/checkout", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ product_id: "core_app", currency: "GBP" }),
+      });
+      const result = await response.json();
+      if (!response.ok || !result.url) throw new Error(result.error || "Checkout is temporarily unavailable. Please retry.");
+      window.location.href = result.url;
+    } catch (error) {
+      setCheckoutError(error instanceof Error ? error.message : "Checkout is temporarily unavailable. Please retry.");
+    } finally {
+      setOpeningCheckout(false);
+    }
+  };
   return (
     <div className="min-h-screen bg-slate-50 selection:bg-primary/20 selection:text-primary">
       <nav className="fixed top-0 inset-x-0 z-50 bg-[#0f172a]/90 backdrop-blur-xl border-b border-white/10">
@@ -115,7 +144,29 @@ export function LandingPage() {
           )}
           {sessionReady && (
             <div hidden={sessionBlocked}>
-              <CustomerJourney key={workspaceKey} workspaceId={workspaceKey} />
+              {accessBlocked && (
+                <section role={accessError ? "alert" : "status"} className="max-w-3xl mx-auto px-5 py-10">
+                  <h2 className="text-xl font-bold">{accessError ? "Access check unavailable" : "Checking your access"}</h2>
+                  {accessError && <button type="button" onClick={() => void retryAccess()} className="mt-3 min-h-[44px] rounded-xl bg-slate-900 px-5 py-3 font-bold text-white">Retry access check</button>}
+                </section>
+              )}
+              {planningAllowed ? (
+                <div hidden={accessBlocked}>
+                  <CustomerJourney key={workspaceKey} workspaceId={workspaceKey} />
+                </div>
+              ) : !accessBlocked && (
+                <section aria-labelledby="purchase-access-heading" className="max-w-3xl mx-auto px-5 py-10">
+                  <h2 id="purchase-access-heading" className="text-2xl font-bold">Your account. Your planning tools.</h2>
+                  <p className="mt-3 text-slate-600">{auth?.authenticated ? "Purchase access before creating tasks or generating plans." : "Create an account or sign in below before purchasing access. Already purchased? Use the same account."}</p>
+                  <a href="https://tenaciouspl.co.uk/#pricing" target="_blank" rel="noopener noreferrer" className="mt-4 inline-flex min-h-[44px] items-center font-semibold underline">View the offer on our website</a>
+                  {auth?.authenticated && (
+                    <button type="button" onClick={() => void beginPurchase()} disabled={pendingPaymentReturn || openingCheckout || !access?.core?.checkout_ready || !access?.regional_checkout_ready?.GBP} aria-busy={openingCheckout} className="mt-4 block min-h-[44px] rounded-xl bg-slate-900 px-5 py-3 font-bold text-white disabled:opacity-60">
+                      {pendingPaymentReturn ? "Verify your existing payment first" : openingCheckout ? "Opening secure checkout…" : access?.core?.checkout_ready && access?.regional_checkout_ready?.GBP ? "Continue to secure payment" : "Purchases are not open yet"}
+                    </button>
+                  )}
+                  {checkoutError && <p role="alert" className="mt-3 text-red-700">{checkoutError}</p>}
+                </section>
+              )}
             </div>
           )}
         </div>
@@ -154,7 +205,7 @@ export function LandingPage() {
             <h2 className="text-2xl font-extrabold text-slate-900 mb-4">Only add what the task needs.</h2>
             <p className="text-slate-600 mb-6 leading-relaxed">LifeAdmin does not require bank, email or calendar access. Signed-in tasks and plans are stored against your account. Passwords are salted and hashed and sessions use protected cookies.</p>
             <ul className="space-y-3">
-              <TrustItem text="Try the planning flow before creating an account." />
+              <TrustItem text="Sign in with your purchasing account to access saved plans." />
               <TrustItem text="Do not enter passwords, full card numbers or security codes." />
               <TrustItem text="Delete your account and saved data from the Account panel." />
             </ul>
