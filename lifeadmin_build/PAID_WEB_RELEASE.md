@@ -4,6 +4,28 @@ Status: prepared for review, not submitted or published. Native app-store work i
 
 Supported browser QA completed on 7 October 2026 against application revision `00762a39046031ef46f944a059492301601cab37`; CI #124 passed for that exact application revision and CI #125 passed for documentation head `868dea9359980b83dcccfe1810c55ba90f43498c`. The completed browser evidence does not cover physical iPad behaviour, protected-admin browser behaviour or payments. The separate one-time Docker build/start/restart/persistence/backup check passed on owner-provided Codespaces evidence on 8 October 2026.
 
+## Current release checkpoint, 11 October 2026 at 21:10 Europe/London
+
+- **Automated build passed:** CI #284 completed successfully for application revision `1421cbd093ff216ff1367463a4129b8b13577f18`. Automated tests, backup locking/HTTP integration, encrypted synthetic backup/offline restore, type checks, API smoke and production frontend build passed.
+- **Local paid-access coverage:** six paid-access HTTP checks and 39 existing payment/privacy/account/import tests passed. Synthetic coverage is separate from real Stripe provider and browser evidence.
+- **Marketing website active:** https://tenaciouspl.co.uk has active HTTPS/SSL. The www hostname remains pending. Use the root address for examples and support. This is the marketing origin, not an approved payment-webhook or application origin.
+- **Agreed offer:** one £1.99 GBP payment for all current planning functions. No subscription or separate upgrade. No pricing in app working screens; pricing appears on the website and secure checkout. Headline: “Your household bills. One place.” Supporting line: “List. Plan. Save.”
+- **Paid public configuration:** `PAID_ACCESS_REQUIRED=true` is required before public paid access. The default false setting is reserved for authorised private QA. In paid mode, planning routes require verified ownership and new purchases require a signed-in account. Production startup rejects live Stripe keys without the paid-access flag. These safeguards are in the release candidate, not evidence of deployment.
+- **Release state:** draft PR #2 is unmerged. Feature freeze continues. Maintenance mode stays enabled and automatic deployment stays disabled. No live payment activation, production backup scheduling or new spending was performed.
+
+### Browser acceptance still required for the current paid-access revision
+
+Record the exact private QA revision and use synthetic accounts and sandbox payments. Earlier browser success and guest cancellation predate the current account-before-payment gate.
+
+1. Signed-out and signed-in unpaid users receive the access screen; direct planning requests stay blocked. Public website examples and support remain available.
+2. A signed-in sandbox purchaser returns with verified access. An unpaid or cancelled return grants no access. Repeated checkout confirmation does not create another purchase.
+3. Payment verification retry reuses the existing session. Reload and sign-out/sign-in restore ownership; another account receives no access to the purchaser's records.
+4. Complete real provider decline, replay and refund checks with the reviewed entitlement policy. Local signed synthetic events do not establish provider lifecycle results.
+5. Complete protected-admin, privacy, recovery and accessibility acceptance, including keyboard and 200% zoom, plus independent usability checks.
+6. Perform physical iPad Safari testing last, after the other acceptance gates.
+
+Automatic approval review blocked provider-decline browser entry because workspace credits were exhausted. A separate security-review block applies to real browser account deletion. Neither block is resolved by these automated results. Do not bypass either blocked action through another interface.
+
 ## Existing Render service (verified 9 October 2026)
 
 The earlier statement that no hosting service existed is superseded. Read-only Render service inspection confirms an existing `LifeAdmin-AI` web service (`srv-db4c8u49v7es73a601jg`) connected to `Tenaciousp/LifeAdmin-AI`, branch `dev/energy-renewal-plan`, with Docker runtime, one instance, a 1 GB persistent disk mounted at `/app/artifacts/api-server/data`, Frankfurt region and **automatic deployment disabled**. Render reports service URL `https://lifeadmin-ai-an0o.onrender.com`. This inspection does **not** establish that the latest application revision is deployed, secure, ready for customers or approved for publication. Do not trigger a deployment or change access settings based on this documentation update.
@@ -67,7 +89,7 @@ The owner completed the private `lifeadmin-drive:` rclone OAuth flow in Codespac
 1. One-time Docker verification and test-only encrypted Drive upload/offline restore have passed. Preserve this evidence and do not rerun unchanged checks.
 2. Test the current revision on a physical iPad **as the final acceptance gate**, after the independent admin, recovery, security and sandbox-payment checks. Include touch, keyboard, clipboard fallback, account screens and payment-return layout. Browser emulation is not physical-device evidence.
 3. Provide one authorised non-admin account and one allowlisted admin account through secure configuration, then verify both protected-admin browser outcomes without sharing credentials.
-4. Choose the paid-web host, domain/public URL, billing owner, data region and acceptable total recurring cost after reviewing the provider's current checkout quote. Do not purchase until approved.
+4. Review the existing Render host, final application origin, billing owner, data region and acceptable total recurring cost. The promotional domain is already purchased and active. Confirm the current provider quote before any new spending; do not create a replacement service without approval.
 5. Publisher/legal identity and support contact have been supplied as recorded above. Finish privacy/terms/refund content, analytics-consent wording, and account/billing data-retention rules; these are not approved merely by supplying a name and email.
 6. Approve the production administrator allowlist, stable secret handling, persistent SQLite or PostgreSQL storage, off-host encrypted backup destination, retention schedule, restore rehearsal and responsible recovery owner.
 7. Private sandbox credentials and the UK Complete Price are configured in the authorised QA environment. Finish the outstanding test-mode failure, return, replay, refund and entitlement checks listed above. The launch uses one £1.99 GBP Price only. Live credentials and activation require separate explicit approval.
@@ -79,7 +101,7 @@ Until these actions are complete, keep the preview private and the release unpub
 - Supported HTTPS preview and `BROWSER_QA_RUNBOOK.md` completed using synthetic data against application revision `00762a39046031ef46f944a059492301601cab37`.
 - Actual iPad Safari checks, including keyboard, clipboard, account screens and checkout returns.
 - One-time Docker build/start/restart and mounted-persistence check completed on 8 October; production configuration and operational recovery still require owner approval.
-- Sandbox payment lifecycle and final paid-access enforcement verified.
+- **Pending:** current-revision browser acceptance of paid-access enforcement and the remaining real sandbox payment lifecycle cases listed above. Automated paid-access enforcement checks have passed.
 - Test-only off-host encrypted backup and isolated restore rehearsal completed on 9 October; production backup key custody, recovery/retention and support/legal review remain pending.
 - Owner approval of recurring cost, final domain, production settings and publication.
 
