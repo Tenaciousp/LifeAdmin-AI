@@ -782,9 +782,12 @@ def handle_stripe_webhook(handler):
         product_id = metadata.get("product_id")
         user_id = checkout_owner(obj)
         session_id = obj.get("id")
-        paid = event_type == "checkout.session.async_payment_succeeded" or obj.get("payment_status") == "paid"
+        paid = obj.get("payment_status") == "paid"
         if paid and user_id and product_id in VALID_PRODUCTS:
-            unlock_purchase(user_id, product_id, "stripe_webhook", session_id)
+            try:
+                unlock_purchase(user_id, product_id, "stripe_webhook", session_id)
+            except Exception:
+                return json_response(handler, {"error": "Payment access is temporarily unavailable. Please retry delivery."}, 503)
     return json_response(handler, {"received": True})
 
 
