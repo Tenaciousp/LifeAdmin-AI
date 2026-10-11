@@ -1,7 +1,7 @@
 import { LandingHero } from "@/components/LandingHero";
 import { CustomerJourney } from "@/components/CustomerJourney";
 import { useAuthMe } from "@/hooks/use-api";
-import { PricingPanel } from "@/components/PricingPanel";
+import { AppHelpPanel } from "@/components/PricingPanel";
 import { AccountPanel } from "@/components/AccountPanel";
 import { AnalyticsConsent, resetAnalyticsConsent } from "@/components/AnalyticsConsent";
 import { CheckCircle2, ChevronDown, ShieldCheck, Sparkles, Search, FileCheck2, MailCheck, MousePointerClick } from "lucide-react";
@@ -26,9 +26,6 @@ const faqs = [
   ["Does LifeAdmin contact providers for me?", "No. It prepares plans, provider messages and checklists. You review and send anything yourself."],
   ["Does it connect to my bank or email?", "No bank connection or mailbox access is required for the core workflow. You enter only the details you choose to use."],
   ["What happens if I do not know all the details?", "Leave them blank. LifeAdmin highlights useful missing information before it generates a plan, without blocking you."],
-  ["How much does LifeAdmin cost?", "LifeAdmin AI Complete costs £1.99 GBP as a one-time purchase, including all current planning features."],
-  ["Which currency is charged?", "Checkout is charged in British pounds. Review the final total before payment."],
-  ["Is there a monthly subscription or recurring charge?", "No. LifeAdmin AI Complete is a single one-time purchase. There is no recurring subscription or separate All Access upgrade."],
   ["Can I try it before creating an account?", "Yes. You can use the planning flow first and create an account later if you want to save plans and purchases across sessions."],
   ["Is this legal or financial advice?", "No. LifeAdmin provides general admin guidance and draft wording. For regulated or high-stakes issues, check official information or seek qualified advice."],
 ];
@@ -52,7 +49,7 @@ export function LandingPage() {
           <div className="hidden md:flex items-center gap-6 text-sm font-semibold text-blue-100/80">
             <a href="#examples" className="hover:text-white transition-colors">Examples</a>
             <a href="#how-it-works" className="hover:text-white transition-colors">How it works</a>
-            <a href="#addons" className="hover:text-white transition-colors">Pricing</a>
+            <a href="#support" className="hover:text-white transition-colors">Examples & support</a>
             <a href="#faq" className="hover:text-white transition-colors">FAQ</a>
           </div>
           <a href="#app" className="min-h-[44px] inline-flex items-center bg-white text-slate-900 hover:bg-blue-50 px-4 py-2 rounded-full text-sm font-bold transition-colors">
@@ -134,7 +131,7 @@ export function LandingPage() {
               ["Privacy-light by design", "No bank connection or mailbox access is required for the core workflow."],
               ["Approval before action", "The app prepares drafts and checklists. It does not send, cancel or purchase for you."],
               ["Household-bill specific", "Twelve categories and seven goals guide the questions and output."],
-              ["Simple one-time pricing", "The complete app for £1.99 GBP once. No subscription or upgrade fee."],
+              ["Help when you need support", "Visit the Tenaciouspl website for examples, product information and support."],
             ].map(([title, text]) => (
               <div key={title} className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm">
                 <ShieldCheck className="w-8 h-8 text-primary mb-5" />
@@ -149,17 +146,7 @@ export function LandingPage() {
           <AccountPanel />
         </div>
 
-        <div className="bg-slate-50">
-          {sessionReady ? (
-            <div hidden={sessionBlocked}>
-              <PricingPanel key={workspaceKey} workspaceId={workspaceKey} />
-            </div>
-          ) : (
-            <div role="status" className="max-w-3xl mx-auto px-5 py-10 text-sm text-slate-600">
-              Pricing and checkout will be available once your session is checked.
-            </div>
-          )}
-        </div>
+        <AppHelpPanel />
 
         <section id="privacy" className="max-w-6xl mx-auto px-5 sm:px-6 py-16 md:py-20 grid md:grid-cols-2 gap-6">
           <div id="terms" className="bg-white rounded-2xl p-7 md:p-8 border border-slate-200 shadow-sm">
