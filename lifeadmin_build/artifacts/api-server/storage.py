@@ -450,25 +450,27 @@ def get_purchases(user_id: str) -> dict[str, bool]:
 
 
 def unlock_purchase(user_id: str, product_id: str, source: str, session_id: str | None = None) -> None:
+    # Delayed signed payment events must not recreate a deleted account's access.
+    # Select the existing owner in the same statement rather than checking first.
     if backend() == "postgresql":
         with connect() as conn:
             with conn.cursor() as cur:
                 cur.execute(
                     """INSERT INTO adminpilot_purchases (user_id, product_id, source, session_id)
-                       VALUES (%s, %s, %s, %s)
+                       SELECT id, %s, %s, %s FROM adminpilot_users WHERE id = %s
                        ON CONFLICT (user_id, product_id)
                        DO UPDATE SET source = EXCLUDED.source, session_id = EXCLUDED.session_id, unlocked_at = NOW()""",
-                    (user_id, product_id, source, session_id),
+                    (product_id, source, session_id, user_id),
                 )
     else:
         ensure_schema()
         with sqlite_connect() as conn:
             conn.execute(
                 """INSERT INTO adminpilot_purchases (user_id, product_id, source, session_id, unlocked_at)
-                   VALUES (?, ?, ?, ?, ?)
+                   SELECT id, ?, ?, ?, ? FROM adminpilot_users WHERE id = ?
                    ON CONFLICT(user_id, product_id)
                    DO UPDATE SET source = excluded.source, session_id = excluded.session_id, unlocked_at = excluded.unlocked_at""",
-                (user_id, product_id, source, session_id, _now_iso()),
+                (product_id, source, session_id, _now_iso(), user_id),
             )
 
 
