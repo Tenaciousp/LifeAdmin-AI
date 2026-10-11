@@ -214,6 +214,26 @@ class CheckoutHTTPTests(unittest.TestCase):
         self.assertEqual(app.load_purchase_store()["stripe_sessions"], {})
         self.assert_no_access(self.other_client)
 
+    def test_delayed_payment_event_after_account_deletion_is_acknowledged_without_access(self):
+        self.register_owner()
+        deleted_id = self.owner_id
+        event = self.event()
+        storage.delete_account(deleted_id, "synthetic-password-only")
+        for event_type in ("checkout.session.completed", "checkout.session.async_payment_succeeded"):
+            event["type"] = event_type
+            with self.subTest(event_type=event_type):
+                self.assertEqual(self.webhook(event)[0], 200)
+                self.assertEqual(self.webhook(event)[0], 200)
+        with storage.sqlite_connect() as connection:
+            self.assertEqual(connection.execute("SELECT COUNT(*) FROM adminpilot_purchases").fetchone()[0], 0)
+            self.assertEqual(connection.execute("SELECT COUNT(*) FROM adminpilot_users").fetchone()[0], 0)
+        self.register_owner()
+        self.assertNotEqual(self.owner_id, deleted_id)
+        self.assertEqual(self.webhook(event)[0], 200)
+        self.assert_no_access(self.owner_client)
+        self.assert_no_access(self.other_client)
+        self.assertEqual(app.load_purchase_store()["users"], {})
+
     def test_paid_guest_entitlement_follows_account_registration(self):
         guest_id = self.owner_id
         self.assertEqual(self.webhook(self.event())[0], 200)
