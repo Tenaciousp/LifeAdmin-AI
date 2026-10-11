@@ -7,20 +7,17 @@ import app
 
 class RegionalPricingTests(unittest.TestCase):
     def test_supported_regional_amounts(self):
-        self.assertEqual({code: item["amount"] for code, item in app.REGIONAL_PRICES.items()}, {
-            "GBP": 199, "USD": 199, "EUR": 199,
-            "CAD": 299, "AUD": 399, "INR": 19900,
-        })
+        self.assertEqual({code: item["amount"] for code, item in app.REGIONAL_PRICES.items()}, {"GBP": 199})
 
     def test_checkout_readiness_is_currency_specific(self):
         with patch.dict(os.environ, {
             "STRIPE_SECRET_KEY": "sk_test",
-            "STRIPE_PRICE_LIFEADMIN_COMPLETE_EUR": "price_eur",
+            "STRIPE_PRICE_LIFEADMIN_COMPLETE_GBP": "price_gbp",
         }, clear=True), patch.object(app, "get_user_purchases", return_value={"core_app": False, "all_access": False}):
             payload = app.product_payload("guest")
-            self.assertTrue(payload["regional_checkout_ready"]["EUR"])
-            self.assertFalse(payload["regional_checkout_ready"]["GBP"])
-            self.assertFalse(payload["regional_checkout_ready"]["USD"])
+            self.assertNotIn("EUR", payload["regional_checkout_ready"])
+            self.assertTrue(payload["regional_checkout_ready"]["GBP"])
+            self.assertNotIn("USD", payload["regional_checkout_ready"])
 
     def test_legacy_single_price_is_gbp_only(self):
         with patch.dict(os.environ, {
@@ -46,15 +43,15 @@ class RegionalPricingTests(unittest.TestCase):
         handler = MagicMock()
         with patch.dict(os.environ, {
             "STRIPE_SECRET_KEY": "sk_test",
-            "STRIPE_PRICE_LIFEADMIN_COMPLETE_EUR": "price_eur",
+            "STRIPE_PRICE_LIFEADMIN_COMPLETE_GBP": "price_gbp",
         }, clear=True), patch.object(app, "json_response") as response, patch.object(app, "stripe_api_request") as stripe:
             stripe.return_value = {"currency": "usd", "unit_amount": 199, "active": True, "type": "one_time"}
-            app.create_checkout_session(handler, {"product_id": "core_app", "currency": "EUR"})
+            app.create_checkout_session(handler, {"product_id": "core_app", "currency": "GBP"})
             self.assertEqual(response.call_args.args[2], 400)
             stripe.assert_called_once()
             stripe.reset_mock()
-            stripe.return_value = {"currency": "eur", "unit_amount": 299, "active": True, "type": "one_time"}
-            app.create_checkout_session(handler, {"product_id": "core_app", "currency": "EUR"})
+            stripe.return_value = {"currency": "gbp", "unit_amount": 299, "active": True, "type": "one_time"}
+            app.create_checkout_session(handler, {"product_id": "core_app", "currency": "GBP"})
             self.assertEqual(response.call_args.args[2], 400)
             stripe.assert_called_once()
 
@@ -62,16 +59,16 @@ class RegionalPricingTests(unittest.TestCase):
         handler = MagicMock()
         with patch.dict(os.environ, {
             "STRIPE_SECRET_KEY": "sk_test",
-            "STRIPE_PRICE_LIFEADMIN_COMPLETE_CAD": "price_cad",
+            "STRIPE_PRICE_LIFEADMIN_COMPLETE_GBP": "price_gbp",
         }, clear=True), patch.object(app, "json_response") as response, patch.object(app, "effective_user_id", return_value="guest"), patch.object(app, "get_base_url", return_value="https://example.test"), patch.object(app, "stripe_api_request") as stripe:
             stripe.side_effect = [
-                {"currency": "cad", "unit_amount": 299, "active": True, "type": "one_time"},
+                {"currency": "gbp", "unit_amount": 199, "active": True, "type": "one_time"},
                 {"url": "https://checkout.stripe.test", "id": "cs_test"},
             ]
-            app.create_checkout_session(handler, {"product_id": "core_app", "currency": "CAD"})
+            app.create_checkout_session(handler, {"product_id": "core_app", "currency": "GBP"})
             self.assertEqual(stripe.call_count, 2)
-            self.assertEqual(stripe.call_args.args[2]["line_items[0][price]"], "price_cad")
-            self.assertEqual(stripe.call_args.args[2]["metadata[currency]"], "CAD")
+            self.assertEqual(stripe.call_args.args[2]["line_items[0][price]"], "price_gbp")
+            self.assertEqual(stripe.call_args.args[2]["metadata[currency]"], "GBP")
             self.assertEqual(response.call_args.args[1]["url"], "https://checkout.stripe.test")
 
 
