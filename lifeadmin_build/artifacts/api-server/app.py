@@ -396,8 +396,9 @@ def guest_session(handler):
 
 def is_database_user(user_id):
     try:
-        uuid.UUID(str(user_id))
-        return storage.available()
+        # Registered IDs are canonical UUIDs; guest IDs are unhyphenated hex.
+        canonical_id = str(uuid.UUID(str(user_id)))
+        return canonical_id == str(user_id) and storage.available()
     except (ValueError, TypeError, AttributeError):
         return False
 
