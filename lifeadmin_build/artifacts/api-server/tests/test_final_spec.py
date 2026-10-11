@@ -88,7 +88,7 @@ class FrontendFinalSpecTests(unittest.TestCase):
     def test_landing_page_contains_conversion_and_trust_sections(self):
         self.assertIn("Start with a bill", self.source)
         self.assertIn("You stay in control", self.source)
-        self.assertIn("Simple one-time pricing", self.source)
+        self.assertIn("Examples & support", self.source)
         self.assertIn("FAQ", self.source)
 
     def test_analytics_bridge_supports_privacy_safe_google_tag_readiness(self):
