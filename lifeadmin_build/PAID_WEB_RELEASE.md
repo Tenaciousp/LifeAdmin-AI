@@ -14,7 +14,7 @@ Use a single application instance with SQLite. The disk preserves the entire API
 
 ## Payment setup, still without live sales
 
-LifeAdmin AI Complete is one one-time purchase, with all current planning features included. Proposed prices: UK £1.99, US $1.99, eurozone €1.99, Canada C$2.99, Australia A$3.99, India ₹199. Other countries show availability rather than an invented local quote. Existing purchasers retain full access. Each enabled market needs a matching Stripe Price ID; the server verifies its currency, active one-time status and exact amount before checkout. The selector is not a billing-country detector. Review regional tax compliance, customer-country handling, processor fees and sandbox transactions before enabling live sales.
+LifeAdmin AI Complete is one one-time purchase, with all current planning features included. The launch price is £1.99 GBP, paid once. Existing purchasers retain full access. Checkout uses one matching GBP Stripe Price; the server verifies its currency, active one-time status and exact amount of 199 pence before checkout. Complete payment, tax and sandbox checks before enabling live sales.
 
 In an authorised private preview, use Stripe sandbox credentials and a complete-product sandbox Price ID only. Follow MONETISATION.md for supported environment variables and checkout configuration. Test purchase, cancellation, failed payment, return verification, duplicate confirmation and account entitlement persistence. Never accept a browser return alone as proof of payment. Verify entitlement enforcement against the final paid feature boundaries. Preview safeguards passed automated tests. The 11 October private sandbox checkpoint below supersedes the earlier absence of real Stripe test-mode transaction evidence.
 
@@ -28,7 +28,7 @@ The following evidence is from the authorised private Codespaces QA runtime usin
 - A successful Stripe sandbox payment returned to the signed-in synthetic account, a signed webhook received HTTP 200, and the Complete entitlement persisted after reload.
 - A separate guest checkout was cancelled through the hosted payment page; the app returned without an entitlement and retained the existing guest tasks and plans.
 - Provider-decline entry was blocked by automatic browser approval review because workspace credits were exhausted. No declined-payment outcome was captured. Do not bypass the blocked action through another interface.
-- Duplicate webhook delivery, complete failed-payment recovery, the remaining return cases, refund lifecycle and other markets still require evidence. API regressions and one successful payment do not close the entire payment gate.
+- Duplicate webhook delivery, complete failed-payment recovery, the remaining return cases, refund lifecycle still require evidence. API regressions and one successful payment do not close the entire payment gate.
 - CI #254 completed successfully at application head `7b23ba6f83589a3ce3a271f308adf71b1f7dbc22`. Later documentation commits are not new browser or transaction evidence.
 - Publisher identity is Paul Lonergan trading as Tenaciouspl; customer support is `tenaciouspl@icloud.com`. The purchased promotional domain is `tenaciouspl.co.uk`. Domain purchase and publisher details do not establish approved legal/refund/retention terms or a production app origin.
 
@@ -70,7 +70,7 @@ The owner completed the private `lifeadmin-drive:` rclone OAuth flow in Codespac
 4. Choose the paid-web host, domain/public URL, billing owner, data region and acceptable total recurring cost after reviewing the provider's current checkout quote. Do not purchase until approved.
 5. Publisher/legal identity and support contact have been supplied as recorded above. Finish privacy/terms/refund content, analytics-consent wording, and account/billing data-retention rules; these are not approved merely by supplying a name and email.
 6. Approve the production administrator allowlist, stable secret handling, persistent SQLite or PostgreSQL storage, off-host encrypted backup destination, retention schedule, restore rehearsal and responsible recovery owner.
-7. Private sandbox credentials and the UK Complete Price are configured in the authorised QA environment. Finish the outstanding test-mode failure, return, replay, refund and entitlement checks listed above. Additional enabled markets require their own matching Prices. Live credentials and activation require separate explicit approval.
+7. Private sandbox credentials and the UK Complete Price are configured in the authorised QA environment. Finish the outstanding test-mode failure, return, replay, refund and entitlement checks listed above. The launch uses one £1.99 GBP Price only. Live credentials and activation require separate explicit approval.
 
 Until these actions are complete, keep the preview private and the release unpublished.
 
