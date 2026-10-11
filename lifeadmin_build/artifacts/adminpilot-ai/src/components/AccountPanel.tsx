@@ -147,8 +147,8 @@ export function AccountPanel() {
     <section id="account" className="max-w-6xl mx-auto px-5 sm:px-6 py-16 md:py-20 grid md:grid-cols-2 gap-10 md:gap-12 items-start">
       <div>
         <p className="text-sm font-bold text-primary tracking-wider uppercase mb-2">Save your work</p>
-        <h2 className="text-3xl md:text-4xl font-extrabold text-slate-900 mb-4">Try first. Create an account only when you want to save.</h2>
-        <p className="text-lg text-slate-600 mb-6">The planning flow works without an account. Sign in later to keep tasks, plans and purchases available across sessions.</p>
+        <h2 className="text-3xl md:text-4xl font-extrabold text-slate-900 mb-4">Your account. Your saved plans.</h2>
+        <p className="text-lg text-slate-600 mb-6">Create an account before purchasing access. Sign in with the same account to return to your tasks, plans and purchase.</p>
         <div className="bg-blue-50 border border-blue-200 rounded-2xl p-5 flex gap-3 text-blue-950">
           <ShieldCheck aria-hidden="true" className="w-6 h-6 shrink-0 text-primary" />
           <p className="text-sm leading-relaxed"><strong className="block mb-1">Your saved work stays separated by account.</strong>Guest work is isolated from other visitors, and signed-in work is stored against your account.</p>
@@ -250,7 +250,7 @@ export function AccountPanel() {
                 {busyAction === "login" ? "Signing in..." : "Sign in"}
               </button>
             </div>
-            <p className="text-center text-sm text-slate-500 mt-4">No account is required to create your first plan.</p>
+            <p className="text-center text-sm text-slate-500 mt-4">Already purchased? Sign in with your purchasing account.</p>
           </form>
         )}
       </div>
