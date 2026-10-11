@@ -34,3 +34,13 @@ Earlier passing CI #244 at the base commit, Docker runtime, owner Drive OAuth an
 - Physical iPad Safari QA last, after earlier release gates pass.
 
 The app is not marked release-ready. Issue #3 remains the authoritative wider tracker, including partial guest-import conflict recovery and non-atomic filesystem deletion cleanup limitations. The intended paid scope is one complete regional-price package, including GBP 1.99 / USD 1.99; obsolete Core-plus-upgrade guidance is not the release scope.
+
+## Subscription context and keyboard continuation: 11 October 2026
+
+A guest cancellation journey was completed using native Tab, Shift+Tab, Enter, arrow keys and keyboard text entry, from the landing page through search/match, detail entry, review, the missing-details dialog, generation and the editable Provider Message tab. Fictional provider QA Streaming Service, reference QA-CANCEL-004 and amount 12 were used. No external message or cancellation was sent. This is one keyboard journey, not full application or 200% zoom acceptance. Clipboard inspection was restricted by browser credential protection and was not bypassed.
+
+The generated named-subscription draft omitted the supplied reference and reason. The bounded repair carries supplied account reference, payment description, issue, minimum-term date and cancellation-confirmation status into next steps and provider wording. Supplied amount, next payment/renewal and billing route also accompany the provider draft. Missing optional values are omitted; no account data is invented. Existing routing and provider-specific cancellation instructions are unchanged.
+
+Three focused semantic regressions passed locally: cancellation reference/reason/billing preservation, dispute amount/date/issue preservation, and absent optional details. Browser regeneration against the patched isolated backend verified QA-CANCEL-004, payment description, cancellation reason, amount 12 and Direct with provider in the editable message. The existing QA store and private ports were retained; original tracked data files were not changed by this work. Saved plans from earlier versions retain their original wording; regenerate deliberately to produce the repaired draft.
+
+Full CI on this change is required before release signoff. Two-account/browser isolation, partial guest imports and deletion, genuine cross-tab focus, authenticated non-admin denial, verified zoom, owner operations/payment gates, independent user validation and final physical iPad Safari QA are still open. No merge, deployment, production data, live Stripe, new charges or recurring automation.

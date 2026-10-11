@@ -889,6 +889,21 @@ def named_subscription_sections(task):
     ]
     if billed_through:
         supplied.append(f"- Billing route supplied: {billed_through}.")
+    supplied_context = []
+    for key, label in (("account_reference", "Account or customer reference"),
+                       ("payment_description", "Payment or bill description"),
+                       ("what_happened", "Issue supplied"),
+                       ("minimum_term_end", "Minimum term ends"),
+                       ("confirmation_received", "Cancellation confirmation supplied")):
+        value = str(details.get(key) or "").strip()
+        if value:
+            supplied.append(f"- {label}: {value}")
+            supplied_context.append(f"{label}: {value}")
+    for label, value in (("Current payment", payment),
+                         ("Next payment or renewal", renewal),
+                         ("Billing route supplied", billed_through)):
+        if value:
+            supplied_context.append(f"{label}: {value}")
     common = [(f"{provider_label} plan and billing", supplied)]
     if wants_cancellation:
         action_sections = [
@@ -926,6 +941,8 @@ def named_subscription_sections(task):
             "Provider billing review draft",
             [f"Hello, please confirm the current plan, billing frequency, next payment date and any upcoming price change for my {provider_label} subscription. Please reply in writing."],
         )
+    if supplied_context:
+        provider_draft = (provider_draft[0], [provider_draft[1][0] + "\n\n" + "\n".join(supplied_context)])
     return common + action_sections + [
         ("Conditional billing-route checks", [
             f"- Use Apple Subscriptions only if the {provider_label} charge is billed by Apple.",
