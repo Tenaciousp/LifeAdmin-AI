@@ -720,6 +720,8 @@ def checkout_status(handler, query):
     if not stripe_configured():
         return json_response(handler, {"error": "Stripe is not configured"}, 400)
     session_id = (query.get("session_id") or [""])[0]
+    if not str(session_id).strip().startswith("cs_"):
+        return json_response(handler, {"error": "Invalid Stripe Checkout Session ID"}, 400)
     session = stripe_retrieve_session(session_id)
     metadata = session.get("metadata") or {}
     product_id = metadata.get("product_id")
@@ -1935,8 +1937,8 @@ class AdminPilotHandler(SimpleHTTPRequestHandler):
         if path == "/api/checkout/status":
             try:
                 return checkout_status(self, query)
-            except Exception as exc:
-                return json_response(self, {"error": str(exc)}, 400)
+            except Exception:
+                return json_response(self, {"error": "Payment verification is temporarily unavailable. Please retry. Do not pay again."}, 503)
         if path.startswith("/api/"):
             return json_response(self, {"error": "Unknown endpoint"}, 404)
         requested = os.path.join(WEB_DIR, path.lstrip("/"))
@@ -2026,8 +2028,8 @@ class AdminPilotHandler(SimpleHTTPRequestHandler):
         if path == "/api/checkout":
             try:
                 return create_checkout_session(self, body)
-            except Exception as exc:
-                return json_response(self, {"error": str(exc)}, 400)
+            except Exception:
+                return json_response(self, {"error": "Checkout is temporarily unavailable. Please try again."}, 503)
         if path == "/api/demo-purchase":
             return demo_purchase(self, body)
         if path == "/api/suggest":
