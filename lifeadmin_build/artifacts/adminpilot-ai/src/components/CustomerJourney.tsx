@@ -352,6 +352,8 @@ export function CustomerJourney({ workspaceId }: { workspaceId: string }) {
     setDynamicFields(t.details || {});
     setActiveStep(3);
     document.getElementById("command-panel")?.scrollIntoView({ behavior: "smooth" });
+    // Wait for the edit fields to render and any review dialog to restore focus.
+    window.setTimeout(() => document.getElementById("task-details-heading")?.focus({ preventScroll: true }), 0);
   };
 
   const handleDeleteTask = (t: any) => {
@@ -837,7 +839,7 @@ ${buildComparisonRequirements(task)}`;
 
                 {selectedGoal && <div className="space-y-4">
                   <div>
-                    <h3 className="text-sm font-bold text-slate-800">3. Add what you know</h3>
+                    <h3 id="task-details-heading" tabIndex={-1} className="text-sm font-bold text-slate-800 rounded focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary">3. Add what you know</h3>
                     <p className="text-xs text-slate-500 mt-1">Leave anything blank if you are not sure. We will show useful missing details before generating your plan.</p>
                   </div>
                   {formFields.map((f: any) => (
