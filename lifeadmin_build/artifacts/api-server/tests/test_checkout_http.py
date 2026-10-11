@@ -102,6 +102,35 @@ class CheckoutHTTPTests(unittest.TestCase):
         self.assert_no_access(self.owner_client)
         self.assertEqual(app.load_purchase_store()["stripe_sessions"], {})
 
+    def check_webhook_storage_retry(self, target, method):
+        event = self.event()
+        private_detail = "synthetic-private-storage-failure"
+        with patch.object(target, method, side_effect=RuntimeError(private_detail)):
+            status, data = self.webhook(event)
+            self.assertEqual(status, 503)
+            self.assertNotIn(private_detail, json.dumps(data))
+            self.assertNotIn("received", data)
+        self.assert_no_access(self.owner_client)
+        self.assertEqual(self.webhook(event)[0], 200)
+        self.assertEqual(self.webhook(event)[0], 200)
+        status, data = self.request(self.owner_client, "/api/products")
+        self.assertEqual(status, 200)
+        self.assertTrue(data["purchases"]["core_app"])
+        self.assert_no_access(self.other_client)
+
+    def test_guest_webhook_write_failure_is_private_and_retryable(self):
+        self.check_webhook_storage_retry(app, "write_json")
+
+    def test_registered_webhook_write_failure_is_private_and_retryable(self):
+        self.register_owner()
+        self.check_webhook_storage_retry(storage, "unlock_purchase")
+
+    def test_async_success_event_with_unpaid_session_does_not_grant_access(self):
+        event = self.event(paid=False)
+        event["type"] = "checkout.session.async_payment_succeeded"
+        self.assertEqual(self.webhook(event)[0], 200)
+        self.assert_no_access(self.owner_client)
+
     def test_unpaid_and_wrong_owner_return_do_not_grant_access(self):
         unpaid = self.event(paid=False)
         self.assertEqual(self.webhook(unpaid)[0], 200)
