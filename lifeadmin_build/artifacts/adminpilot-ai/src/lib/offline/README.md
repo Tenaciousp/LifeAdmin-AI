@@ -3,6 +3,13 @@
 The catalogue and search hooks use domain.mjs. Search requests no longer transmit
 bill-search text to the API.
 
+plans.mjs now generates energy-renewal and unknown-payment results locally,
+preserving missing-detail prompts and the existing safety notices. Its
+generateAndSaveLocalPlan function writes the complete result through the local
+repository. Other routes, including water renewal, fail explicitly until their
+playbooks are migrated. There is no hosted or external-AI fallback.
+These generators are not yet connected to customer screens.
+
 storage.mjs supplies the next migration stage: account-free IndexedDB storage for
 bills and plans, with explicit backup export/import. This repository is not yet
 connected to customer screens. Hosted tasks and plans still use the old API.
@@ -42,3 +49,9 @@ Run from lifeadmin_build after npm ci:
 
 The Python test suite also invokes these nine storage checks. Native releases and
 any change to production access, payment or hosting settings need release review.
+
+Energy and result-contract tests compare local output with the existing Python
+functions. Coverage includes 49 billing-period pairs, all 84 category/goal
+missing-detail combinations, safety notices and local generation/save/restore.
+This checks behaviour preservation, not the freshness of provider policies or
+official guidance; review time-sensitive guidance before release.
