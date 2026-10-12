@@ -83,7 +83,7 @@ CATEGORY_PROMPTS = {
 CORE_PRODUCT = {
     "id": "core_app",
     "name": "LifeAdmin AI Complete",
-    "price": "£1.99 / $1.99",
+    "price": "£1.99",
     "amount_pence": 199,
     "billing": "one-time",
     "description": "All household admin planning modes, advanced negotiation, switching, complaints and escalation guidance.",
@@ -95,7 +95,7 @@ CORE_PRODUCT = {
 ALL_ACCESS_PRODUCT = {
     "id": "all_access",
     "name": "All Access Pack",
-    "price": "£1.99 / $1.99",
+    "price": "£1.99",
     "amount_pence": 199,
     "billing": "one-time",
     "price_env": "STRIPE_PRICE_ALL_ACCESS",
@@ -121,22 +121,26 @@ MODE_PROMPTS = {
 }
 
 QA_REPORT = {
-    "updated": "21 September 2026",
-    "progress_note": "Database accounts, per-user data isolation, deletion controls, legal screens and store QA are implemented.",
+    "updated": "12 October 2026",
+    "progress_note": "Release candidate under review. Earlier evidence and outstanding gates are recorded in draft PR #2 and PAID_WEB_RELEASE.md; this summary is not release approval.",
     "passed": [
         "Six task-specific playbooks produce distinct plans",
         "Streaming checklist includes provider, store, renewal, cancellation and refund checks",
         "Ambiguous renewal wording stays with insurance, travel, document, refund or bill context",
-        "Every advanced mode adds substantive specialist output behind one All Access entitlement",
-        "Core 99p/99c and All Access £1.99/$1.99 pricing, Stripe checkout, demo unlocks and privacy-light workflow remain intact",
-        "PostgreSQL account storage and account/data deletion flow are available",
-        "Privacy, terms, mobile accessibility and store-listing guidance are included"
+        "The Complete purchase includes all current planning modes; legacy entitlements remain compatible",
+        "Earlier CI #297 passed for application revision 5192c89dcfe09d935d4a52987c1b5ff4f8dcc31e",
+        "Synthetic account isolation, payment and recovery checks have recorded automated coverage",
+        "Owner-review privacy, terms and refund drafts are prepared but not approved or published"
     ],
     "failed": [],
     "blocked": [
         "Native iOS and Android packages require the mobile artifact build",
         "Apple and Google signing, store billing and submission require owner developer accounts",
-        "Final privacy disclosures require the owner's legal/business contact details"
+        "Current signed-in browser and real provider lifecycle acceptance remain incomplete",
+        "Actual email delivery, production recovery and backup custody require verification",
+        "Business address, service duration, retention and refund commitments require owner decisions",
+        "Physical iPad Safari acceptance remains the final device gate",
+        "App merge, deployment and live sales require explicit release approval"
     ]
 }
 
@@ -510,7 +514,7 @@ def product_lookup(product_id):
 
 
 def public_product(item):
-    payload = {k: item[k] for k in item if k not in {"amount_pence", "price_env"}}
+    payload = {k: item[k] for k in item if k not in {"price", "amount_pence", "price_env"}}
     payload["checkout_ready"] = stripe_ready_for(item)
     return payload
 
@@ -563,10 +567,7 @@ def is_mode_unlocked(mode, user_id="demo"):
 
 def locked_response(mode):
     product_id = MODE_REQUIREMENTS.get(mode)
-    item = ALL_ACCESS_PRODUCT
-    name = item["name"]
-    price = item["price"]
-    content = f"# LifeAdmin AI Complete required\n\nOne-time price: {CORE_PRODUCT['price']} or equivalent local checkout price. No separate upgrade is required."
+    content = "# Planning access required\n\nSign in with your purchasing account to use these planning tools. Visit https://tenaciouspl.co.uk/#example for examples or https://tenaciouspl.co.uk/#contact for support."
     return {
         "locked": True,
         "product_id": product_id,
