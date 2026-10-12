@@ -15,7 +15,8 @@
     "start": "npm --workspace @workspace/api-server run start"
   },
   "devDependencies": {
-    "typescript": "~5.9.3"
+    "typescript": "~5.9.3",
+    "fake-indexeddb": "6.2.5"
   },
   "engines": {
     "node": ">=20.12.0",
