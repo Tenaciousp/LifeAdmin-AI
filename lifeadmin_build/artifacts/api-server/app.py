@@ -23,6 +23,7 @@ import urllib.request
 import urllib.error
 
 import storage
+import password_recovery
 from backup_lock import data_lock, LockTimeout
 import domain
 import energy_renewal
@@ -1985,6 +1986,33 @@ class AdminPilotHandler(SimpleHTTPRequestHandler):
             return json_response(self, {"error": str(exc)}, 413)
         user = current_user(self)
         user_id = user["id"] if user else guest_session(self)
+        if path == "/api/auth/forgot-password":
+            if auth_rate_limited(self, "forgot-password", 3):
+                return json_response(self, {"error": "Please wait before requesting another reset link."}, 429, {"Retry-After": "60"})
+            if not password_recovery.configured():
+                return json_response(self, {"error": "Password recovery is unavailable. Contact tenaciouspl@icloud.com. Do not pay again."}, 503)
+            email = storage.normalize_email(body.get("email"))
+            if not isinstance(body.get("email"), str) or len(email) > 254 or "@" not in email or "\n" in email or "\r" in email:
+                return json_response(self, {"error": "Enter a valid email address."}, 400)
+            if not password_recovery.enqueue("request", email):
+                return json_response(self, {"error": "Recovery is busy. Please retry shortly."}, 503)
+            return json_response(self, {"message": "If an account matches, a reset link will arrive by email. Check your inbox and spam folder. Do not pay again."}, 202)
+        if path == "/api/auth/reset-password":
+            if auth_rate_limited(self, "reset-password", 5):
+                return json_response(self, {"error": "Please wait before trying another reset link."}, 429, {"Retry-After": "60"})
+            if not password_recovery.configured():
+                return json_response(self, {"error": "Password recovery is unavailable. Contact support."}, 503)
+            password = body.get("password")
+            if not isinstance(password, str) or password != body.get("password_confirm"):
+                return json_response(self, {"error": "Enter matching new passwords."}, 400)
+            try:
+                email = storage.reset_password(body.get("token"), password)
+            except ValueError as exc:
+                return json_response(self, {"error": str(exc)}, 400)
+            except Exception:
+                return json_response(self, {"error": "Password reset is temporarily unavailable. Please retry."}, 503)
+            password_recovery.enqueue("changed", email)
+            return json_response(self, {"message": "Password changed. Sign in with your new password."}, headers={"Set-Cookie": session_cookie(self, "", 0)})
         if path == "/api/auth/register":
             if auth_rate_limited(self, "register", 6):
                 return json_response(self, {"error": "Too many account attempts. Please wait and try again."}, 429, {"Retry-After": "60"})
@@ -2200,4 +2228,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

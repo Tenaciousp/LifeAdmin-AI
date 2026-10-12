@@ -105,9 +105,9 @@ Record the exact application commit, Docker version and final pass line. If it f
 
 The owner completed the private `lifeadmin-drive:` rclone OAuth flow in Codespaces. A non-sensitive token-presence check returned true, and `rclone lsd lifeadmin-drive:` completed without errors. The test-only rehearsal `python3 scripts/rehearse_drive_backup.py lifeadmin-drive:LifeAdmin-AI-Automated-Backups` reported **encrypted upload verified, no files deleted, and synthetic encrypted upload and offline restore verified**. The disposable encryption key was discarded, leaving an unrestorable encrypted synthetic object in the remote folder. This is **not** a production backup policy or recovery setup. No customer data was transferred and no automated schedule was enabled. Production still requires independently managed recoverable keys, consistency controls, restore ownership, retention/alerting and durable OAuth authorisation; OAuth Testing refresh tokens can expire.
 
-## Account recovery launch blocker, source review 12 October
+## Account recovery launch blocker, initial source review 12 October
 
-The current application revision `5a633a5070e74f9a2abc8372c61c43190206ff9b` has no password-reset route or account recovery UI. Reviewed source blobs: AccountPanel `089b1c7857d59c1de8601d628ec0de03573feca9`, API `4c5b3528df62e082a671fdf59d7730df4ad745fd`, storage `78a727e345ad26a1fa0a549f56f156ccaec98162`. Supported authentication routes are me, register, login, retry-guest-import, logout and delete. Storage contains password authentication and session handling, but no reset-token or password-update recovery functions.
+At the initial reviewed application revision `5a633a5070e74f9a2abc8372c61c43190206ff9b`, no password-reset route or account recovery UI existed. Reviewed source blobs: AccountPanel `089b1c7857d59c1de8601d628ec0de03573feca9`, API `4c5b3528df62e082a671fdf59d7730df4ad745fd`, storage `78a727e345ad26a1fa0a549f56f156ccaec98162`. Supported authentication routes are me, register, login, retry-guest-import, logout and delete. Storage contains password authentication and session handling, but no reset-token or password-update recovery functions.
 
 This is a source finding, not a browser failure or completed recovery test. A purchaser who loses their password currently has no verified recovery route to the same paid account. A support email link is not proof of account ownership and does not close this gate. Do not ask customers to repurchase, recreate their account, send passwords or share Stripe/API secrets.
 
@@ -120,6 +120,10 @@ Before public paid release, implement and verify a reviewed recovery process. Mi
 - Configure credentials privately; confirm delivery, domain authentication and any recurring cost before activation.
 
 No email provider, subscription, reset link, account change or production setting was created by this review. Approved delivery infrastructure and secure identity verification remain prerequisites. Browser security restrictions still apply to eventual acceptance. This blocker takes precedence over a percentage readiness estimate.
+
+### Recovery implementation follow-up, 12 October
+
+The isolated release-candidate change adds password recovery storage/API, an account recovery screen and disabled-by-default authenticated TLS SMTP configuration. Ten synthetic recovery tests passed locally, including concurrency and transaction rollback. See `PASSWORD_RECOVERY.md` for the implementation and acceptance boundaries. This supersedes the missing-code finding above only after the new revision is saved; it does not close delivery, browser, operational or release acceptance. No real email, configured SMTP provider, production change or spending occurred. Full CI is required for the new revision.
 
 ## Minimum owner decisions and actions
 

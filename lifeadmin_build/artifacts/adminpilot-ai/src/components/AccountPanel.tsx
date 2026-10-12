@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { PasswordRecoveryPanel } from "./PasswordRecoveryPanel";
+import { useEffect, useState } from "react";
 import { useAuthMe } from "@/hooks/use-api";
 import { saveBuyerEmail, clearBuyerEmail } from "@/lib/auth";
 import { toast } from "sonner";
@@ -16,6 +17,25 @@ const ACCOUNT_SCOPED_QUERY_KEYS = [
 export function AccountPanel() {
   const { data: auth, isLoading, isError, refetch: retryAuth } = useAuthMe();
   const queryClient = useQueryClient();
+  const [resetToken, setResetToken] = useState(() => {
+    const hash = window.location.hash;
+    if (!hash.startsWith("#reset=")) return "";
+    const value = hash.slice(7);
+    return /^[A-Za-z0-9_-]{32,128}$/.test(value) ? value : "invalid";
+  });
+  useEffect(() => {
+    if (resetToken) window.history.replaceState(null, "", window.location.pathname + window.location.search + "#account");
+  }, [resetToken]);
+  useEffect(() => {
+    const receiveLink = () => {
+      if (window.location.hash.startsWith("#reset=")) {
+        const value = window.location.hash.slice(7);
+        setResetToken(/^[A-Za-z0-9_-]{32,128}$/.test(value) ? value : "invalid");
+      }
+    };
+    window.addEventListener("hashchange", receiveLink);
+    return () => window.removeEventListener("hashchange", receiveLink);
+  }, []);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [deleteConfirm, setDeleteConfirm] = useState("");
@@ -156,7 +176,14 @@ export function AccountPanel() {
       </div>
 
       <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-xl">
-        {isLoading ? (
+        {resetToken ? (
+          <PasswordRecoveryPanel token={resetToken} onComplete={async () => {
+            clearCredentialState();
+            clearBuyerEmail();
+            await refreshAccountQueries({ authenticated: false });
+            setResetToken("");
+          }} />
+        ) : isLoading ? (
           <div role="status" aria-live="polite" className="rounded-xl border border-blue-200 bg-blue-50 p-5 text-blue-950">
             <strong className="block">Checking account status...</strong>
             <p className="mt-1 text-sm">Your account controls will appear when the secure check finishes.</p>
@@ -233,6 +260,7 @@ export function AccountPanel() {
             </div>
           </div>
         ) : (
+          <>
           <form className="space-y-4" onSubmit={(event) => { event.preventDefault(); handleAction("/api/auth/register"); }}>
             <div>
               <label htmlFor="account-email" className="block text-sm font-bold text-slate-700 mb-1.5">Email</label>
@@ -252,6 +280,8 @@ export function AccountPanel() {
             </div>
             <p className="text-center text-sm text-slate-500 mt-4">Already purchased? Sign in with your purchasing account.</p>
           </form>
+          <PasswordRecoveryPanel />
+          </>
         )}
       </div>
     </section>

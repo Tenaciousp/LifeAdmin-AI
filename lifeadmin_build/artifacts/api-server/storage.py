@@ -86,6 +86,12 @@ def ensure_schema() -> bool:
                    password_hash TEXT NOT NULL,
                    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
                )""",
+            """CREATE TABLE IF NOT EXISTS adminpilot_password_resets (
+                   token_hash TEXT PRIMARY KEY,
+                   user_id UUID NOT NULL REFERENCES adminpilot_users(id) ON DELETE CASCADE,
+                   expires_at TIMESTAMPTZ NOT NULL,
+                   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+               )""",
             """CREATE TABLE IF NOT EXISTS adminpilot_sessions (
                    token_hash TEXT PRIMARY KEY,
                    user_id UUID NOT NULL REFERENCES adminpilot_users(id) ON DELETE CASCADE,
@@ -132,6 +138,12 @@ def ensure_schema() -> bool:
                 id TEXT PRIMARY KEY,
                 email TEXT NOT NULL UNIQUE,
                 password_hash TEXT NOT NULL,
+                created_at TEXT NOT NULL
+            );
+            CREATE TABLE IF NOT EXISTS adminpilot_password_resets (
+                token_hash TEXT PRIMARY KEY,
+                user_id TEXT NOT NULL REFERENCES adminpilot_users(id) ON DELETE CASCADE,
+                expires_at TEXT NOT NULL,
                 created_at TEXT NOT NULL
             );
             CREATE TABLE IF NOT EXISTS adminpilot_sessions (
@@ -530,3 +542,69 @@ def admin_overview() -> dict[str, Any]:
         "recent_activity": recent_activity,
     }
 
+
+def issue_password_reset(email: str) -> tuple[str, str] | None:
+    """Worker-only issuance. Keep existing valid links; throttle each account."""
+    ensure_schema()
+    token = secrets.token_urlsafe(32)
+    digest = hashlib.sha256(token.encode()).hexdigest()
+    now = datetime.now(timezone.utc)
+    expires = now + timedelta(minutes=30)
+    cutoff = now - timedelta(minutes=2)
+    if backend() == "postgresql":
+        with connect() as conn:
+            with conn.cursor() as cur:
+                cur.execute("SELECT id, email FROM adminpilot_users WHERE email = %s FOR UPDATE", (normalize_email(email),))
+                row = cur.fetchone()
+                if not row:
+                    return None
+                cur.execute("DELETE FROM adminpilot_password_resets WHERE expires_at <= NOW()")
+                cur.execute("SELECT 1 FROM adminpilot_password_resets WHERE user_id = %s AND created_at > %s", (row[0], cutoff))
+                if cur.fetchone():
+                    return None
+                cur.execute("INSERT INTO adminpilot_password_resets (token_hash, user_id, expires_at) VALUES (%s, %s, %s)", (digest, row[0], expires))
+                return row[1], token
+    with sqlite_connect() as conn:
+        conn.execute("BEGIN IMMEDIATE")
+        row = conn.execute("SELECT id, email FROM adminpilot_users WHERE email = ?", (normalize_email(email),)).fetchone()
+        if not row:
+            return None
+        conn.execute("DELETE FROM adminpilot_password_resets WHERE expires_at <= ?", (now.isoformat(),))
+        if conn.execute("SELECT 1 FROM adminpilot_password_resets WHERE user_id = ? AND created_at > ?", (row[0], cutoff.isoformat())).fetchone():
+            return None
+        conn.execute("INSERT INTO adminpilot_password_resets VALUES (?, ?, ?, ?)", (digest, row[0], expires.isoformat(), now.isoformat()))
+        return row[1], token
+
+
+def reset_password(token: str, password: str) -> str:
+    """Consume a valid token atomically with password change and session revocation."""
+    if not isinstance(token, str) or not 32 <= len(token) <= 128:
+        raise ValueError("Reset link is invalid or expired. Request a new link.")
+    validate_credentials("recovery@example.invalid", password)
+    digest = hashlib.sha256(token.encode()).hexdigest()
+    password_hash = _password_hash(password)
+    ensure_schema()
+    if backend() == "postgresql":
+        with connect() as conn:
+            with conn.cursor() as cur:
+                # Lock the owner first so two different links cannot reset concurrently.
+                cur.execute("SELECT u.id, u.email FROM adminpilot_users u JOIN adminpilot_password_resets r ON r.user_id = u.id WHERE r.token_hash = %s FOR UPDATE OF u", (digest,))
+                owner = cur.fetchone()
+                if not owner:
+                    raise ValueError("Reset link is invalid or expired. Request a new link.")
+                cur.execute("DELETE FROM adminpilot_password_resets WHERE token_hash = %s AND expires_at > NOW() RETURNING user_id", (digest,))
+                if not cur.fetchone():
+                    raise ValueError("Reset link is invalid or expired. Request a new link.")
+                cur.execute("UPDATE adminpilot_users SET password_hash = %s WHERE id = %s", (password_hash, owner[0]))
+                cur.execute("DELETE FROM adminpilot_sessions WHERE user_id = %s", (owner[0],))
+                cur.execute("DELETE FROM adminpilot_password_resets WHERE user_id = %s", (owner[0],))
+                return owner[1]
+    with sqlite_connect() as conn:
+        conn.execute("BEGIN IMMEDIATE")
+        owner = conn.execute("SELECT u.id, u.email FROM adminpilot_users u JOIN adminpilot_password_resets r ON r.user_id = u.id WHERE r.token_hash = ? AND r.expires_at > ?", (digest, _now_iso())).fetchone()
+        if not owner:
+            raise ValueError("Reset link is invalid or expired. Request a new link.")
+        conn.execute("UPDATE adminpilot_users SET password_hash = ? WHERE id = ?", (password_hash, owner[0]))
+        conn.execute("DELETE FROM adminpilot_sessions WHERE user_id = ?", (owner[0],))
+        conn.execute("DELETE FROM adminpilot_password_resets WHERE user_id = ?", (owner[0],))
+        return owner[1]
