@@ -55,8 +55,8 @@ class AccountSwitchFrontendPrivacyTests(unittest.TestCase):
         self.assertIn('queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] })', refresh)
         self.assertIn("await refreshAccountQueries(data)", ACCOUNT)
         for start_marker, end_marker in (
-            ("const handleLogout = async", "\\n  };"),
-            ("const handleDelete = async", "\\n  };"),
+            ("const handleLogout = async", "\n  };"),
+            ("const handleDelete = async", "\n  };"),
             ("<PasswordRecoveryPanel token={resetToken} onComplete={async () => {", "} />"),
         ):
             start = ACCOUNT.index(start_marker)
@@ -66,8 +66,8 @@ class AccountSwitchFrontendPrivacyTests(unittest.TestCase):
     def test_checkout_email_is_replaced_on_login_and_cleared_on_exit(self):
         self.assertIn("if (data.user?.email) saveBuyerEmail(data.user.email)", ACCOUNT)
         for start_marker, end_marker in (
-            ("const handleLogout = async", "\\n  };"),
-            ("const handleDelete = async", "\\n  };"),
+            ("const handleLogout = async", "\n  };"),
+            ("const handleDelete = async", "\n  };"),
             ("<PasswordRecoveryPanel token={resetToken} onComplete={async () => {", "} />"),
         ):
             start = ACCOUNT.index(start_marker)
