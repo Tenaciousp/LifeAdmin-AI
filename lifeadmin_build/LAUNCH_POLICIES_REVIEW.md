@@ -5,7 +5,9 @@
 Status: requirements agreed in conversation; architecture change not implemented or deployed. The earlier account-based policy text below is historical and must not be published as the current offer.
 
 The owner requires:
-- No LifeAdmin account or sign-in in the purchased app.
+- Paid native download through Apple App Store and Google Play, targeting £1.99 GBP or the store's local equivalent. No free trial, free tier, subscription or in-app upgrade.
+- No LifeAdmin account or sign-in in the purchased app. The customer's store account handles the purchase separately.
+- Website purpose: product examples, support, promotion and future product sales. Existing Stripe checkout is not the launch purchase route for this native release.
 - Household bills, task details and saved plans remain on the customer's device inside the app, retained during use until the customer deletes them.
 - No automatic transmission of household information to LifeAdmin's server, external AI providers, analytics or support.
 - Retain only necessary sales, refund, accounting, tax and support correspondence records separately from household planning information.
@@ -19,11 +21,34 @@ The application at `c9a51de381e9ce2f9235b1a09f2f9dfa10184bad` is an account-base
 
 Implementation must move planning and persistent household data to the device, remove app-account/recovery requirements from the target customer flow, prevent automatic household-data network transmission, and define a purchase entitlement appropriate to the selected distribution channel. Do not erase existing records or disable current production access controls as a shortcut.
 
-Distribution still needs an explicit choice:
-- A paid native Apple/Google download is compatible with no separate LifeAdmin sign-in. Store account, purchase/restore and verification requirements are separate from an app login.
-- Retaining web/Stripe sales needs an account-free entitlement and restoration design. Existing account-bound checkout must not simply be bypassed.
+### Confirmed distribution and customer-controlled backups
 
-Saved work should survive normal app closure and reopening. Device-only storage does not promise recovery after uninstall, browser storage removal, device loss or replacement. Local backup/export and restore behaviour need design and testing; optional operating-system cloud backups also need review before making a strict device-only statement. User-directed copying/sharing must be described accurately and must never happen automatically.
+The owner confirmed the paid Apple App Store and Google Play route on 12 October. Native purchase, re-download and store refund arrangements replace the hosted-account purchase flow for this target release. No Stripe account, existing purchase or production access setting is changed by this decision. Store prices, product availability and release approval still require verification.
+
+Saved bills and plans must survive normal app closure, restart and app updates. Their primary storage is on the customer's device. Tenaciouspl will not retain a server copy of household planning data.
+
+Operating-system backups are conditional, not a guaranteed recovery service. Apple's iCloud Backup includes eligible app data when the customer enables backup and includes the app. Android Auto Backup depends on device settings, eligible storage, app configuration, backup conditions and its 25 MB per-app quota. A completed, usable backup must exist for restoration. Re-downloading a purchased app does not itself prove restoration of household information.
+
+Customer-controlled operating-system cloud backup is consistent with no Tenaciouspl household-data service, but is not consistent with a blanket promise that information never leaves the device. Privacy wording must explain optional Apple/Google backup separately. User-directed export or sharing also leaves the device only through the customer's chosen action.
+
+Implement a customer-controlled backup export/import function as an additional recovery option. Keep exports private by default, warn about sensitive contents before sharing, validate imports before replacing saved work, and preserve current data if an import fails. No automatic upload, support attachment or household-data telemetry.
+
+Tenaciouspl support will help with app faults and backup instructions. Without a retained server copy, support cannot reconstruct missing household records for an individual purchaser. Do not use this limitation to exclude statutory consumer rights or responsibility for defective software.
+
+Before claiming backup support, test:
+- Offline planning, editing, saving, reopening and restart.
+- Native app update without loss of existing records.
+- Export/import round trip, invalid or incompatible backup, and interrupted write.
+- Apple backup/restore and Android backup/restore with representative synthetic records.
+- Backup-disabled and no-backup scenarios with accurate customer guidance.
+- Explicit deletion, clean installation and supported device transfer behaviour.
+- Network inspection proving no automatic household-data transmission to Tenaciouspl, AI services, analytics or support.
+
+Official backup references checked on 12 October 2026:
+- https://support.apple.com/en-gb/108770
+- https://developer.android.com/identity/data/autobackup
+
+The earlier voluntary 14-day refund draft is not a free trial and remains unapproved. Native-store refund procedures and applicable consumer rights need separate review before customer terms are published.
 
 ### Minimum business-record retention
 
