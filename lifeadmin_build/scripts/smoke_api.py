@@ -50,7 +50,9 @@ def main():
 
     products = request_json(client, "/api/products")
     assert products["core"]["id"] == "core_app"
-    assert products["core"]["price"] == "£1.99 / $1.99"
+    assert "price" not in products["core"]
+    assert "amount_pence" not in products["core"]
+    assert set(products["regional_checkout_ready"]) == {"GBP"}
     assert products["addons"] == []
     assert products["core"]["name"] == "LifeAdmin AI Complete"
     assert products["payments_live"] is False
