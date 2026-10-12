@@ -1,23 +1,60 @@
 # LifeAdmin supported-browser QA runbook
 
-Prepared: 5 October 2026  
+Updated: 12 October 2026  
 Target branch: `dev/energy-renewal-plan`  
-Target revision: `2ca754171207fb01cbf117df1ed87cdd6445a60b`  
-Application revision: `f9aa6fb191845b541648c454636c1128ba74c9c7`
+Current tested application revision: `5a633a5070e74f9a2abc8372c61c43190206ff9b`
 
-Use only synthetic data. Do not enter real customer details, passwords, payment-card data or production secrets. Record the browser, version, viewport, preview URL, tested commit and result before marking an item passed. Browser emulation is not physical-device evidence.
+Use only synthetic data and sandbox payments. Record tested application commit, browser/version, viewport and observed result before marking a check passed. Use approved secure credential entry only; never expose passwords, keys or tokens in screenshots, model-visible controls or repository records. Browser emulation is not physical-device evidence.
 
-## Environment record
+## Environment and evidence record
 
-| Evidence | Value |
+| Evidence | Recorded value |
 |---|---|
-| Preview URL | Pending authorised HTTPS preview |
-| Tested commit | `2ca754171207fb01cbf117df1ed87cdd6445a60b` |
-| Browser and version | Pending |
-| Viewport | Pending; start at 390 × 844, then 1024 × 1366 |
-| Tester/date | Pending |
-| Popup policy | Pending |
-| Clipboard permission | Pending |
+| Private frontend | Existing Codespace, port 5173, Private |
+| Private API | Existing Codespace, port 8000, Private |
+| Paid-access setting | `PAID_ACCESS_REQUIRED=true` for the 11 October browser session |
+| Tested application | `5a633a5070e74f9a2abc8372c61c43190206ff9b` |
+| Browser | Chrome cloud browser; exact version not exposed |
+| Observed viewport | 1363 × 936 |
+| Test date | 11 October 2026 |
+| Automated checks | Full CI #286 passed for the tested application revision |
+| Mobile, zoom and clipboard | Pending; no 200% zoom or physical-device pass |
+| Public application | Render maintenance page; no release performed |
+
+Earlier October scenarios remain reusable test instructions, not evidence against the current paid gate. Historical Docker build and encrypted synthetic restore results are recorded in `PAID_WEB_RELEASE.md`.
+
+## Secure-access restriction
+
+Secure credential submission did not produce a verified signed-in app session. Automatic security review rejected manual browser handoff and explicitly prohibited workarounds, indirect execution, alternate browser surfaces and policy circumvention. Do not retry the blocked outcome through another interface. No new test account is required: the owner confirmed only the existing synthetic QA accounts.
+
+Provider-decline browser entry has a separate exhausted-credit block; real browser account deletion has a separate security block. Preserve each restriction. Signed-in tests remain pending until an approved secure workflow is available. Do not count synthetic HTTP tests as successful browser authentication.
+
+## Paid-access acceptance
+
+Complete in the existing private environment after secure access is available. Reconfirm the tested revision and private port visibility first. Do not deploy or activate live payments.
+
+| Scenario | Expected result | Status |
+|---|---|---|
+| Signed-out access | Account/purchase screen; no planning controls or guest payment button | Passed, bounded desktop observation |
+| Signed-out /admin | Protected-access message; no metrics | Passed |
+| Signed-in unpaid account | Planning unavailable; secure-payment action available | Pending |
+| Signed-in sandbox purchase | Verified payment grants planning access to purchaser | Pending for current gate |
+| Cancelled or unpaid checkout | No planning access or new ownership | Pending for current gate |
+| Invalid return identifier | No access; retry visible; no replacement checkout | Passed with synthetic invalid identifier only |
+| Successful return replay | Same ownership; no additional purchase | Pending real provider evidence |
+| Reload and relogin | Purchaser ownership restored | Pending for current gate |
+| Account switch | Other account has no purchaser records or ownership | Pending |
+| Already-owned checkout attempt | No duplicate charge or new checkout | Pending browser evidence |
+| Provider decline and refund | Correct reviewed entitlement behaviour | Pending; existing blocks apply |
+| Normal user /admin | No metrics or administrative access | Pending |
+| Allowlisted admin /admin | Authorised metrics only | Pending |
+| API outage and recovery | Access fails closed; recovers without new payment | Pending; attempted interruption never executed |
+
+## Public help and accessibility acceptance
+
+Observed: app price-free working-page content, correct examples/support destinations and support email, Enter-operated app FAQ, declined optional analytics, website three examples, ArrowRight example selection, privacy and product-information opening, privacy Escape with trigger focus restored.
+
+Still pending: complete Tab/Shift+Tab sequence, dialog focus containment, visible focus, measurable 200% zoom, phone-width layout, error announcements, clipboard/popup fallback and independent usability. No email delivery was attempted. Physical iPad Safari remains the final acceptance gate after other checks.
 
 ## Scenario A — core electricity renewal
 
@@ -90,7 +127,7 @@ Do not edit implementation code until the defect is reproduced. Keep privacy, pa
 ## Still outside supported-browser evidence
 
 - Physical iPad/touch behaviour and real clipboard/popup handling
-- Full Docker-image build
+- New Docker runtime evidence only if a material Docker change requires another run; earlier one-time verification passed
 - Native iOS/Android packages, signing, billing and store review
 - Live payments, hosting and publication
 - Allowed-administrator production configuration and durable-storage recovery drill
