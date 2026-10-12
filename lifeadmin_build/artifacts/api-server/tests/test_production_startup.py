@@ -39,7 +39,7 @@ class ProductionStartupTests(unittest.TestCase):
                     app.validate_production_configuration()
 
     def test_live_payments_require_a_fixed_https_origin(self):
-        for url in ("", "http://app.example.invalid", "https://user:secret@app.example.invalid", "https://app.example.invalid/path", "https://app.example.invalid/?secret=synthetic", "https://app.example.invalid/#fragment", "https://app.example.invalid:bad", "https://[bad", "https://app .example.invalid", "https://app.example.invalid\r\n", "\x00https://app.example.invalid"):
+        for url in ("", "http://app.example.invalid", "https://user:secret@app.example.invalid", "https://app.example.invalid/path", "https://app.example.invalid/?secret=synthetic", "https://app.example.invalid/#fragment", "https://app.example.invalid:bad", "https://[bad", "https://app .example.invalid", "https://app.example.invalid\r\n", "\x01https://app.example.invalid"):
             with self.subTest(url=url), patch.dict(os.environ, {"STRIPE_SECRET_KEY": "sk_live_synthetic", "APP_BASE_URL": url}):
                 with self.assertRaisesRegex(RuntimeError, "HTTPS app origin") as failure:
                     app.validate_production_configuration()
