@@ -105,6 +105,22 @@ Record the exact application commit, Docker version and final pass line. If it f
 
 The owner completed the private `lifeadmin-drive:` rclone OAuth flow in Codespaces. A non-sensitive token-presence check returned true, and `rclone lsd lifeadmin-drive:` completed without errors. The test-only rehearsal `python3 scripts/rehearse_drive_backup.py lifeadmin-drive:LifeAdmin-AI-Automated-Backups` reported **encrypted upload verified, no files deleted, and synthetic encrypted upload and offline restore verified**. The disposable encryption key was discarded, leaving an unrestorable encrypted synthetic object in the remote folder. This is **not** a production backup policy or recovery setup. No customer data was transferred and no automated schedule was enabled. Production still requires independently managed recoverable keys, consistency controls, restore ownership, retention/alerting and durable OAuth authorisation; OAuth Testing refresh tokens can expire.
 
+## Account recovery launch blocker, source review 12 October
+
+The current application revision `5a633a5070e74f9a2abc8372c61c43190206ff9b` has no password-reset route or account recovery UI. Reviewed source blobs: AccountPanel `089b1c7857d59c1de8601d628ec0de03573feca9`, API `4c5b3528df62e082a671fdf59d7730df4ad745fd`, storage `78a727e345ad26a1fa0a549f56f156ccaec98162`. Supported authentication routes are me, register, login, retry-guest-import, logout and delete. Storage contains password authentication and session handling, but no reset-token or password-update recovery functions.
+
+This is a source finding, not a browser failure or completed recovery test. A purchaser who loses their password currently has no verified recovery route to the same paid account. A support email link is not proof of account ownership and does not close this gate. Do not ask customers to repurchase, recreate their account, send passwords or share Stripe/API secrets.
+
+Before public paid release, implement and verify a reviewed recovery process. Minimum acceptance:
+- Initiate recovery without revealing whether an email address has an account.
+- Deliver recovery only through an approved secure channel to the account's verified owner. The current support mailbox is not configured transactional delivery.
+- Use expiring, single-use recovery tokens; store token digests, keep tokens out of logs and restrict attempt rates.
+- Reset the password on the existing account, revoke existing sessions and preserve its tasks, plans and purchase ownership.
+- Verify expired, invalid, reused and cross-account tokens, unsuccessful delivery, and successful recovery without a second payment.
+- Configure credentials privately; confirm delivery, domain authentication and any recurring cost before activation.
+
+No email provider, subscription, reset link, account change or production setting was created by this review. Approved delivery infrastructure and secure identity verification remain prerequisites. Browser security restrictions still apply to eventual acceptance. This blocker takes precedence over a percentage readiness estimate.
+
 ## Minimum owner decisions and actions
 
 1. One-time Docker verification and test-only encrypted Drive upload/offline restore have passed. Preserve this evidence and do not rerun unchanged checks.
