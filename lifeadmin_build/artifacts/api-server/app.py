@@ -2203,19 +2203,50 @@ class AdminPilotHandler(SimpleHTTPRequestHandler):
         return json_response(self, {"error": "Unknown endpoint"}, 404)
 
 
-def main():
-    ensure_data()
-    if os.environ.get("APP_ENV", "development").lower() == "production" and not os.environ.get("SESSION_SECRET"):
-        raise RuntimeError("SESSION_SECRET must be set in production")
-    if (os.environ.get("APP_ENV", "development").lower() == "production"
-            and os.environ.get("STRIPE_SECRET_KEY", "").startswith(("sk_live_", "rk_live_"))
-            and not env_bool("PAID_ACCESS_REQUIRED", False)):
+def validate_production_configuration():
+    if os.environ.get("APP_ENV", "development").lower() != "production":
+        return
+    live_payments = os.environ.get("STRIPE_SECRET_KEY", "").startswith(("sk_live_", "rk_live_"))
+    if live_payments and not env_bool("PAID_ACCESS_REQUIRED", False):
         raise RuntimeError("Live payment configuration requires PAID_ACCESS_REQUIRED=true.")
+    configured_secret = os.environ.get("SESSION_SECRET", "")
+    if len(configured_secret) < 32 or any(character.isspace() for character in configured_secret):
+        raise RuntimeError("SESSION_SECRET must contain at least 32 random characters in production.")
+    if env_bool("DEMO_PAYMENTS", False):
+        raise RuntimeError("DEMO_PAYMENTS must be false in production.")
+    recovery_enabled = env_bool("PASSWORD_RECOVERY_ENABLED", False)
+    if live_payments or recovery_enabled:
+        try:
+            origin_value = os.environ.get("APP_BASE_URL", "")
+            origin = urlparse(origin_value)
+            valid_origin = (origin.scheme == "https" and bool(origin.hostname)
+                            and not origin.username and not origin.password
+                            and origin.path in ("", "/") and not origin.query and not origin.fragment
+                            and not any(character.isspace() or ord(character) < 32 or ord(character) == 127 for character in origin_value))
+            # Accessing port also validates malformed/out-of-range port values.
+            origin.port
+        except ValueError:
+            valid_origin = False
+        if not valid_origin:
+            raise RuntimeError("APP_BASE_URL must be an HTTPS app origin without credentials, path, query or fragment.")
+    if live_payments and (not os.environ.get("STRIPE_WEBHOOK_SECRET") or not regional_price_id("GBP")):
+        raise RuntimeError("Live payments require the webhook secret and Complete GBP Price configuration.")
+    if recovery_enabled and not password_recovery.configured():
+        raise RuntimeError("Enabled password recovery requires complete encrypted SMTP configuration.")
+    if not storage.available():
+        raise RuntimeError("Production account storage is unavailable; startup stopped.")
+
+
+def main():
+    validate_production_configuration()
+    ensure_data()
     if storage.available():
         try:
             storage.ensure_schema()
-        except Exception as exc:
-            print(f"Account storage unavailable during startup: {exc}")
+        except Exception:
+            if os.environ.get("APP_ENV", "development").lower() == "production":
+                raise RuntimeError("Account storage unavailable; production startup stopped.") from None
+            print("Account storage unavailable during startup. Check storage configuration.")
     port = int(os.environ.get("PORT", "8000"))
     server = ThreadingHTTPServer(("0.0.0.0", port), AdminPilotHandler)
     print(f"LifeAdmin AI running at http://localhost:{port}")

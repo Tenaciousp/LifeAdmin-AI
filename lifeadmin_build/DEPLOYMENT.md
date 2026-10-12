@@ -75,3 +75,13 @@ Do not start paid acquisition until conversion events, purchase attribution, pay
 ## Native stores
 
 The current deliverable is a web application. Apple App Store and Google Play release work remains a separate phase requiring developer accounts, native packaging, signing, device QA, store assets and platform declarations. The intended native offer is an upfront paid download at £1.99 or a store-local equivalent; store billing and acceptance must be reviewed during that separate phase.
+
+## Production startup preflight, 12 October
+
+The release candidate checks configuration before binding the HTTP server. Production requires SESSION_SECRET with at least 32 non-whitespace characters and rejects DEMO_PAYMENTS=true. Length checking does not prove randomness; generate and privately retain a strong, stable secret rather than a memorable phrase.
+
+Live Stripe credentials require PAID_ACCESS_REQUIRED=true, a fixed HTTPS APP_BASE_URL without credentials/path/query/fragment, the webhook secret and the Complete GBP Price configuration. Enabled password recovery requires the same origin shape and complete encrypted SMTP settings. These checks verify local configuration shape and presence, not ownership of a domain, reachability, provider agreement, actual delivery or verified Stripe Price/endpoint operation.
+
+Unavailable production account storage or schema initialization stops startup. Startup errors do not print connection exception details. Development preview and the earlier production Docker smoke environment without live payments/recovery retain their existing configuration path; no new Docker runtime pass is claimed by these source checks.
+
+No Render settings or credentials were changed. Complete secure acceptance and approve deployment separately. Marketing domain tenaciouspl.co.uk remains active with active HTTPS; native refresh on 12 October still reports www pending, despite active provider/SSL status. Use the root marketing address. Marketing hosting is separate from the app origin and deployment.
