@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { catalog as localCatalog, suggest as localSuggest } from "@/lib/offline/domain.mjs";
 
 async function fetcher(url: string, options: RequestInit = {}) {
   let res: Response;
@@ -25,21 +26,18 @@ async function fetcher(url: string, options: RequestInit = {}) {
   return res.json();
 }
 
-// GET /api/catalog
+// Bundled catalogue is available without an account or network connection.
 export function useCatalog() {
   return useQuery({
     queryKey: ["/api/catalog"],
-    queryFn: () => fetcher("/api/catalog"),
+    queryFn: async () => localCatalog(),
   });
 }
 
-// POST /api/suggest
+// Search text stays in the client.
 export function useSuggestMatch() {
   return useMutation({
-    mutationFn: (query: string) => fetcher("/api/suggest", {
-      method: "POST",
-      body: JSON.stringify({ query })
-    }),
+    mutationFn: async (query: string) => localSuggest(query),
   });
 }
 
