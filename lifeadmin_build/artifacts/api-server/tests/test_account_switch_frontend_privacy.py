@@ -54,11 +54,25 @@ class AccountSwitchFrontendPrivacyTests(unittest.TestCase):
         self.assertIn('queryClient.setQueryData(["/api/auth/me"], nextAuth)', refresh)
         self.assertIn('queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] })', refresh)
         self.assertIn("await refreshAccountQueries(data)", ACCOUNT)
-        self.assertEqual(ACCOUNT.count("await refreshAccountQueries({ authenticated: false })"), 2)
+        for start_marker, end_marker in (
+            ("const handleLogout = async", "\\n  };"),
+            ("const handleDelete = async", "\\n  };"),
+            ("<PasswordRecoveryPanel token={resetToken} onComplete={async () => {", "} />"),
+        ):
+            start = ACCOUNT.index(start_marker)
+            transition = ACCOUNT[start:ACCOUNT.index(end_marker, start)]
+            self.assertIn("await refreshAccountQueries({ authenticated: false })", transition)
 
     def test_checkout_email_is_replaced_on_login_and_cleared_on_exit(self):
         self.assertIn("if (data.user?.email) saveBuyerEmail(data.user.email)", ACCOUNT)
-        self.assertEqual(ACCOUNT.count("clearBuyerEmail();"), 2)
+        for start_marker, end_marker in (
+            ("const handleLogout = async", "\\n  };"),
+            ("const handleDelete = async", "\\n  };"),
+            ("<PasswordRecoveryPanel token={resetToken} onComplete={async () => {", "} />"),
+        ):
+            start = ACCOUNT.index(start_marker)
+            transition = ACCOUNT[start:ACCOUNT.index(end_marker, start)]
+            self.assertLess(transition.index("clearBuyerEmail();"), transition.index("await refreshAccountQueries"))
         self.assertIn("localStorage.removeItem('adminpilot_buyer_email')", AUTH)
 
 
