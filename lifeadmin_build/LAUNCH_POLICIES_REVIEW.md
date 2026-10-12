@@ -1,5 +1,48 @@
 # LifeAdmin launch policies: owner review
 
+## Updated owner requirements, 12 October 2026
+
+Status: requirements agreed in conversation; architecture change not implemented or deployed. The earlier account-based policy text below is historical and must not be published as the current offer.
+
+The owner requires:
+- No LifeAdmin account or sign-in in the purchased app.
+- Household bills, task details and saved plans remain on the customer's device inside the app, retained during use until the customer deletes them.
+- No automatic transmission of household information to LifeAdmin's server, external AI providers, analytics or support.
+- Retain only necessary sales, refund, accounting, tax and support correspondence records separately from household planning information.
+- Continue operating a paid product business and developing future apps. This is not an approved lifetime service guarantee or a subscription instruction.
+- Defer the public business-address decision until before sales or platform verification. Do not publish a home address or form a company.
+- The voluntary 14-day full-refund proposal remains unapproved.
+
+### What must change before these statements describe the product
+
+The application at `c9a51de381e9ce2f9235b1a09f2f9dfa10184bad` is an account-based hosted web app. It currently stores household planning records on the server and conditionally supports external AI generation. Removing only the sign-in screen would neither make data local nor preserve proper paid-access checks.
+
+Implementation must move planning and persistent household data to the device, remove app-account/recovery requirements from the target customer flow, prevent automatic household-data network transmission, and define a purchase entitlement appropriate to the selected distribution channel. Do not erase existing records or disable current production access controls as a shortcut.
+
+Distribution still needs an explicit choice:
+- A paid native Apple/Google download is compatible with no separate LifeAdmin sign-in. Store account, purchase/restore and verification requirements are separate from an app login.
+- Retaining web/Stripe sales needs an account-free entitlement and restoration design. Existing account-bound checkout must not simply be bypassed.
+
+Saved work should survive normal app closure and reopening. Device-only storage does not promise recovery after uninstall, browser storage removal, device loss or replacement. Local backup/export and restore behaviour need design and testing; optional operating-system cloud backups also need review before making a strict device-only statement. User-directed copying/sharing must be described accurately and must never happen automatically.
+
+### Minimum business-record retention
+
+Keep necessary sales and expense records from the start; retention is not triggered only after crossing a tax-reporting threshold. Keep accounting records separately, without collecting household bills or plans for tax purposes.
+
+For self-employed tax records, HMRC's general rule is at least five years after the relevant tax year's 31 January submission deadline, with exceptions including very late returns. Apply the relevant rule to the actual tax circumstances and record type.
+
+Support correspondence has no universal fixed UK GDPR retention period. Retain only what is necessary for the support matter, applicable legal obligations and justified complaint/dispute handling; delete or anonymise once those reasons expire. Do not apply the tax-record period automatically to every support email or attachment. A documented schedule and deletion process still need completion.
+
+Sources checked on 12 October 2026:
+- https://www.gov.uk/self-employed-records/how-long-to-keep-your-records
+- https://ico.org.uk/for-organisations/advice-for-small-organisations/information-security/data-storage-advice/
+
+No household record, account, payment, mailbox, runtime setting or public policy was changed by this requirements update. Existing CI validates the previous hosted architecture, not the requested device-only architecture.
+
+---
+
+## Historical hosted-web draft, not approved for publication
+
 Prepared: 12 October 2026  
 Application evidence: `200bf0b0af33ff2c90733ebffe5ad6235bce0fd0`, full CI #294 passed  
 Status: draft only. Not approved, published or incorporated into checkout.
