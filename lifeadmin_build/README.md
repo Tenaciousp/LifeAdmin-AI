@@ -1,5 +1,24 @@
 # LifeAdmin AI
 
+> Release target changed on 12 October 2026. The approved direction is a paid Apple App Store and Google Play download, £1.99 GBP or local store equivalent, without a trial, subscription or LifeAdmin account. Household planning and saved data must run locally, without automatic transmission to Tenaciouspl or AI providers. The website serves examples, support and future product promotion/sales.
+>
+> The code described below is still the hosted web implementation. Its server storage, account flow and Stripe checkout do not satisfy the new release target. Do not publish the hosted privacy or access descriptions as native-app promises. Read [LAUNCH_POLICIES_REVIEW.md](LAUNCH_POLICIES_REVIEW.md) for the current requirements and backup acceptance checks.
+
+## Native migration sequence
+
+1. Bundle the category/goal catalogue and move routing, task normalisation and plan generation into the client. Preserve the four output sections and existing energy-comparison safeguards. Planning must work offline without a Python server or external AI.
+2. Replace server task/plan operations with persistent device storage, including schema upgrades and safe writes. Retain saved work across restart and app updates.
+3. Replace the customer account, password recovery and Stripe purchase journey with the paid-store download flow. Keep price information in store listings and promotional material, not app working screens.
+4. Add customer-controlled export/import with validated, versioned backups and safe failure handling.
+5. Package the client for Apple and Android, configure eligible operating-system backups and verify native persistence and restoration. A browser-storage experiment is not evidence of native backup support.
+6. Remove automatic household-data network paths and analytics from the native customer flow. Support and examples open the website without appending household data.
+7. Verify offline journeys, network behaviour, update retention, deletion, exports and native restore using synthetic records. Test store installation and purchase re-download separately from data restoration.
+8. Rewrite public support/privacy/refund wording for the verified native behaviour, then complete platform requirements and release review. Preserve existing production data and release safeguards throughout migration.
+
+This is a migration plan, not an implemented native release. Existing hosted tests remain useful regression coverage but do not establish native readiness.
+
+## Existing hosted implementation
+
 LifeAdmin AI is a privacy-light household-admin assistant for bills, renewals, subscriptions and recurring payments.
 
 **Promise:** Sort bills, renewals and subscriptions without the admin headache.
