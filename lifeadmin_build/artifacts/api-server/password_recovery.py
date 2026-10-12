@@ -1,6 +1,7 @@
 """Bounded asynchronous reset mail. Disabled until explicitly configured."""
 from email.message import EmailMessage
 import os
+import logging
 import queue
 import smtplib
 import ssl
@@ -13,9 +14,24 @@ from backup_lock import data_lock
 _jobs = queue.Queue(maxsize=32)
 _worker_lock = threading.Lock()
 _worker = None
+_logger = logging.getLogger(__name__)
+
+
+def smtp_settings():
+    mode = os.environ.get("SMTP_SECURITY", "ssl").lower()
+    if mode not in ("ssl", "starttls"):
+        raise ValueError("SMTP requires ssl or starttls")
+    port = int(os.environ.get("SMTP_PORT") or ("587" if mode == "starttls" else "465"))
+    if not 1 <= port <= 65535:
+        raise ValueError("Invalid SMTP port")
+    return mode, port
 
 
 def configured():
+    try:
+        smtp_settings()
+    except (ValueError, TypeError):
+        return False
     origin = urlparse(os.environ.get("APP_BASE_URL", ""))
     return (os.environ.get("PASSWORD_RECOVERY_ENABLED", "").lower() == "true"
             and origin.scheme == "https" and bool(origin.hostname)
@@ -31,9 +47,18 @@ def send_mail(recipient, subject, text):
     message["To"] = recipient
     message["Subject"] = subject
     message.set_content(text)
-    # Implicit TLS only; certificate verification is mandatory.
-    with smtplib.SMTP_SSL(os.environ["SMTP_HOST"], int(os.environ.get("SMTP_PORT", "465")),
-                          timeout=10, context=ssl.create_default_context()) as smtp:
+    mode, port = smtp_settings()
+    context = ssl.create_default_context()
+    if mode == "ssl":
+        connection = smtplib.SMTP_SSL(os.environ["SMTP_HOST"], port, timeout=10, context=context)
+    else:
+        connection = smtplib.SMTP(os.environ["SMTP_HOST"], port, timeout=10)
+    with connection as smtp:
+        if mode == "starttls":
+            smtp.ehlo()
+            # An absent or failed TLS upgrade must abort before credentials are sent.
+            smtp.starttls(context=context)
+            smtp.ehlo()
         smtp.login(os.environ["SMTP_USERNAME"], os.environ["SMTP_PASSWORD"])
         smtp.send_message(message)
 
@@ -66,9 +91,8 @@ def _run():
         try:
             process_job(*job)
         except Exception:
-            # Never log recipient details, tokens, links or SMTP credentials.
-            # Delivery/monitoring acceptance is required before activation.
-            pass
+            # Fixed text only: provider exceptions often contain account details.
+            _logger.warning("LifeAdmin password recovery delivery failed; sensitive details withheld.")
         finally:
             _jobs.task_done()
 
@@ -83,4 +107,5 @@ def enqueue(kind, email):
         _jobs.put_nowait((kind, email))
         return True
     except queue.Full:
+        _logger.warning("LifeAdmin password recovery queue is full; sensitive details withheld.")
         return False
