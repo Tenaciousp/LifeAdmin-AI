@@ -10,7 +10,6 @@ export function PasswordRecoveryPanel({ token, onComplete }: Props) {
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
-  const [complete, setComplete] = useState(false);
 
   const submit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -31,7 +30,7 @@ export function PasswordRecoveryPanel({ token, onComplete }: Props) {
       setPassword("");
       setConfirmation("");
       setMessage(data.message || "Check your email for the next step.");
-      if (token) setComplete(true);
+      if (token) await onComplete?.();
     } catch (failure) {
       setError(failure instanceof Error ? failure.message : "Recovery is unavailable. Please retry.");
     } finally {
@@ -47,7 +46,7 @@ export function PasswordRecoveryPanel({ token, onComplete }: Props) {
       {open && <div id="password-recovery">
         <h3 className="mb-2 text-lg font-bold text-slate-900">{token ? "Set a new password" : "Recover your account"}</h3>
         <p className="mb-4 text-sm text-slate-600">Your saved plans and paid access stay with your existing account. Do not pay again.</p>
-        {!complete && <form className="space-y-3" onSubmit={submit}>
+        <form className="space-y-3" onSubmit={submit}>
           {token ? <>
             <label className="block font-bold text-sm" htmlFor="recovery-password">New password</label>
             <input id="recovery-password" className={field} type="password" autoComplete="new-password" required minLength={10} maxLength={256} value={password} onChange={event => setPassword(event.target.value)} />
@@ -58,10 +57,9 @@ export function PasswordRecoveryPanel({ token, onComplete }: Props) {
             <input id="recovery-email" className={field} type="email" autoComplete="email" required maxLength={254} value={email} onChange={event => setEmail(event.target.value)} />
           </>}
           <button type="submit" disabled={busy} aria-busy={busy} className={`${button} bg-primary text-white`}>{busy ? "Please wait..." : token ? "Change password" : "Email a reset link"}</button>
-        </form>}
+        </form>
         {message && <p role="status" className="mt-3 rounded-xl bg-emerald-50 p-3 text-emerald-900">{message}</p>}
         {error && <p role="alert" className="mt-3 rounded-xl bg-amber-50 p-3 text-amber-950">{error}</p>}
-        {complete && <button type="button" className={`${button} mt-3 bg-primary text-white`} onClick={() => void onComplete?.()}>Return to sign in</button>}
         <a className={`${button} mt-2 inline-flex items-center text-primary underline`} href="mailto:tenaciouspl@icloud.com">Contact support</a>
         <p className="mt-2 text-xs text-slate-500">Never send your password or reset link to support.</p>
       </div>}

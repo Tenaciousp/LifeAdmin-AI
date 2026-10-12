@@ -181,6 +181,7 @@ export function AccountPanel() {
             clearCredentialState();
             clearBuyerEmail();
             await refreshAccountQueries({ authenticated: false });
+            toast.success("Password changed. Sign in with your new password.");
             setResetToken("");
           }} />
         ) : isLoading ? (
