@@ -4,20 +4,41 @@ Status: prepared for review, not submitted or published. Native app-store work i
 
 Supported browser QA completed on 7 October 2026 against application revision `00762a39046031ef46f944a059492301601cab37`; CI #124 passed for that exact application revision and CI #125 passed for documentation head `868dea9359980b83dcccfe1810c55ba90f43498c`. The completed browser evidence does not cover physical iPad behaviour, protected-admin browser behaviour or payments. The separate one-time Docker build/start/restart/persistence/backup check passed on owner-provided Codespaces evidence on 8 October 2026.
 
-## Current release checkpoint, 11 October 2026 at 21:10 Europe/London
+## Current release checkpoint, reconciled 12 October 2026
 
-- **Automated build passed:** CI #284 completed successfully for application revision `1421cbd093ff216ff1367463a4129b8b13577f18`. Automated tests, backup locking/HTTP integration, encrypted synthetic backup/offline restore, type checks, API smoke and production frontend build passed.
+- **Automated build passed:** CI #286 completed successfully for application revision `5a633a5070e74f9a2abc8372c61c43190206ff9b`. The successful result was rechecked on 12 October. This revision corrects misleading account-free planning copy without changing authentication or payment logic. Automated tests, backup locking/HTTP integration, encrypted synthetic backup/offline restore, type checks, API smoke and production frontend build passed.
 - **Local paid-access coverage:** six paid-access HTTP checks and 39 existing payment/privacy/account/import tests passed. Synthetic coverage is separate from real Stripe provider and browser evidence.
 - **Marketing website active:** https://tenaciouspl.co.uk has active HTTPS/SSL. The www hostname remains pending. Use the root address for examples and support. This is the marketing origin, not an approved payment-webhook or application origin.
 - **Agreed offer:** one £1.99 GBP payment for all current planning functions. No subscription or separate upgrade. No pricing in app working screens; pricing appears on the website and secure checkout. Headline: “Your household bills. One place.” Supporting line: “List. Plan. Save.”
 - **Paid public configuration:** `PAID_ACCESS_REQUIRED=true` is required before public paid access. The default false setting is reserved for authorised private QA. In paid mode, planning routes require verified ownership and new purchases require a signed-in account. Production startup rejects live Stripe keys without the paid-access flag. These safeguards are in the release candidate, not evidence of deployment.
 - **Release state:** draft PR #2 is unmerged. Feature freeze continues. Maintenance mode stays enabled and automatic deployment stays disabled. No live payment activation, production backup scheduling or new spending was performed.
 
+### Current browser evidence, 11 October 2026
+
+Tested application revision: `5a633a5070e74f9a2abc8372c61c43190206ff9b`. Chrome cloud browser at 1363 × 936; exact browser version was not exposed. The existing Codespace was fast-forwarded with three uncommitted synthetic JSON data files preserved. Frontend and API ports remained Private.
+
+| Check | Recorded outcome |
+|---|---|
+| Signed-out paid access | Access screen shown; no planning controls or new-payment button |
+| Signed-out administration | Protected-access message; no dashboard metrics |
+| App price and support | No £1.99 text in working-page content; professional examples/support destinations and correct support email |
+| App FAQ and analytics | FAQ opened through Enter; optional analytics declined |
+| Invalid synthetic payment return | No planning access; verification retry persisted after reload; no checkout created |
+| Website examples | Broadband, subscription and energy examples displayed four sections; ArrowRight selected subscription |
+| Website dialogs | Privacy and product information opened; privacy Escape restored trigger focus |
+| Account wording correction | Three stale free-planning promises replaced; corrected account-before-purchase copy observed after reload |
+
+These are bounded observations, not complete keyboard, responsive, usability or payment-provider acceptance. The invalid return is not a real declined card, successful purchase, refund or provider replay. Zoom shortcuts did not establish 200% zoom. Email delivery was not tested.
+
+Secure credential submission returned submitted, but subsequent app observation showed no verified signed-in session. Credential protection blocked the proposed workspace interaction before execution, so no API outage/recovery result exists. Manual browser handoff was then rejected by automatic security review, with an explicit prohibition on workarounds, indirect execution, alternate browser surfaces or policy circumvention. Do not retry the rejected action or enter/reconstruct credentials through model-visible controls.
+
+The owner confirmed there are no additional LifeAdmin test accounts beyond the previously created synthetic QA accounts. Do not request a new account as a substitute for resolving the secure-access restriction. Signed-in ownership, account switching, protected-admin and recovery checks stay open. The API was not stopped during the blocked attempt.
+
 ### Browser acceptance still required for the current paid-access revision
 
 Record the exact private QA revision and use synthetic accounts and sandbox payments. Earlier browser success and guest cancellation predate the current account-before-payment gate.
 
-1. Signed-out and signed-in unpaid users receive the access screen; direct planning requests stay blocked. Public website examples and support remain available.
+1. Signed-out browser access and public help destinations passed the bounded observations above. Signed-in unpaid acceptance still requires evidence. Direct planning-route enforcement has synthetic HTTP coverage, not fresh browser coverage.
 2. A signed-in sandbox purchaser returns with verified access. An unpaid or cancelled return grants no access. Repeated checkout confirmation does not create another purchase.
 3. Payment verification retry reuses the existing session. Reload and sign-out/sign-in restore ownership; another account receives no access to the purchaser's records.
 4. Complete real provider decline, replay and refund checks with the reviewed entitlement policy. Local signed synthetic events do not establish provider lifecycle results.
@@ -88,7 +109,7 @@ The owner completed the private `lifeadmin-drive:` rclone OAuth flow in Codespac
 
 1. One-time Docker verification and test-only encrypted Drive upload/offline restore have passed. Preserve this evidence and do not rerun unchanged checks.
 2. Test the current revision on a physical iPad **as the final acceptance gate**, after the independent admin, recovery, security and sandbox-payment checks. Include touch, keyboard, clipboard fallback, account screens and payment-return layout. Browser emulation is not physical-device evidence.
-3. Provide one authorised non-admin account and one allowlisted admin account through secure configuration, then verify both protected-admin browser outcomes without sharing credentials.
+3. Use the existing synthetic QA accounts through an approved secure workflow when the security restriction is resolved. Verify normal non-admin and allowlisted-admin outcomes; do not expose credentials or create replacement accounts to bypass the block.
 4. Review the existing Render host, final application origin, billing owner, data region and acceptable total recurring cost. The promotional domain is already purchased and active. Confirm the current provider quote before any new spending; do not create a replacement service without approval.
 5. Publisher/legal identity and support contact have been supplied as recorded above. Finish privacy/terms/refund content, analytics-consent wording, and account/billing data-retention rules; these are not approved merely by supplying a name and email.
 6. Approve the production administrator allowlist, stable secret handling, persistent SQLite or PostgreSQL storage, off-host encrypted backup destination, retention schedule, restore rehearsal and responsible recovery owner.
