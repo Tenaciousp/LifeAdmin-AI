@@ -27,12 +27,18 @@ test("unknown payments keep a bank-query draft and fraud guidance", () => {
   assert.match(result.things_to_check, /official fraud channel/);
 });
 
-test("unmigrated routes and water renewals never fall back to server generation", async () => {
+test("water and insurance plans work without server generation", async () => {
   const store = await openLocalStore({ indexedDB: new IDBFactory() });
   await store.createTask({ id: "water", title: "Water renewal", category_id: "energy_water", goal_id: "prepare_renewal", details: { utility_type: "Water" } });
-  await assert.rejects(generateAndSaveLocalPlan(store, "water"), /not yet been migrated/);
-  assert.throws(() => generateLocalResult({ category_id: "insurance", goal_id: "prepare_renewal", details: {} }), /not yet been migrated/);
+  await generateAndSaveLocalPlan(store, "water");
+  assert.ok(generateLocalResult({ category_id: "insurance", goal_id: "prepare_renewal", details: {} }).content);
   await assert.rejects(generateAndSaveLocalPlan(store, "missing"), /Bill not found/);
-  assert.equal((await store.read()).plans.length, 0);
+  assert.equal((await store.read()).plans.length, 1);
   store.close();
+});
+
+
+test("customer placeholder-like text stays literal", () => {
+  const result = generateLocalResult({ title: "Subscription", category_id: "subscriptions_memberships", goal_id: "cancel_switch", details: { provider: "__LIFEADMIN_CANCELLATION_ROUTE__" } });
+  assert.match(result.content, /Provider: __LIFEADMIN_CANCELLATION_ROUTE__/);
 });

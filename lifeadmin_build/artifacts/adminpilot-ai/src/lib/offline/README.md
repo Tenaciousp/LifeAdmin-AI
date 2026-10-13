@@ -3,11 +3,12 @@
 The catalogue and search hooks use domain.mjs. Search requests no longer transmit
 bill-search text to the API.
 
-plans.mjs now generates energy-renewal and unknown-payment results locally,
+plans.mjs generates every current category, goal and planning mode locally,
 preserving missing-detail prompts and the existing safety notices. Its
 generateAndSaveLocalPlan function writes the complete result through the local
-repository. Other routes, including water renewal, fail explicitly until their
-playbooks are migrated. There is no hosted or external-AI fallback.
+repository. Static playbooks are exported from the existing Python guidance by
+scripts/export_offline_playbooks.py. Client rendering uses data only, with no
+Python execution, hosted generation or external-AI fallback.
 These generators are not yet connected to customer screens.
 
 storage.mjs supplies the next migration stage: account-free IndexedDB storage for
@@ -52,6 +53,8 @@ any change to production access, payment or hosting settings need release review
 
 Energy and result-contract tests compare local output with the existing Python
 functions. Coverage includes 49 billing-period pairs, all 84 category/goal
-missing-detail combinations, safety notices and local generation/save/restore.
+missing-detail combinations, 252 category/goal/provider scenarios, all eight
+planning modes, named subscriptions, water, legacy routes, safety notices and
+local generation/save/restore. A drift check compares bundled playbooks with source.
 This checks behaviour preservation, not the freshness of provider policies or
 official guidance; review time-sensitive guidance before release.

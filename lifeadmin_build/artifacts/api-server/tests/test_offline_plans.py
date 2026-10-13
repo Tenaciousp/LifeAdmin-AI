@@ -21,27 +21,27 @@ def load_reference(name):
 domain = load_reference("domain")
 energy = load_reference("energy_renewal")
 # Load only pure contract functions/constants, never app startup, storage or secrets.
-names = {"structured_result", "safety_notice", "result_contract"}
-constants = {"OMITTED_RESULT_HEADINGS", "PROVIDER_MESSAGE_HEADINGS", "APPROVAL_HEADINGS", "THINGS_TO_CHECK_HEADINGS"}
+names = {"structured_result", "safety_notice", "result_contract", "detect_playbook", "note_value", "named_subscription_sections", "playbook_sections", "mode_sections", "fallback_agent"}
+constants = {"MODE_PROMPTS", "CATEGORY_PROMPTS", "OMITTED_RESULT_HEADINGS", "PROVIDER_MESSAGE_HEADINGS", "APPROVAL_HEADINGS", "THINGS_TO_CHECK_HEADINGS"}
 tree = ast.parse((API / "app.py").read_text())
 nodes = [node for node in tree.body if
          (isinstance(node, ast.FunctionDef) and node.name in names) or
          (isinstance(node, ast.Assign) and any(isinstance(target, ast.Name) and target.id in constants for target in node.targets))]
-reference = {"domain": domain, "re": re, "json": json}
+reference = {"domain": domain, "re": re, "json": json, "energy_renewal": energy}
 exec(compile(ast.Module(body=nodes, type_ignores=[]), "<pure-plan-reference>", "exec"), reference)
 
 
 class OfflinePlanTests(unittest.TestCase):
-    def local(self, method, tasks):
+    def local(self, method, tasks, mode="full"):
         script = """
           globalThis.fetch = () => { throw new Error('Unexpected network request'); };
           const module = await import(process.argv[1]);
           let input = '';
           for await (const chunk of process.stdin) input += chunk;
-          console.log(JSON.stringify(JSON.parse(input).map(module[process.argv[2]])));
+          console.log(JSON.stringify(JSON.parse(input).map(task => module[process.argv[2]](task, process.argv[3]))));
         """
         result = subprocess.run(
-            ["node", "--input-type=module", "-e", script, MODULE.as_uri(), method],
+            ["node", "--input-type=module", "-e", script, MODULE.as_uri(), method, mode],
             input=json.dumps(tasks), capture_output=True, text=True, check=True, timeout=30,
         )
         return json.loads(result.stdout)
@@ -93,6 +93,41 @@ class OfflinePlanTests(unittest.TestCase):
                     ("next_steps", "Next steps"), ("provider_message", "Provider message"),
                     ("things_to_check", "Things to check"), ("approval_checklist", "Approval checklist")])
             self.assertEqual(actual, {"content": text, **reference["result_contract"](text, task)})
+
+    def test_all_playbook_routes_match_reference(self):
+        tasks = [{"title": "Household plan", "category_id": category["id"], "goal_id": goal["id"],
+                  "details": {"provider": provider, "amount": "£12", "date": "2026-10-01"}}
+                 for category in domain.CATEGORIES for goal in domain.GOALS
+                 for provider in ["", "Netflix", "Example provider"]]
+        for task, actual in zip(tasks, self.local("generateLocalResult", tasks), strict=True):
+            text = reference["fallback_agent"](task, "full")
+            self.assertEqual(actual, {"content": text, **reference["result_contract"](text, task)}, str(task))
+
+    def test_modes_provider_context_and_legacy_routing(self):
+        tasks = [{"title": title, "category": "General", "notes": notes, "details": {}}
+                 for title, notes in [("Travel booking", ""), ("Document review", ""),
+                                      ("Refund request", ""), ("Unrelated household task", "Bring papers"),
+                                      ("NOW subscription", "Provider: NOW\nBilled through: Apple")]]
+        tasks += [{"title": "Subscription", "category_id": "subscriptions_memberships", "goal_id": goal,
+                   "details": {"provider": provider, "account_reference": "TEST", "billing_route": "Apple",
+                               "amount": "£12", "next_payment_date": "2026-10-01", "payment_description": "EXAMPLE",
+                               "what_happened": "Renewal", "minimum_term_end": "2026-10-02",
+                               "confirmation_received": "Email"}}
+                  for provider in ["Disney+", "Disney Plus", "NOW", "Spotify", "Custom provider"]
+                  for goal in ["cancel_switch", "challenge_charge", "check_bill"]]
+        tasks += [{"title": "Water bill", "category_id": "energy_water", "goal_id": "prepare_renewal",
+                   "details": {"utility_type": "Water"}}]
+        for mode in reference["MODE_PROMPTS"]:
+            for task, actual in zip(tasks, self.local("generateLocalResult", tasks, mode), strict=True):
+                text = reference["fallback_agent"](task, mode)
+                self.assertEqual(actual, {"content": text, **reference["result_contract"](text, task)}, str((mode, task)))
+
+    def test_exported_guidance_matches_source(self):
+        script = API.parents[1] / "scripts/export_offline_playbooks.py"
+        spec = importlib.util.spec_from_file_location("offline_export", script)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        self.assertEqual(json.loads(json.dumps(module.build())), json.loads(MODULE.with_name("playbooks.json").read_text()))
 
     def test_local_generation_and_storage_integration(self):
         result = subprocess.run(["node", "--test", str(MODULE.with_name("plans.test.mjs"))],

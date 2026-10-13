@@ -1,5 +1,6 @@
 import { catalog } from "./domain.mjs";
 import { renewalSections } from "./energy-renewal.mjs";
+import { playbookText, structuredResult } from "./playbooks.mjs";
 
 const catalogue = catalog();
 const categories = new Map(catalogue.categories.map(x => [x.id, x]));
@@ -72,7 +73,7 @@ function unknownPayment(task) {
   };
 }
 
-export function generateLocalResult(input) {
+export function generateLocalResult(input, mode = "full") {
   const task = normaliseTask(input);
   const raw = [task.title || "", task.notes || "", task.details.payment_description || "", task.details.statement_description || ""]
     .join(" ").toLowerCase().replace(/[^a-z0-9+£$.-]+/g, " ").trim();
@@ -94,8 +95,20 @@ export function generateLocalResult(input) {
     const provider = String(task.details.provider || "Provider").trim();
     sections.provider_email = { subject: cut(provider + " renewal review", 140), body: generated.provider_message.trim(), kind: "provider" };
   } else {
-    // Never silently send unsupported local planning to the hosted API.
-    throw new Error("This planning route has not yet been migrated to local generation.");
+    content = playbookText(input, task, mode);
+    sections = structuredResult(content);
+    const body = sections.provider_message.trim();
+    const provider = String(task.details.provider || "Provider").trim();
+    const subjects = {
+      prepare_renewal: provider + " renewal review", reduce_price: "Review of my " + provider + " price",
+      cancel_switch: "Cancellation or switching confirmation - " + provider,
+      challenge_charge: "Query about a charge - " + provider, contact_provider: "Account query - " + provider,
+      check_bill: "Bill query - " + provider,
+    };
+    sections.provider_email = body ? {
+      subject: cut(subjects[task.goal_id] || provider + " account query", 140),
+      body: body.replace(/^##\s+[^\n]+\n?/, "").trim(), kind: "provider",
+    } : null;
   }
   sections.known_details = { ...task.details };
   sections.missing_details = missingDetails(task);
@@ -104,11 +117,11 @@ export function generateLocalResult(input) {
   return { content, ...sections };
 }
 
-export async function generateAndSaveLocalPlan(store, taskId) {
+export async function generateAndSaveLocalPlan(store, taskId, mode = "full") {
   const snapshot = await store.read();
   const task = snapshot.tasks.find(item => item.id === taskId);
   if (!task) throw new Error("Bill not found.");
-  const result = generateLocalResult(task);
+  const result = generateLocalResult(task, mode);
   const note = {
     id: globalThis.crypto.randomUUID(), task_id: task.id, title: task.title,
     source: "local", created_at: new Date().toISOString(), content: result.content,
