@@ -71,3 +71,6 @@ jobs:
         run: |
           npm run build:local
           node scripts/verify_local_bundle.mjs
+
+      - name: Check native scaffold configuration
+        run: node native/scripts/verify-config.mjs

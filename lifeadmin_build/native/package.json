@@ -1,0 +1,21 @@
+{
+  "name": "lifeadmin-native",
+  "private": true,
+  "version": "1.0.0",
+  "scripts": {
+    "sync": "node scripts/sync.mjs",
+    "android": "cap open android",
+    "ios": "cap open ios"
+  },
+  "dependencies": {
+    "@capacitor/core": "8.5.3",
+    "@capacitor/android": "8.5.3",
+    "@capacitor/ios": "8.5.3"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "8.5.3"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}
