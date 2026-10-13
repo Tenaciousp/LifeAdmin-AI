@@ -94,4 +94,4 @@ jobs:
 
       - name: Compile Android development package
         working-directory: lifeadmin_build/native/android
-        run: ./gradlew assembleDebug --no-daemon
+        run: ./gradlew assembleDebug testDebugUnitTest --no-daemon
