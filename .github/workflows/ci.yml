@@ -117,3 +117,68 @@ jobs:
             lifeadmin_build/native/android/app/build/reports/tests/testDebugUnitTest/
           if-no-files-found: warn
           retention-days: 14
+
+
+  verify-apple:
+    name: Compile Apple simulator package
+    # Standard hosted runners are free for public repositories; skip if that changes.
+    if: ${{ github.event.repository.private == false }}
+    runs-on: macos-26
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    defaults:
+      run:
+        working-directory: lifeadmin_build
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up native Node toolchain
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Check Apple toolchain
+        run: |
+          xcodebuild -version
+          python -c 'import subprocess; v=subprocess.check_output(["xcodebuild","-version"],text=True); assert int(v.splitlines()[0].split()[1].split(".")[0]) >= 26, "Xcode 26 or later required"'
+
+      - name: Build and verify offline customer assets
+        run: |
+          npm ci
+          npm run build:local
+          node scripts/verify_local_bundle.mjs
+          node native/scripts/verify-config.mjs
+
+      - name: Synchronize Apple development assets
+        working-directory: lifeadmin_build/native
+        run: |
+          npm ci
+          npm exec cap sync ios
+
+      - name: Compile unsigned Apple simulator package
+        working-directory: lifeadmin_build/native
+        run: |
+          xcodebuild -project ios/App/App.xcodeproj -scheme App \
+            -configuration Debug -sdk iphonesimulator \
+            -destination 'generic/platform=iOS Simulator' \
+            -derivedDataPath build-ios-simulator \
+            -resultBundlePath build-ios-simulator.xcresult \
+            CODE_SIGNING_ALLOWED=NO build 2>&1 | tee apple-build.log
+
+      - name: Save Apple compilation evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lifeadmin-apple-compilation-${{ github.sha }}
+          path: |
+            lifeadmin_build/native/apple-build.log
+            lifeadmin_build/native/build-ios-simulator.xcresult/
+          if-no-files-found: warn
+          retention-days: 14

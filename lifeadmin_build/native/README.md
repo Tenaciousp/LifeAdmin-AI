@@ -69,6 +69,14 @@ Verify OS restore on supported devices before claiming it works.
 
 Backup rule reference: https://developer.android.com/identity/data/autobackup
 
+## Apple compilation in CI
+
+The unsigned simulator build uses GitHub’s standard macOS runner, without an
+Apple account, signing secrets or store upload. The job is guarded to run only
+while the repository is public. Compilation evidence is retained for 14 days.
+The first run is pending; a configured job does not establish compilation or
+physical-device acceptance.
+
 ## Required device acceptance
 
 See [DEVICE_TESTING.md](DEVICE_TESTING.md) for Android installation, the first
