@@ -12,7 +12,8 @@
     "typecheck": "npm --workspace @workspace/adminpilot-ai run typecheck && npm --workspace @workspace/api-server run typecheck",
     "test": "npm --workspace @workspace/api-server run test",
     "build": "npm run typecheck && npm run build:web",
-    "start": "npm --workspace @workspace/api-server run start"
+    "start": "npm --workspace @workspace/api-server run start",
+    "build:local": "node scripts/build_local.mjs"
   },
   "devDependencies": {
     "typescript": "~5.9.3",

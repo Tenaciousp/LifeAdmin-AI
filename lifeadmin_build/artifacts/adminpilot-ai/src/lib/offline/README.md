@@ -9,11 +9,11 @@ generateAndSaveLocalPlan function writes the complete result through the local
 repository. Static playbooks are exported from the existing Python guidance by
 scripts/export_offline_playbooks.py. Client rendering uses data only, with no
 Python execution, hosted generation or external-AI fallback.
-These generators are not yet connected to customer screens.
+LocalApp.tsx connects these generators to the separate account-free customer build.
 
 storage.mjs supplies the next migration stage: account-free IndexedDB storage for
-bills and plans, with explicit backup export/import. This repository is not yet
-connected to customer screens. Hosted tasks and plans still use the old API.
+bills and plans, with explicit backup export/import. The local customer screen uses
+this repository. Hosted tasks and plans still use the old API.
 Do not remove account or purchase controls from the hosted flow as a shortcut.
 
 ## Storage contract
@@ -33,9 +33,15 @@ Do not remove account or purchase controls from the hosted flow as a shortcut.
 
 ## Remaining integration and acceptance
 
-Connect this repository to the separate local customer flow together with local
-plan generation, versioned data migration and backup controls. Explicit deletion
-and import replacement need clear customer confirmation in those controls.
+Build the separate local customer package with npm run build:local. This selects
+LocalApp at compile time and writes dist-local/public, leaving the hosted package
+separate. The screen provides search, bills, all plan modes, saved plans, edit/status,
+deletion and backup export/import. Import replacement and deletion require customer
+confirmation; exports warn about readable personal data. No account, checkout or
+analytics hook is mounted. CI verifies hosted customer endpoints are absent from
+local JavaScript assets. No runtime query or URL switches a hosted account into this
+flow. This draft package still needs native wrapping, file-sharing integration,
+versioned upgrade acceptance and browser/device UX review.
 
 The tests use fake-indexeddb to exercise database transactions and fault rollback.
 Reopening a connection in these tests is not proof of physical-device durability,

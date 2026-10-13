@@ -7,7 +7,7 @@ const port = Number(process.env.PORT || process.env.WEB_PORT || 5173);
 const apiTarget = process.env.VITE_API_TARGET || "http://127.0.0.1:8000";
 
 export default defineConfig({
-  base: process.env.BASE_PATH || "/",
+  base: process.env.LIFEADMIN_LOCAL_BUILD === "true" ? "./" : process.env.BASE_PATH || "/",
   plugins: [react(), tailwindcss()],
   resolve: {
     alias: {
@@ -18,7 +18,7 @@ export default defineConfig({
   },
   root: path.resolve(import.meta.dirname),
   build: {
-    outDir: path.resolve(import.meta.dirname, "dist/public"),
+    outDir: path.resolve(import.meta.dirname, process.env.LIFEADMIN_LOCAL_BUILD === "true" ? "dist-local/public" : "dist/public"),
     emptyOutDir: true,
     sourcemap: false,
   },

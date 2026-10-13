@@ -66,3 +66,8 @@ jobs:
 
       - name: Build production frontend
         run: npm run build:web
+
+      - name: Build and verify local customer package
+        run: |
+          npm run build:local
+          node scripts/verify_local_bundle.mjs
