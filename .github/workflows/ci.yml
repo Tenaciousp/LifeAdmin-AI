@@ -95,3 +95,22 @@ jobs:
       - name: Compile Android development package
         working-directory: lifeadmin_build/native/android
         run: ./gradlew assembleDebug testDebugUnitTest --no-daemon
+
+      - name: Save Android device-test package
+        uses: actions/upload-artifact@v4
+        with:
+          name: lifeadmin-android-debug-${{ github.sha }}
+          path: lifeadmin_build/native/android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Save native storage test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lifeadmin-android-storage-tests-${{ github.sha }}
+          path: |
+            lifeadmin_build/native/android/app/build/test-results/testDebugUnitTest/
+            lifeadmin_build/native/android/app/build/reports/tests/testDebugUnitTest/
+          if-no-files-found: warn
+          retention-days: 14

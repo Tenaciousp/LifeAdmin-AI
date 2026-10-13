@@ -27,8 +27,12 @@ and signing material are excluded from source control.
 Open projects with npm run android or npm run ios from native. Android Studio
 and the Android SDK are required for Android builds. Apple compilation needs a
 Mac and Xcode 26 or later. This workspace generated the projects and checked the
-configuration, but has neither Xcode nor the Android SDK. No APK, AAB, IPA,
-signing key, store upload or release acceptance is claimed.
+configuration, but has neither Xcode nor the Android SDK. CI #313 compiled an Android debug APK and passed the native SQLite unit tests.
+CI now retains a development APK and native test reports for 14 days under the
+workflow run’s Artifacts section. Download the APK artifact, extract it and use
+it only for controlled testing on a supported Android device. Debug packages
+are not store releases and do not establish upgrade or physical-device acceptance.
+No release AAB, IPA, signing key, store upload or release acceptance is claimed.
 
 ## Native storage implementation and acceptance
 
@@ -43,13 +47,13 @@ of times. Success is acknowledged only after native transaction commit.
 Synthetic JavaScript contract tests cover reconnect, save/restore, concurrent
 edits, failed commit, failed replacement, invalid imports, deletion and corrupt
 storage. These tests use an injected bridge and do not prove physical-device
-durability. Android compilation is added to CI; Apple compilation still needs
+durability. Android compilation and four native SQLite tests passed in CI #313; Apple compilation still needs
 Mac/Xcode. Native file export and import now use the system document picker on both
 platforms. Selected UTF-8 backup files are bounded to 5 MB, then pass the same
 full snapshot validation before replacement. Exports use a customer-chosen
 destination; no permanent file-provider permission is retained. Cancellation
 preserves saved records. Apple export staging copies are deleted after completion
-or cancellation. Native compilation, file-picker usability, app-update,
+or cancellation. Apple compilation, physical file-picker usability, app-update,
 storage-pressure, interruption and OS backup/restore acceptance remain release gates. No guaranteed OS backup
 or reinstall recovery is promised. Existing server records are preserved.
 
@@ -87,3 +91,4 @@ Sources checked 13 October 2026:
 - https://capacitorjs.com/docs/getting-started/environment-setup
 - https://capacitorjs.com/docs/config
 - https://capacitorjs.com/docs/guides/storage
+
