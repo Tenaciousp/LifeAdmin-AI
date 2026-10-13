@@ -9,7 +9,8 @@ public class LifeAdminFilesPlugin: CAPPlugin, CAPBridgedPlugin, UIDocumentPicker
     public let jsName = "LifeAdminFiles"
     public let pluginMethods: [CAPPluginMethod] = [
         CAPPluginMethod(name: "exportBackup", returnType: CAPPluginReturnPromise),
-        CAPPluginMethod(name: "importBackup", returnType: CAPPluginReturnPromise)
+        CAPPluginMethod(name: "importBackup", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "copyText", returnType: CAPPluginReturnPromise)
     ]
     private var pending: CAPPluginCall?
     private var temporary: URL?
@@ -45,6 +46,15 @@ public class LifeAdminFilesPlugin: CAPPlugin, CAPBridgedPlugin, UIDocumentPicker
                 self.temporary = nil
                 call.reject("Backup file could not be prepared.", "file_write")
             }
+        }
+    }
+    @objc func copyText(_ call: CAPPluginCall) {
+        guard let text = call.getString("text"), text.utf16.count <= 262144 else {
+            call.reject("Plan text is too large to copy.", "clipboard_input"); return
+        }
+        DispatchQueue.main.async {
+            UIPasteboard.general.setItems([["public.utf8-plain-text": text]], options: [.localOnly: true, .expirationDate: Date().addingTimeInterval(300)])
+            call.resolve()
         }
     }
     @objc func importBackup(_ call: CAPPluginCall) {

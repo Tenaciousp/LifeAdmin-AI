@@ -27,3 +27,10 @@ export async function chooseDeviceBackup() {
   parseBackup(result.snapshot);
   return result.snapshot;
 }
+
+export async function copyDeviceText(text) {
+  if (typeof text !== "string" || text.length > 262144) throw new Error("Plan text is too large to copy.");
+  if (isNativeDevice()) { await nativeFiles().copyText({ text }); return; }
+  if (!navigator.clipboard?.writeText) throw new Error("Copy is unavailable. Select the text and copy manually.");
+  await navigator.clipboard.writeText(text);
+}

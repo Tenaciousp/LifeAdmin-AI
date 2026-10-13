@@ -21,7 +21,9 @@ public class LifeAdminStoragePlugin extends Plugin {
             @Override public void onConfigure(SQLiteDatabase db) {
                 db.disableWriteAheadLogging();
                 db.execSQL("PRAGMA synchronous=FULL");
-                db.execSQL("PRAGMA secure_delete=ON");
+                try (Cursor settings = db.rawQuery("PRAGMA secure_delete=ON", null)) {
+                    if (!settings.moveToFirst() || settings.getInt(0) != 1) throw new IllegalStateException("Storage configuration failed.");
+                }
             }
             @Override public void onCreate(SQLiteDatabase db) {
                 db.execSQL("CREATE TABLE snapshot (id INTEGER PRIMARY KEY CHECK(id=1), revision TEXT NOT NULL, data TEXT NOT NULL)");

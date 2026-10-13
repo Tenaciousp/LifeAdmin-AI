@@ -1,6 +1,12 @@
 package uk.co.tenaciouspl.lifeadmin;
 
 import android.app.Activity;
+import android.content.ClipboardManager;
+import android.content.ClipData;
+import android.content.ClipDescription;
+import android.os.Build;
+import android.os.PersistableBundle;
+import android.content.Context;
 import android.content.Intent;
 import android.net.Uri;
 import androidx.activity.result.ActivityResult;
@@ -44,6 +50,21 @@ public class LifeAdminFilesPlugin extends Plugin {
         intent.setType("application/json");
         try { startActivityForResult(call, intent, "importResult"); }
         catch (Exception error) { choosing = false; call.reject("File selection is unavailable.", "file_open"); }
+    }
+    @PluginMethod public void copyText(PluginCall call) {
+        String text = call.getString("text");
+        if (text == null || text.length() > 262144) { call.reject("Plan text is too large to copy.", "clipboard_input"); return; }
+        try {
+            ClipboardManager manager = (ClipboardManager) getContext().getSystemService(Context.CLIPBOARD_SERVICE);
+            if (manager == null) throw new IllegalStateException();
+            ClipData clip = ClipData.newPlainText("LifeAdmin plan", text);
+            if (Build.VERSION.SDK_INT >= 33) {
+                PersistableBundle extras = new PersistableBundle();
+                extras.putBoolean(ClipDescription.EXTRA_IS_SENSITIVE, true);
+                clip.getDescription().setExtras(extras);
+            }
+            manager.setPrimaryClip(clip); call.resolve();
+        } catch (Exception error) { call.reject("Copy failed. Select the text and copy manually.", "clipboard_write"); }
     }
     private Uri selected(ActivityResult result) {
         return result.getResultCode() == Activity.RESULT_OK && result.getData() != null ? result.getData().getData() : null;
