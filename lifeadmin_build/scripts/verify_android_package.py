@@ -57,8 +57,12 @@ def inspect_manifest(apk, tool):
     badge = dump("badging")
     require("package: name='" + APP_ID + "'" in badge, "Incorrect packaged identity")
     require("application-label:'LifeAdmin'" in badge, "Incorrect packaged display name")
-    require("sdkVersion:'24'" in badge, "Unexpected minimum Android version")
-    require("targetSdkVersion:'36'" in badge, "Unexpected target Android version")
+    def sdk_version(names):
+        match = re.search(r"(?:" + "|".join(names) + r"):\s*'([0-9]+)'", badge)
+        require(match is not None, "Unable to parse Android version from badging: " + badge)
+        return int(match.group(1))
+    require(sdk_version(("sdkVersion", "minSdkVersion")) == 24, "Unexpected minimum Android version")
+    require(sdk_version(("targetSdkVersion",)) == 36, "Unexpected target Android version")
     permissions = set(re.findall(r"uses-permission(?:-[^: ]+)?:\s*(?:name=)?'([^']+)'", dump("permissions")))
     allowed = {"android.permission.INTERNET", APP_ID + ".DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION"}
     require("android.permission.INTERNET" in permissions, "Unable to verify APK permissions")
