@@ -12,3 +12,9 @@ export type LocalStore = {
  importBackup(text: string, options: { replace: boolean }): Promise<unknown>;
 };
 export function openLocalStore(options?: { indexedDB?: IDBFactory; name?: string }): Promise<LocalStore>;
+
+
+export function parseBackup(text: string): { tasks: LocalRecord[]; plans: LocalRecord[] };
+export function serialise(snapshot: { tasks: LocalRecord[]; plans: LocalRecord[] }): string;
+export function record(value: unknown, kind: string): LocalRecord;
+export function jsonValue(value: unknown): void;

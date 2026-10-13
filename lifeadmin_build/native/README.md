@@ -30,14 +30,23 @@ Mac and Xcode 26 or later. This workspace generated the projects and checked the
 configuration, but has neither Xcode nor the Android SDK. No APK, AAB, IPA,
 signing key, store upload or release acceptance is claimed.
 
-## Storage release blocker
+## Native storage implementation and acceptance
 
-The customer screen currently uses IndexedDB. Capacitor documents WebView
-storage eviction, including IndexedDB on iOS. Native wrapping alone does not
-make saved household records durable. Implement a native durable repository
-before release and verify app-update retention, failed-write recovery and
-backup/restore on both platforms. Do not promise OS backup or reinstall recovery
-from the current scaffold. No existing server or customer record was deleted.
+The native customer screen now selects an app-private SQLite repository through
+the LifeAdminStorage bridge. Web builds retain IndexedDB. Native startup fails
+closed if the bridge or existing records are unreadable; there is no silent
+WebView-storage fallback. The native database stores a versioned snapshot and
+uses a transaction plus expected revision to reject overlapping stale writes.
+The JavaScript repository reloads and retries a conflicting edit a bounded number
+of times. Success is acknowledged only after native transaction commit.
+
+Synthetic JavaScript contract tests cover reconnect, save/restore, concurrent
+edits, failed commit, failed replacement, invalid imports, deletion and corrupt
+storage. These tests use an injected bridge and do not prove physical-device
+durability. Android compilation is added to CI; Apple compilation still needs
+Mac/Xcode. Native file export/restore and app-update, storage-pressure, interruption
+and OS backup/restore acceptance remain release gates. No guaranteed OS backup
+or reinstall recovery is promised. Existing server records are preserved.
 
 Keep the version-1 export format and local result contract compatible when the
 native repository is connected. Import validation must complete before

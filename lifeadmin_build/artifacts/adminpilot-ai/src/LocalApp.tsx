@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { catalog, suggest } from "./lib/offline/domain.mjs";
-import { openLocalStore } from "./lib/offline/storage.mjs";
+import { openDeviceStore } from "./lib/offline/device-store.mjs";
 import { generateAndSaveLocalPlan, missingDetails } from "./lib/offline/plans.mjs";
 
 type RecordData = { id: string; title: string; [key: string]: any };
@@ -40,7 +40,7 @@ export default function LocalApp() {
     setError("");
     (async () => {
       try {
-        connection = await openLocalStore();
+        connection = await openDeviceStore();
         const data = await connection.read();
         if (!active) { connection.close(); return; }
         store.current = connection;
@@ -152,3 +152,4 @@ function PlanText({ text }: { text: string }) {
     return line.trim() ? <p key={index} className="my-2 whitespace-pre-wrap">{line}</p> : null;
   })}</div>;
 }
+

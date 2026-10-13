@@ -4,7 +4,7 @@ const VERSION = 1;
 const MAX_BYTES = 5 * 1024 * 1024;
 const FORBIDDEN = new Set(["__proto__", "prototype", "constructor"]);
 
-function serialise(snapshot) {
+export function serialise(snapshot) {
   return JSON.stringify({ format: FORMAT, version: VERSION, exported_at: new Date().toISOString(), ...snapshot });
 }
 
@@ -19,7 +19,7 @@ function verifySize(tx, run) {
   });
 }
 
-function jsonValue(value, depth = 0, seen = new Set()) {
+export function jsonValue(value, depth = 0, seen = new Set()) {
   if (depth > 12) throw new Error("Backup nesting is too deep.");
   if (value === null || typeof value === "boolean") return;
   if (typeof value === "string" && value.length <= 100000) return;
@@ -41,7 +41,7 @@ function jsonValue(value, depth = 0, seen = new Set()) {
   seen.delete(value);
 }
 
-function record(value, kind) {
+export function record(value, kind) {
   jsonValue(value);
   if (!value || Array.isArray(value) || typeof value !== "object" ||
       typeof value.id !== "string" || !value.id.trim() || value.id.length > 100 ||

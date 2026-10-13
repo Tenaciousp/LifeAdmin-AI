@@ -74,3 +74,24 @@ jobs:
 
       - name: Check native scaffold configuration
         run: node native/scripts/verify-config.mjs
+
+      - name: Set up native Node toolchain
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Set up Android Java toolchain
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Synchronize Android development assets
+        working-directory: lifeadmin_build/native
+        run: |
+          npm ci
+          npm exec cap sync android
+
+      - name: Compile Android development package
+        working-directory: lifeadmin_build/native/android
+        run: ./gradlew assembleDebug --no-daemon
