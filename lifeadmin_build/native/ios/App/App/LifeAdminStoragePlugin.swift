@@ -30,6 +30,7 @@ public class LifeAdminStoragePlugin: CAPPlugin, CAPBridgedPlugin {
             sqlite3_busy_timeout(database, 5000)
             try execute(database, "PRAGMA journal_mode=DELETE")
             try execute(database, "PRAGMA synchronous=FULL")
+            try execute(database, "PRAGMA secure_delete=ON")
             var statement: OpaquePointer?
             guard sqlite3_prepare_v2(database, "PRAGMA user_version", -1, &statement, nil) == SQLITE_OK else { throw StorageError.database }
             let step = sqlite3_step(statement)

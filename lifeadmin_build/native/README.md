@@ -44,8 +44,13 @@ Synthetic JavaScript contract tests cover reconnect, save/restore, concurrent
 edits, failed commit, failed replacement, invalid imports, deletion and corrupt
 storage. These tests use an injected bridge and do not prove physical-device
 durability. Android compilation is added to CI; Apple compilation still needs
-Mac/Xcode. Native file export/restore and app-update, storage-pressure, interruption
-and OS backup/restore acceptance remain release gates. No guaranteed OS backup
+Mac/Xcode. Native file export and import now use the system document picker on both
+platforms. Selected UTF-8 backup files are bounded to 5 MB, then pass the same
+full snapshot validation before replacement. Exports use a customer-chosen
+destination; no permanent file-provider permission is retained. Cancellation
+preserves saved records. Apple export staging copies are deleted after completion
+or cancellation. Native compilation, file-picker usability, app-update,
+storage-pressure, interruption and OS backup/restore acceptance remain release gates. No guaranteed OS backup
 or reinstall recovery is promised. Existing server records are preserved.
 
 Keep the version-1 export format and local result contract compatible when the

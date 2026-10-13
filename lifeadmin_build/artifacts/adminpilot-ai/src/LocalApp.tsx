@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { catalog, suggest } from "./lib/offline/domain.mjs";
+import { exportDeviceBackup, chooseDeviceBackup, isNativeDevice } from "./lib/offline/device-files.mjs";
 import { openDeviceStore } from "./lib/offline/device-store.mjs";
 import { generateAndSaveLocalPlan, missingDetails } from "./lib/offline/plans.mjs";
 
@@ -61,7 +62,10 @@ export default function LocalApp() {
     setError("");
     setMessage("");
     try { await action(); setSnapshot(await store.current.read()); }
-    catch (failure) { setError(failure instanceof Error ? failure.message : "Unable to save changes. Please retry."); }
+    catch (failure) {
+      if ((failure as { code?: string })?.code === "cancelled") setMessage("Backup action cancelled. Existing records are unchanged.");
+      else setError(failure instanceof Error ? failure.message : "Unable to save changes. Please retry.");
+    }
     finally { running.current = false; setBusy(false); }
   }
 
@@ -92,12 +96,8 @@ export default function LocalApp() {
     if (!window.confirm("The backup contains personal bill and plan details as a readable file. Choose a private destination and keep the file secure. Export now?")) return;
     await run(async () => {
       const data = await store.current.exportBackup();
-      const url = URL.createObjectURL(new Blob([data], { type: "application/json" }));
-      const link = document.createElement("a");
-      link.href = url; link.download = "lifeadmin-backup-" + new Date().toISOString().slice(0, 10) + ".json";
-      document.body.append(link); link.click(); link.remove();
-      window.setTimeout(() => URL.revokeObjectURL(url), 30000);
-      setMessage("Backup download requested. Check the chosen destination before relying on this copy.");
+      const outcome = await exportDeviceBackup(data);
+      setMessage(outcome === "saved" ? "Backup export completed. Check the chosen file before relying on this copy." : "Backup download requested. Check the chosen destination before relying on this copy.");
     });
   }
   async function importBackup(file?: File) {
@@ -106,6 +106,16 @@ export default function LocalApp() {
     if (!window.confirm("Restore replaces every bill and plan on this device. Export your current records first if needed. Replace the current records?")) return;
     await run(async () => {
       await store.current.importBackup(await file.text(), { replace: true });
+      resetForm(); setSelected(null); setMessage("Backup restored on this device.");
+    });
+  }
+
+  async function chooseRestore() {
+    if (!isNativeDevice()) { fileInput.current?.click(); return; }
+    await run(async () => {
+      const text = await chooseDeviceBackup();
+      if (!text || !window.confirm("Restore replaces every bill and plan on this device. Export your current records first if needed. Replace the current records?")) return;
+      await store.current.importBackup(text, { replace: true });
       resetForm(); setSelected(null); setMessage("Backup restored on this device.");
     });
   }
@@ -138,7 +148,7 @@ export default function LocalApp() {
         <section className="rounded-2xl border border-violet-100 bg-white p-5 shadow-sm"><h2 className="text-xl font-bold">Your bills ({snapshot.tasks.length})</h2><label className="mt-4 block max-w-sm">Planning style<select className={input + " mt-1"} value={mode} onChange={event => setMode(event.target.value)}>{modes.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>{!snapshot.tasks.length && <p className="mt-4 text-slate-600">Add your first bill above.</p>}<ul className="mt-4 space-y-3">{snapshot.tasks.map(task => <li key={task.id} className="rounded-xl border border-slate-200 p-4"><h3 className="font-bold">{task.title}</h3><p className="text-sm text-slate-600">{task.category} · {task.status}</p><div className="mt-3 flex flex-wrap gap-2"><button className={button} onClick={() => void generate(task)}>Create plan</button><button className={button} onClick={() => edit(task)}>Edit</button><button className={button} onClick={() => void run(async () => { await store.current.updateTask(task.id, { status: task.status === "Done" ? "Open" : "Done" }); setMessage("Bill status saved."); })}>{task.status === "Done" ? "Reopen" : "Mark done"}</button><button className={button} onClick={() => { if (window.confirm("Delete this bill and every associated plan?")) void run(async () => { await store.current.deleteTask(task.id); if (selected?.task_id === task.id) setSelected(null); if (editing === task.id) resetForm(); setMessage("Bill and associated plans deleted."); }); }}>Delete bill</button></div></li>)}</ul></section>
         <section className="rounded-2xl border border-violet-100 bg-white p-5 shadow-sm"><h2 className="text-xl font-bold">Saved plans ({snapshot.plans.length})</h2>{!snapshot.plans.length && <p className="mt-4 text-slate-600">Create a plan from a saved bill.</p>}<ul className="mt-4 space-y-3">{snapshot.plans.map(plan => <li key={plan.id} className="flex flex-wrap items-center gap-3 rounded-xl border border-slate-200 p-3"><span className="flex-1 font-semibold">{plan.title}</span><button className={button} onClick={() => setSelected(plan)}>Open plan</button><button className={button} onClick={() => { if (window.confirm("Delete this saved plan?")) void run(async () => { await store.current.deletePlan(plan.id); if (selected?.id === plan.id) setSelected(null); setMessage("Plan deleted."); }); }}>Delete plan</button></li>)}</ul></section>
         {selected && <section className="rounded-2xl border border-teal-200 bg-white p-5 shadow-sm"><h2 id="local-plan-heading" tabIndex={-1} className="text-xl font-bold focus-visible:outline focus-visible:outline-violet-700">{selected.title}</h2>{selected.missing_details?.length > 0 && <p className="mt-3 text-amber-900">Useful missing details: {selected.missing_details.join(", ")}</p>}<p className="mt-3 text-sm text-slate-600">General guidance only. Confirm current provider terms and official information before acting. Nothing is sent automatically.</p>{Object.entries(selected.sections || {}).map(([key, value]) => <section key={key} className="mt-5"><h3 className="font-bold capitalize">{key.replaceAll("_", " ")}</h3><PlanText text={String(value)} /></section>)}{selected.provider_email && <section className="mt-5"><h3 className="font-bold">Message draft</h3><p className="mt-2 font-semibold">{selected.provider_email.subject}</p><p className="mt-2 whitespace-pre-wrap">{selected.provider_email.body}</p></section>}<button className={button + " mt-4"} onClick={() => void run(async () => { await navigator.clipboard.writeText(selected.content + (selected.provider_email ? "\n\nSubject: " + selected.provider_email.subject + "\n" + selected.provider_email.body : "")); setMessage("Plan copied. Review before sharing."); })}>Copy plan</button></section>}
-        <section className="rounded-2xl border border-violet-100 bg-white p-5 shadow-sm"><h2 className="text-xl font-bold">Your data and backups</h2><p className="mt-3 text-slate-600">Tenaciouspl holds no recovery copy of your household records. Device cloud backups depend on your settings and the final app package. Export a private copy before deleting the app or changing devices.</p><button className={button + " mt-4"} onClick={() => setBackups(value => !value)}>{backups ? "Hide backup controls" : "Manage backups"}</button>{backups && <div className="mt-4 space-y-3"><p>Backup files contain readable personal information. Keep your chosen copy private. Restore replaces existing bills and plans.</p><div className="flex flex-wrap gap-3"><button className={button} onClick={() => void exportBackup()}>Export backup</button><button className={button} onClick={() => fileInput.current?.click()}>Restore backup</button><input ref={fileInput} className="sr-only" tabIndex={-1} type="file" accept=".json,application/json" onChange={event => { const file = event.target.files?.[0]; event.target.value = ""; void importBackup(file); }} /><button className={button} onClick={() => { if (window.confirm("Delete every bill and plan on this device? Export a backup first if needed.")) void run(async () => { await store.current.clear(); resetForm(); setSelected(null); setMessage("All device records deleted."); }); }}>Delete all records</button></div></div>}</section>
+        <section className="rounded-2xl border border-violet-100 bg-white p-5 shadow-sm"><h2 className="text-xl font-bold">Your data and backups</h2><p className="mt-3 text-slate-600">Tenaciouspl holds no recovery copy of your household records. Device cloud backups depend on your settings and the final app package. Export a private copy before deleting the app or changing devices.</p><button className={button + " mt-4"} onClick={() => setBackups(value => !value)}>{backups ? "Hide backup controls" : "Manage backups"}</button>{backups && <div className="mt-4 space-y-3"><p>Backup files contain readable personal information. Keep your chosen copy private. Restore replaces existing bills and plans.</p><div className="flex flex-wrap gap-3"><button className={button} onClick={() => void exportBackup()}>Export backup</button><button className={button} onClick={() => void chooseRestore()}>Restore backup</button><input ref={fileInput} className="sr-only" tabIndex={-1} type="file" accept=".json,application/json" onChange={event => { const file = event.target.files?.[0]; event.target.value = ""; void importBackup(file); }} /><button className={button} onClick={() => { if (window.confirm("Delete every bill and plan on this device? Export a backup first if needed.")) void run(async () => { await store.current.clear(); resetForm(); setSelected(null); setMessage("All device records deleted."); }); }}>Delete all records</button></div></div>}</section>
       </fieldset>
       </>}
     </main><footer className="mx-auto max-w-6xl px-5 py-8 text-sm text-slate-600">Tenaciouspl · Support: <a className="underline" href="mailto:tenaciouspl@icloud.com">tenaciouspl@icloud.com</a></footer>

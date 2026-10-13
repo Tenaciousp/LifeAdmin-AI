@@ -16,3 +16,8 @@ const project = await nativeFile("ios/App/App.xcodeproj/project.pbxproj");
 assert.match(project, /LifeAdminStoragePlugin\.swift in Sources/);
 assert.match(project, /LifeAdminViewController\.swift in Sources/);
 console.log("Native repository is registered on both platforms.");
+
+assert.match(await nativeFile("android/app/src/main/java/uk/co/tenaciouspl/lifeadmin/MainActivity.java"), /registerPlugin\(LifeAdminFilesPlugin\.class\)/);
+assert.match(await nativeFile("ios/App/App/LifeAdminViewController.swift"), /registerPluginInstance\(LifeAdminFilesPlugin\(\)\)/);
+assert.match(project, /LifeAdminFilesPlugin\.swift in Sources/);
+console.log("Native backup file handling is registered on both platforms.");

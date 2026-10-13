@@ -59,3 +59,8 @@ planning modes, named subscriptions, water, legacy routes, safety notices and
 local generation/save/restore. A drift check compares bundled playbooks with source.
 This checks behaviour preservation, not the freshness of provider policies or
 official guidance; review time-sensitive guidance before release.
+
+Native backup file handling uses LifeAdminFiles with the Apple/Android system
+document picker. Web exports remain downloads and imports use a file input.
+Full validation occurs before replacement and cancellation preserves records.
+OS picker, cloud-provider and interruption behaviour require device acceptance.

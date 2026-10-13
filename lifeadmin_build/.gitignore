@@ -57,3 +57,9 @@ Thumbs.db
 *.sqlite3-shm
 *.sqlite3-wal
 artifacts/api-server/data/.session_secret
+
+# local customer builds and native runtime journals
+dist-local
+*.sqlite-journal
+*.sqlite-shm
+*.sqlite-wal

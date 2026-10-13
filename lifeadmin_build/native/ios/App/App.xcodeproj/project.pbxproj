@@ -18,6 +18,7 @@
 		9582B6832FE993A70072D4E8 /* SceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9582B6822FE993A50072D4E8 /* SceneDelegate.swift */; };
 		AF1100000000000000000002 /* LifeAdminStoragePlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF1100000000000000000001 /* LifeAdminStoragePlugin.swift */; };
 		AF1100000000000000000012 /* LifeAdminViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF1100000000000000000011 /* LifeAdminViewController.swift */; };
+		AF1100000000000000000022 /* LifeAdminFilesPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF1100000000000000000021 /* LifeAdminFilesPlugin.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -34,6 +35,7 @@
 		958DCC722DB07C7200EA8C5F /* debug.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; name = debug.xcconfig; path = ../debug.xcconfig; sourceTree = SOURCE_ROOT; };
 		AF1100000000000000000001 /* LifeAdminStoragePlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LifeAdminStoragePlugin.swift; sourceTree = "<group>"; };
 		AF1100000000000000000011 /* LifeAdminViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LifeAdminViewController.swift; sourceTree = "<group>"; };
+		AF1100000000000000000021 /* LifeAdminFilesPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LifeAdminFilesPlugin.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -69,6 +71,7 @@
 			isa = PBXGroup;
 			children = (
 				9582B6822FE993A50072D4E8 /* SceneDelegate.swift */,
+				AF1100000000000000000021 /* LifeAdminFilesPlugin.swift */,
 				AF1100000000000000000011 /* LifeAdminViewController.swift */,
 				AF1100000000000000000001 /* LifeAdminStoragePlugin.swift */,
 				50379B222058CBB4000EE86E /* capacitor.config.json */,
@@ -166,6 +169,7 @@
 			files = (
 				504EC3081FED79650016851F /* AppDelegate.swift in Sources */,
 				9582B6832FE993A70072D4E8 /* SceneDelegate.swift in Sources */,
+				AF1100000000000000000022 /* LifeAdminFilesPlugin.swift in Sources */,
 				AF1100000000000000000012 /* LifeAdminViewController.swift in Sources */,
 				AF1100000000000000000002 /* LifeAdminStoragePlugin.swift in Sources */,
 			);
