@@ -60,7 +60,14 @@ or reinstall recovery is promised. Existing server records are preserved.
 Keep the version-1 export format and local result contract compatible when the
 native repository is connected. Import validation must complete before
 replacement; failed replacement must preserve the previous saved state.
-No cloud or Tenaciouspl recovery service is provided.
+No Tenaciouspl recovery service is provided. Android OS backup rules explicitly
+include only the native database directory, excluding WebView state and other
+app files. Cloud backup requires the platform’s encryption capability; device
+transfer is configured separately on Android 12 and later. These declarations
+do not prove that a customer’s settings, provider or device support restoration.
+Verify OS restore on supported devices before claiming it works.
+
+Backup rule reference: https://developer.android.com/identity/data/autobackup
 
 ## Required device acceptance
 
@@ -91,4 +98,3 @@ Sources checked 13 October 2026:
 - https://capacitorjs.com/docs/getting-started/environment-setup
 - https://capacitorjs.com/docs/config
 - https://capacitorjs.com/docs/guides/storage
-
