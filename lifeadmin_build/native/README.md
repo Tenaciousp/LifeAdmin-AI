@@ -71,6 +71,9 @@ Backup rule reference: https://developer.android.com/identity/data/autobackup
 
 ## Required device acceptance
 
+See [DEVICE_TESTING.md](DEVICE_TESTING.md) for Android installation, the first
+acceptance pass and Mac compilation commands.
+
 Record device, OS version, build/commit, result and evidence for each check.
 
 | Check | Required outcome |
