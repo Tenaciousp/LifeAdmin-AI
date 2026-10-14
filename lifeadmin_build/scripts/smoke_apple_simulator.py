@@ -56,6 +56,13 @@ def main():
     try:
         sim("boot", device)
         sim("bootstatus", device, "-b", timeout=300)
+        # Fresh iOS runtimes perform data migration on their first boot. CI #325
+        # finished migration but its subsequent app launch timed out. Reboot the
+        # disposable simulator before installation to separate OS setup from
+        # customer-app acceptance. Do not retry or suppress app launch failures.
+        sim("shutdown", device, timeout=120)
+        sim("boot", device)
+        sim("bootstatus", device, "-b", timeout=300)
         sim("install", device, str(app.resolve()), timeout=120)
         results = []
         for label in ("first-launch", "relaunch"):
@@ -67,6 +74,7 @@ def main():
             sim("terminate", device, bundle)
         (evidence / "result.json").write_text(json.dumps({
             "runtime": runtime["version"], "device": phones[-1]["name"],
+            "preparation": "Fresh simulator boot, OS migration, reboot, then app install",
             "launches": results, "scope": "Launch and relaunch only; screenshots need review",
         }, indent=2) + "\n")
         print("Apple simulator launch and relaunch completed; review screenshots.")
