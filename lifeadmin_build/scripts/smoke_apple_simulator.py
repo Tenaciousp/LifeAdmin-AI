@@ -56,29 +56,11 @@ def main():
     try:
         sim("boot", device)
         sim("bootstatus", device, "-b", timeout=300)
-        # Fresh iOS runtimes perform data migration on their first boot. CI #325
-        # finished migration but its subsequent app launch timed out. Reboot the
-        # disposable simulator before installation to separate OS setup from
-        # customer-app acceptance. Do not retry or suppress app launch failures.
-        sim("shutdown", device, timeout=120)
-        sim("boot", device)
-        sim("bootstatus", device, "-b", timeout=300)
         sim("install", device, str(app.resolve()), timeout=120)
-        results = []
-        for label in ("first-launch", "relaunch"):
-            launched = sim("launch", device, bundle, timeout=120 if label == "first-launch" else 60)
-            results.append({"stage": label, "launch": launched})
-            time.sleep(10)
-            sim("io", device, "screenshot", str(evidence / (label + ".png")))
-            # Termination fails if the app already crashed or exited.
-            sim("terminate", device, bundle)
-        (evidence / "result.json").write_text(json.dumps({
-            "runtime": runtime["version"], "device": phones[-1]["name"],
-            "preparation": "Fresh simulator boot, OS migration, reboot, then app install",
-            "launches": results, "scope": "Launch and relaunch only; screenshots need review",
-        }, indent=2) + "\n")
-        print("Apple simulator launch and relaunch completed; review screenshots.")
+        # Let XCTest own the initial launch so a simctl launch timeout does not
+        # prevent collection of UI-test diagnostics. Both checks must still pass.
         if "--ui-tests" in sys.argv:
+            print("Starting Apple interactive acceptance on a fresh installation.", flush=True)
             with (evidence / "ui-tests.log").open("w") as log:
                 subprocess.run([
                     "xcodebuild", "-project", "ios/App/App.xcodeproj",
@@ -93,12 +75,31 @@ def main():
                     "CODE_SIGNING_ALLOWED=NO", "test",
                 ], check=True, stdout=log, stderr=subprocess.STDOUT, timeout=900)
             print("Apple interactive persistence and deletion test passed.")
+        results = []
+        labels = ("post-ui-launch", "relaunch") if "--ui-tests" in sys.argv else ("first-launch", "relaunch")
+        for label in labels:
+            launched = sim("launch", device, bundle, timeout=120)
+            results.append({"stage": label, "launch": launched})
+            time.sleep(10)
+            sim("io", device, "screenshot", str(evidence / (label + ".png")))
+            # Termination fails if the app already crashed or exited.
+            sim("terminate", device, bundle)
+        (evidence / "result.json").write_text(json.dumps({
+            "runtime": runtime["version"], "device": phones[-1]["name"],
+            "interactive_acceptance_passed": "--ui-tests" in sys.argv,
+            "launches": results, "scope": "Simulator only; physical-device acceptance outstanding",
+        }, indent=2) + "\n")
+        print("Apple simulator launch and relaunch completed; review screenshots.")
     except Exception:
+        ui_log = evidence / "ui-tests.log"
+        if ui_log.exists():
+            print("Final UI-test diagnostics:\n" + ui_log.read_text(errors="replace")[-20000:], flush=True)
         # Preserve synthetic simulator evidence before removing the disposable device.
         diagnostics = [
             ("failure-screen.log", ["io", device, "screenshot", str(evidence / "failure.png")]),
             ("failure-system.log", ["spawn", device, "log", "show", "--last", "2m",
-             "--style", "compact", "--predicate", 'process == "App" OR process == "SpringBoard"']),
+             "--style", "compact", "--predicate",
+             'process == "App" OR process == "SpringBoard" OR process == "runningboardd" OR process == "launchd"']),
         ]
         for filename, arguments in diagnostics:
             try:
