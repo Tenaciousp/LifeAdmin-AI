@@ -69,10 +69,16 @@ xcodebuild -project ios/App/App.xcodeproj -scheme App \
   CODE_SIGNING_ALLOWED=NO build
 ```
 
-Save the build result and any errors. Compilation has not yet been verified on
-a Mac. Simulator success does not establish iCloud backup, physical file-provider
-behaviour or store acceptance. A signed device build and store submission are
-separate later steps.
+Unsigned simulator compilation passed on the GitHub Mac runner with Xcode 26.6
+in [CI #320](https://github.com/Tenaciousp/LifeAdmin-AI/actions/runs/38466303133),
+for source commit `3fb68c03f7bb1cc92a5d9694959cb404b14eaf3e`.
+Android compilation, native storage tests and packaged-app verification also
+passed in that run. The Apple artifact contains build logs and results, not a
+signed installable app. Interactive simulator testing remains outstanding.
+
+For subsequent runs, save the build result and any errors. Compilation success
+does not establish iCloud backup, physical file-provider behaviour or store
+acceptance. A signed device build and store submission are separate later steps.
 
 Apple toolchain reference:
 https://capacitorjs.com/docs/updating/8-0
