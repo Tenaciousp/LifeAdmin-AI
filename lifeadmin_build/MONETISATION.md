@@ -1,34 +1,38 @@
-# LifeAdmin AI monetisation and growth
+# LifeAdmin purchase model
 
-## One-time pricing
+Updated 14 October 2026. Supersedes the earlier hosted web pricing plan.
 
-**LifeAdmin AI Complete: one purchase, no subscription.**
+## Agreed native release
 
-**£1.99 GBP once for the complete app.** All current planning features are included. No country selector, regional-price menu, subscription or separate upgrade.
+£1.99 upfront UK download, with store-managed local equivalents. All planning
+features shipped in this release are included. No free trial, subscription,
+LifeAdmin account, sign-in, in-app pricing, checkout or separate upgrade.
+Separate future apps and products are outside this purchase promise.
 
-One purchase includes 12 household categories, seven goals, next steps, provider messages, checklists, unknown-payment support, manual AI handoff, advanced negotiation, switching, complaint/escalation support and all advanced planning modes in this release.
+Apple/Google handle the store purchase. The native customer app does not require
+a Stripe entitlement, Core/All Access tiers or in-app purchase products for this
+upfront-download offer. Final store configuration and purchase/re-download
+behaviour need verification.
 
-There is no subscription, separate upgrade or second payment. Existing Core and All Access purchasers retain complete access under the migration rule. Checkout uses the GBP Price only. The server verifies the Stripe Price currency, one-time type, active status and exact amount of 199 pence before creating a Checkout Session. Final payment, tax and release checks remain required before live sales.
+## Website and records
 
-## Web payments
+https://tenaciouspl.co.uk provides promotion, examples, support and privacy
+information. Future direct website sales need separate reviewed implementation
+and approval; existing Stripe setup does not establish a direct-sales route.
 
-Live Stripe checkout is enabled only when both the Stripe secret and the matching product price ID are configured. The customer UI remains in preview mode when payment configuration is incomplete. A purchase entitlement is granted only after Stripe reports a paid session. Do not activate checkout until the actual Stripe Price currency and amount match the displayed £1.99 GBP price.
+Household records stay in app-private device storage. Store sales, support and
+necessary tax/accounting records are separate. Retain only the minimum appropriate
+records for the purpose and applicable requirements. Do not add app sign-in or
+household-data uploads for sales reporting.
 
-Required production secrets:
+The customer build has no advertising analytics or automatic external AI upload.
+Analytics SDKs and paid advertising require separate approval and privacy review.
 
-- `STRIPE_SECRET_KEY`
-- `STRIPE_WEBHOOK_SECRET`
-- `STRIPE_PRICE_LIFEADMIN_COMPLETE_GBP` (active, one-time GBP 199)
-- Legacy `STRIPE_PRICE_LIFEADMIN_COMPLETE` is accepted only as the GBP fallback, and must be verified as GBP £1.99 before checkout.
+## Historical hosted web implementation
 
-Never place live secrets in client code or source control.
+Older account, Stripe and analytics code remains in the hosted build. Earlier
+Core/All Access tiers, checkout rules and account entitlements are historical,
+not requirements for the account-free native app. Do not reintroduce them.
 
-## Ads and measurement readiness
-
-Paid acquisition should start only after the final product, live payments, privacy disclosures and conversion tracking have been verified.
-
-The web client contains a privacy-light analytics bridge suitable for Umami and later GA4 / Google Tag Manager configuration. Useful conversion events include start flow, bill search, category and goal selection, suggestion accepted, plan generated, provider message copied, email opened, AI handoff opened, account created and checkout started.
-
-Do not send free-text bill descriptions, provider messages, email addresses, account identifiers, postal addresses or payment details as advertising/analytics event properties.
-
-A sensible launch sequence is: product QA, measurement QA, small campaign test, conversion-quality review, then controlled scaling.
+No voluntary 14-day refund policy is approved. Apply relevant consumer rights
+and store processes without publishing an additional refund promise.

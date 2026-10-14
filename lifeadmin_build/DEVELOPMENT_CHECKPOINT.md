@@ -1,3 +1,33 @@
+# Current release checkpoint: 14 October 2026
+
+This section supersedes conflicting product, pricing and next-action instructions
+below. Historical test evidence applies only to its recorded build.
+
+Agreed release: LifeAdmin, a £1.99 upfront Apple/Google store download (local
+equivalents), without trial, account, sign-in, in-app pricing or checkout.
+Household records stay on device. Manual JSON and platform-controlled backups
+are distinct; no publisher recovery copy or guaranteed restore.
+The website provides promotion, examples and support.
+
+Current instructions: STORE_SUBMISSION.md, MONETISATION.md and
+native/DEVICE_TESTING.md.
+
+CI #322 passed native build/storage/package checks and Apple install/launch/
+relaunch at source 0a2e22e14019cd55cff56b6336854fcbf20ab715. iPhone 11 / iOS 26.5
+startup screenshots were reviewed. CI #323 passed Android checks and Apple
+compilation but timed out during initial simulator launch, before the new
+interactive persistence/deletion test executed. Next run adds launch diagnostics
+and a bounded longer first-launch wait. Do not count interactive acceptance as passed.
+
+Next: resolve interactive-test findings, verify native backup/restore, upgrade
+and accessibility, then physical-device acceptance, with physical iPad QA last.
+The owner has no Android device. Signing, seller/privacy details, store listing/
+pricing and explicit release approval remain outstanding. Keep draft PR #2.
+No production app release, live payments, paid services or external messages
+are authorised by this update.
+
+# Historical checkpoints (superseded where inconsistent)
+
 # LifeAdmin completion checkpoint
 
 Reviewed: 8 October 2026. This checkpoint reconciles the available conversation history, current automation and repository documents. It is not proof that every historical conversation or requirement has been retrieved.

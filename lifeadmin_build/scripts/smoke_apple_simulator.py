@@ -10,11 +10,25 @@ import time
 
 
 def sim(*args, timeout=60):
-    result = subprocess.run(
-        ["xcrun", "simctl", *args], check=True, text=True,
-        stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=timeout,
-    )
-    return result.stdout.strip()
+    started = time.monotonic()
+    command = ["xcrun", "simctl", *args]
+    log = Path("apple-launch-evidence/commands.log")
+    try:
+        result = subprocess.run(
+            command, check=True, text=True,
+            stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=timeout,
+        )
+        with log.open("a") as handle:
+            handle.write(f"{args[0]} completed in {time.monotonic() - started:.1f}s\n")
+            handle.write(result.stdout + result.stderr + "\n")
+        return result.stdout.strip()
+    except (subprocess.CalledProcessError, subprocess.TimeoutExpired) as error:
+        with log.open("a") as handle:
+            handle.write(f"{args[0]} failed after {time.monotonic() - started:.1f}s: {error}\n")
+            for output in (error.stdout, error.stderr):
+                if output:
+                    handle.write(output.decode(errors="replace") if isinstance(output, bytes) else output)
+        raise
 
 
 def main():
@@ -45,7 +59,7 @@ def main():
         sim("install", device, str(app.resolve()), timeout=120)
         results = []
         for label in ("first-launch", "relaunch"):
-            launched = sim("launch", device, bundle)
+            launched = sim("launch", device, bundle, timeout=120 if label == "first-launch" else 60)
             results.append({"stage": label, "launch": launched})
             time.sleep(10)
             sim("io", device, "screenshot", str(evidence / (label + ".png")))
@@ -71,6 +85,21 @@ def main():
                     "CODE_SIGNING_ALLOWED=NO", "test",
                 ], check=True, stdout=log, stderr=subprocess.STDOUT, timeout=900)
             print("Apple interactive persistence and deletion test passed.")
+    except Exception:
+        # Preserve synthetic simulator evidence before removing the disposable device.
+        diagnostics = [
+            ("failure-screen.log", ["io", device, "screenshot", str(evidence / "failure.png")]),
+            ("failure-system.log", ["spawn", device, "log", "show", "--last", "2m",
+             "--style", "compact", "--predicate", 'process == "App" OR process == "SpringBoard"']),
+        ]
+        for filename, arguments in diagnostics:
+            try:
+                with (evidence / filename).open("w") as log:
+                    subprocess.run(["xcrun", "simctl", *arguments], stdout=log,
+                                   stderr=subprocess.STDOUT, timeout=20, check=False)
+            except (OSError, subprocess.TimeoutExpired):
+                pass
+        raise
     finally:
         subprocess.run(["xcrun", "simctl", "shutdown", device], check=False, timeout=60)
         subprocess.run(["xcrun", "simctl", "delete", device], check=False, timeout=60)
