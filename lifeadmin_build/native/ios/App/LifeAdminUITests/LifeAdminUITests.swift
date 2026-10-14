@@ -24,8 +24,9 @@ final class LifeAdminUITests: XCTestCase {
     private func reveal(_ element: XCUIElement, file: StaticString = #filePath, line: UInt = #line) {
         for _ in 0..<14 {
             if element.exists && element.isHittable { return }
-            app.webViews.firstMatch.swipeUp()
+            app.swipeUp()
         }
+        print(app.debugDescription)
         XCTFail("Control is not reachable: \(element)", file: file, line: line)
     }
 
