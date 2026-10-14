@@ -172,9 +172,9 @@ jobs:
             -resultBundlePath build-ios-simulator.xcresult \
             CODE_SIGNING_ALLOWED=NO build 2>&1 | tee apple-build.log
 
-      - name: Launch and relaunch Apple simulator app
+      - name: Check Apple startup and interactive persistence
         working-directory: lifeadmin_build/native
-        run: python ../scripts/smoke_apple_simulator.py
+        run: python ../scripts/smoke_apple_simulator.py --ui-tests
 
       - name: Save Apple compilation evidence
         if: always()
@@ -182,6 +182,7 @@ jobs:
         with:
           name: lifeadmin-apple-compilation-${{ github.sha }}
           path: |
+            lifeadmin_build/native/apple-ui-tests.xcresult/
             lifeadmin_build/native/apple-launch-evidence/
             lifeadmin_build/native/apple-build.log
             lifeadmin_build/native/build-ios-simulator.xcresult/

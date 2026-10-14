@@ -5,6 +5,7 @@ Screenshots require human review. This is not household-data or device acceptanc
 import json
 from pathlib import Path
 import subprocess
+import sys
 import time
 
 
@@ -55,6 +56,21 @@ def main():
             "launches": results, "scope": "Launch and relaunch only; screenshots need review",
         }, indent=2) + "\n")
         print("Apple simulator launch and relaunch completed; review screenshots.")
+        if "--ui-tests" in sys.argv:
+            with (evidence / "ui-tests.log").open("w") as log:
+                subprocess.run([
+                    "xcodebuild", "-project", "ios/App/App.xcodeproj",
+                    "-scheme", "LifeAdminAcceptance", "-configuration", "Debug",
+                    "-destination", "platform=iOS Simulator,id=" + device,
+                    "-derivedDataPath", "build-ios-simulator",
+                    "-resultBundlePath", "apple-ui-tests.xcresult",
+                    "-parallel-testing-enabled", "NO",
+                    "-test-timeouts-enabled", "YES",
+                    "-default-test-execution-time-allowance", "180",
+                    "-maximum-test-execution-time-allowance", "300",
+                    "CODE_SIGNING_ALLOWED=NO", "test",
+                ], check=True, stdout=log, stderr=subprocess.STDOUT, timeout=900)
+            print("Apple interactive persistence and deletion test passed.")
     finally:
         subprocess.run(["xcrun", "simctl", "shutdown", device], check=False, timeout=60)
         subprocess.run(["xcrun", "simctl", "delete", device], check=False, timeout=60)

@@ -6,6 +6,14 @@
 	objectVersion = 60;
 	objects = {
 
+/* Begin PBXContainerItemProxy section */
+AF220000000000000000000B = {isa = PBXContainerItemProxy; containerPortal = 504EC2FC1FED79650016851F; proxyType = 1; remoteGlobalIDString = 504EC3031FED79650016851F; remoteInfo = App; };
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXTargetDependency section */
+AF220000000000000000000C = {isa = PBXTargetDependency; target = 504EC3031FED79650016851F; targetProxy = AF220000000000000000000B; };
+/* End PBXTargetDependency section */
+
 /* Begin PBXBuildFile section */
 		2FAD9763203C412B000D30F8 /* config.xml in Resources */ = {isa = PBXBuildFile; fileRef = 2FAD9762203C412B000D30F8 /* config.xml */; };
 		4D22ABE92AF431CB00220026 /* CapApp-SPM in Frameworks */ = {isa = PBXBuildFile; productRef = 4D22ABE82AF431CB00220026 /* CapApp-SPM */; };
@@ -19,6 +27,7 @@
 		AF1100000000000000000002 /* LifeAdminStoragePlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF1100000000000000000001 /* LifeAdminStoragePlugin.swift */; };
 		AF1100000000000000000012 /* LifeAdminViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF1100000000000000000011 /* LifeAdminViewController.swift */; };
 		AF1100000000000000000022 /* LifeAdminFilesPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF1100000000000000000021 /* LifeAdminFilesPlugin.swift */; };
+AF2200000000000000000001 = {isa = PBXBuildFile; fileRef = AF2200000000000000000002; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -36,6 +45,8 @@
 		AF1100000000000000000001 /* LifeAdminStoragePlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LifeAdminStoragePlugin.swift; sourceTree = "<group>"; };
 		AF1100000000000000000011 /* LifeAdminViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LifeAdminViewController.swift; sourceTree = "<group>"; };
 		AF1100000000000000000021 /* LifeAdminFilesPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LifeAdminFilesPlugin.swift; sourceTree = "<group>"; };
+AF2200000000000000000002 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LifeAdminUITests/LifeAdminUITests.swift; sourceTree = "<group>"; };
+AF2200000000000000000003 = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = LifeAdminUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -47,6 +58,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+AF2200000000000000000004 = {isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -55,6 +67,7 @@
 			children = (
 				958DCC722DB07C7200EA8C5F /* debug.xcconfig */,
 				504EC3061FED79650016851F /* App */,
+				AF2200000000000000000002,
 				504EC3051FED79650016851F /* Products */,
 			);
 			sourceTree = "<group>";
@@ -63,6 +76,7 @@
 			isa = PBXGroup;
 			children = (
 				504EC3041FED79650016851F /* App.app */,
+				AF2200000000000000000003,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -109,6 +123,17 @@
 			productReference = 504EC3041FED79650016851F /* App.app */;
 			productType = "com.apple.product-type.application";
 		};
+AF2200000000000000000007 /* LifeAdminUITests */ = {
+isa = PBXNativeTarget;
+buildConfigurationList = AF2200000000000000000008;
+buildPhases = (AF2200000000000000000005, AF2200000000000000000004, AF2200000000000000000006,);
+buildRules = ();
+dependencies = (AF220000000000000000000C,);
+name = LifeAdminUITests;
+productName = LifeAdminUITests;
+productReference = AF2200000000000000000003;
+productType = "com.apple.product-type.bundle.ui-testing";
+};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -118,6 +143,7 @@
 				LastSwiftUpdateCheck = 0920;
 				LastUpgradeCheck = 0920;
 				TargetAttributes = {
+					AF2200000000000000000007 = { CreatedOnToolsVersion = 26.6; TestTargetID = 504EC3031FED79650016851F; };
 					504EC3031FED79650016851F = {
 						CreatedOnToolsVersion = 9.2;
 						LastSwiftMigration = 1100;
@@ -141,6 +167,7 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
+				AF2200000000000000000007,
 				504EC3031FED79650016851F /* App */,
 			);
 		};
@@ -160,6 +187,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+AF2200000000000000000006 = {isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
@@ -175,6 +203,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+AF2200000000000000000005 = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (AF2200000000000000000001,); runOnlyForDeploymentPostprocessing = 0; };
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXVariantGroup section */
@@ -350,6 +379,14 @@
 			};
 			name = Release;
 		};
+AF2200000000000000000009 = {isa = XCBuildConfiguration; buildSettings = {CODE_SIGN_STYLE = Automatic; GENERATE_INFOPLIST_FILE = YES; IPHONEOS_DEPLOYMENT_TARGET = 15.0;
+PRODUCT_BUNDLE_IDENTIFIER = uk.co.tenaciouspl.lifeadmin.uitests; PRODUCT_NAME = "$(TARGET_NAME)";
+SWIFT_VERSION = 5.0; TARGETED_DEVICE_FAMILY = "1,2"; TEST_TARGET_NAME = App;
+ENABLE_TESTING_SEARCH_PATHS = YES; LD_RUNPATH_SEARCH_PATHS = ("$(inherited)", "@executable_path/Frameworks", "@loader_path/Frameworks",);}; name = Debug; };
+AF220000000000000000000A = {isa = XCBuildConfiguration; buildSettings = {CODE_SIGN_STYLE = Automatic; GENERATE_INFOPLIST_FILE = YES; IPHONEOS_DEPLOYMENT_TARGET = 15.0;
+PRODUCT_BUNDLE_IDENTIFIER = uk.co.tenaciouspl.lifeadmin.uitests; PRODUCT_NAME = "$(TARGET_NAME)";
+SWIFT_VERSION = 5.0; TARGETED_DEVICE_FAMILY = "1,2"; TEST_TARGET_NAME = App;
+ENABLE_TESTING_SEARCH_PATHS = YES; LD_RUNPATH_SEARCH_PATHS = ("$(inherited)", "@executable_path/Frameworks", "@loader_path/Frameworks",);}; name = Release; };
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -371,6 +408,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
+AF2200000000000000000008 = {isa = XCConfigurationList; buildConfigurations = (AF2200000000000000000009, AF220000000000000000000A,); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
 /* End XCConfigurationList section */
 
 /* Begin XCLocalSwiftPackageReference section */
