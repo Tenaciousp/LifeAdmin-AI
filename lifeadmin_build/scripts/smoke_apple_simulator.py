@@ -70,7 +70,7 @@ def main():
                     "-resultBundlePath", "apple-ui-tests.xcresult",
                     "-parallel-testing-enabled", "NO",
                     "-test-timeouts-enabled", "YES",
-                    "-default-test-execution-time-allowance", "180",
+                    "-default-test-execution-time-allowance", "300",
                     "-maximum-test-execution-time-allowance", "300",
                     "CODE_SIGNING_ALLOWED=NO", "test",
                 ], check=True, stdout=log, stderr=subprocess.STDOUT, timeout=900)

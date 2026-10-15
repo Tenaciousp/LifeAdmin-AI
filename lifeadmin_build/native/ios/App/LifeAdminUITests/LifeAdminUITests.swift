@@ -63,6 +63,15 @@ final class LifeAdminUITests: XCTestCase {
         XCTAssertEqual(XCTWaiter.wait(for: [closed], timeout: 5), .completed)
     }
 
+    private func cancelFilePicker() {
+        let cancel = app.buttons["Cancel"].firstMatch
+        XCTAssertTrue(cancel.waitForExistence(timeout: 10))
+        cancel.tap()
+        XCTAssertTrue(app.staticTexts[
+            "Backup action cancelled. Existing records are unchanged."
+        ].waitForExistence(timeout: 10))
+    }
+
     func testBillAndPlanSurviveRestartAndDeletionPersists() throws {
         // The CI runner creates a fresh disposable simulator. No customer data.
         app.launch()
@@ -102,6 +111,30 @@ final class LifeAdminUITests: XCTestCase {
         let open = app.buttons["Open plan"]
         reveal(open)
         XCTAssertTrue(app.staticTexts["CI sample subscription"].exists)
+        XCTAssertTrue(app.otherElements["Saved plans (1)"].exists)
+
+        // Exercise native file-picker cancellation with acknowledged records.
+        // No document is selected and no cloud account is needed.
+        let backups = app.buttons["Manage backups"]
+        reveal(backups)
+        backups.tap()
+        let restore = app.buttons["Restore backup"]
+        reveal(restore)
+        restore.tap()
+        cancelFilePicker()
+        let export = app.buttons["Export backup"]
+        reveal(export)
+        export.tap()
+        confirm()
+        cancelFilePicker()
+
+        // Cancellation must preserve both records through a process restart.
+        app.terminate()
+        app.launch()
+        XCTAssertTrue(app.buttons["Search"].waitForExistence(timeout: 20))
+        reveal(open)
+        XCTAssertTrue(app.staticTexts["CI sample subscription"].exists)
+        XCTAssertTrue(app.otherElements["Your bills (1)"].exists)
         XCTAssertTrue(app.otherElements["Saved plans (1)"].exists)
         open.tap()
         XCTAssertTrue(app.buttons["Copy plan"].waitForExistence(timeout: 5))
