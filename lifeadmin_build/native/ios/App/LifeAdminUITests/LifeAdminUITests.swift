@@ -36,13 +36,41 @@ final class LifeAdminUITests: XCTestCase {
         alert.buttons["OK"].tap()
     }
 
+    private func dismissKeyboardTutorial() {
+        // Fresh simulators display Apple's slide-to-type introduction above
+        // the keyboard. Only dismiss this identified system tutorial.
+        let tutorial = app.otherElements["UIContinuousPathIntroductionView"]
+        if tutorial.waitForExistence(timeout: 3) {
+            let proceed = tutorial.buttons["Continue"]
+            XCTAssertTrue(proceed.isHittable)
+            proceed.tap()
+            let gone = XCTNSPredicateExpectation(
+                predicate: NSPredicate(format: "exists == false"), object: tutorial)
+            XCTAssertEqual(XCTWaiter.wait(for: [gone], timeout: 5), .completed)
+        }
+    }
+
+    private func closeKeyboard() {
+        dismissKeyboardTutorial()
+        let done = app.toolbars.buttons["Done"]
+        XCTAssertTrue(done.waitForExistence(timeout: 5))
+        XCTAssertTrue(done.isHittable)
+        done.tap()
+        let closed = XCTNSPredicateExpectation(
+            predicate: NSPredicate(format: "exists == false"), object: app.keyboards.firstMatch)
+        XCTAssertEqual(XCTWaiter.wait(for: [closed], timeout: 5), .completed)
+    }
+
     func testBillAndPlanSurviveRestartAndDeletionPersists() throws {
         // The CI runner creates a fresh disposable simulator. No customer data.
         app.launch()
         XCTAssertTrue(app.buttons["Search"].waitForExistence(timeout: 20))
         let search = app.textFields.firstMatch
         search.tap()
+        dismissKeyboardTutorial()
         search.typeText("Cancel Netflix")
+        XCTAssertEqual(search.value as? String, "Cancel Netflix")
+        closeKeyboard()
         app.buttons["Search"].tap()
         XCTAssertTrue(app.buttons["Use suggestion"].waitForExistence(timeout: 5))
         app.buttons["Use suggestion"].tap()
@@ -51,9 +79,10 @@ final class LifeAdminUITests: XCTestCase {
             "label == %@ OR placeholderValue == %@", "Bill name", "Optional name")).firstMatch
         reveal(billName)
         billName.tap()
+        dismissKeyboardTutorial()
         billName.typeText("CI sample subscription")
-        let done = app.toolbars.buttons["Done"]
-        if done.exists { done.tap() }
+        XCTAssertEqual(billName.value as? String, "CI sample subscription")
+        closeKeyboard()
         let save = app.buttons["Save bill"]
         reveal(save)
         save.tap()
@@ -71,7 +100,7 @@ final class LifeAdminUITests: XCTestCase {
         let open = app.buttons["Open plan"]
         reveal(open)
         XCTAssertTrue(app.staticTexts["CI sample subscription"].exists)
-        XCTAssertTrue(app.staticTexts["Saved plans (1)"].exists)
+        XCTAssertTrue(app.otherElements["Saved plans (1)"].exists)
         open.tap()
         XCTAssertTrue(app.buttons["Copy plan"].waitForExistence(timeout: 5))
 
@@ -87,9 +116,9 @@ final class LifeAdminUITests: XCTestCase {
         app.terminate()
         app.launch()
         XCTAssertTrue(app.buttons["Search"].waitForExistence(timeout: 20))
-        let empty = app.staticTexts["Your bills (0)"]
+        let empty = app.otherElements["Your bills (0)"]
         reveal(empty)
-        XCTAssertTrue(app.staticTexts["Saved plans (0)"].exists)
+        XCTAssertTrue(app.otherElements["Saved plans (0)"].exists)
         XCTAssertFalse(app.buttons["Open plan"].exists)
     }
 }
