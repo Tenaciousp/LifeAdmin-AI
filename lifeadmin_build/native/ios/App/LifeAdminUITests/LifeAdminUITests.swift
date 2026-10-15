@@ -33,7 +33,9 @@ final class LifeAdminUITests: XCTestCase {
     private func confirm() {
         let alert = app.alerts.firstMatch
         XCTAssertTrue(alert.waitForExistence(timeout: 5))
-        alert.buttons["OK"].tap()
+        let accept = alert.buttons.matching(NSPredicate(format: "label ==[c] %@", "OK")).firstMatch
+        XCTAssertTrue(accept.waitForExistence(timeout: 5))
+        accept.tap()
     }
 
     private func dismissKeyboardTutorial() {
