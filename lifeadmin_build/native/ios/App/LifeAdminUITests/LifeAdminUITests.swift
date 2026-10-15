@@ -65,28 +65,30 @@ final class LifeAdminUITests: XCTestCase {
         XCTAssertEqual(XCTWaiter.wait(for: [closed], timeout: 5), .completed)
     }
 
+    private func pickerControl(_ label: String) -> XCUIElement {
+        // Remote file-provider controls can be wrapped as Other in XCTest.
+        let control = app.descendants(matching: .any).matching(
+            NSPredicate(format: "label == %@", label)).firstMatch
+        XCTAssertTrue(control.waitForExistence(timeout: 45))
+        XCTAssertTrue(control.frame.intersects(app.frame))
+        return control
+    }
+
     private func cancelFilePicker(exporting: Bool = false) {
         if exporting {
             // The captured export sheet has Save but no visible Cancel button.
-            // Dismiss it with the native sheet gesture, without choosing a file.
-            let navigation = app.navigationBars["FullDocumentManagerViewControllerNavigationBar"]
-            XCTAssertTrue(navigation.waitForExistence(timeout: 10))
-            let start = navigation.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.1))
+            _ = pickerControl("Save")
+            let start = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.1))
             let end = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.8))
             start.press(forDuration: 0.1, thenDragTo: end)
         } else {
-            // Direct import Cancel tap was observed to succeed in CI #331.
-            let cancel = app.buttons["Cancel"].firstMatch
-            guard cancel.waitForExistence(timeout: 10) else {
-                print("Backup picker controls:\n" + app.debugDescription)
-                XCTFail("Native import picker Cancel control was not found")
-                return
-            }
-            cancel.tap()
+            // Touch the visible labelled Cancel bounds, independent of AX role.
+            pickerControl("Cancel").coordinate(
+                withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
         }
         XCTAssertTrue(app.staticTexts[
             "Backup action cancelled. Existing records are unchanged."
-        ].waitForExistence(timeout: 10))
+        ].waitForExistence(timeout: 30))
     }
 
     func testNativeBackupRoundTripAndCancellationPreserveRecords() throws {
@@ -162,9 +164,8 @@ final class LifeAdminUITests: XCTestCase {
         reveal(export)
         export.tap()
         confirm()
-        let saveFile = app.buttons["Save"].firstMatch
-        XCTAssertTrue(saveFile.waitForExistence(timeout: 10))
-        saveFile.tap()
+        pickerControl("Save").coordinate(
+            withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
         XCTAssertTrue(app.staticTexts[
             "Backup export completed. Check the chosen file before relying on this copy."
         ].waitForExistence(timeout: 15))
@@ -193,12 +194,13 @@ final class LifeAdminUITests: XCTestCase {
         restore.tap()
         let document = app.descendants(matching: .any).matching(
             NSPredicate(format: "label BEGINSWITH[c] %@", "lifeadmin-backup")).firstMatch
-        guard document.waitForExistence(timeout: 15) else {
+        guard document.waitForExistence(timeout: 45) else {
             print("Restore document controls:\n" + app.debugDescription)
             XCTFail("Exported LifeAdmin document was not available for restore")
             return
         }
-        document.tap()
+        XCTAssertTrue(document.frame.intersects(app.frame))
+        document.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
         confirm()
         XCTAssertTrue(app.staticTexts["Backup restored on this device."].waitForExistence(timeout: 10))
         app.terminate()

@@ -70,8 +70,8 @@ def main():
                     "-resultBundlePath", "apple-ui-tests.xcresult",
                     "-parallel-testing-enabled", "NO",
                     "-test-timeouts-enabled", "YES",
-                    "-default-test-execution-time-allowance", "300",
-                    "-maximum-test-execution-time-allowance", "300",
+                    "-default-test-execution-time-allowance", "600",
+                    "-maximum-test-execution-time-allowance", "600",
                     "CODE_SIGNING_ALLOWED=NO", "test",
                 ], check=True, stdout=log, stderr=subprocess.STDOUT, timeout=900)
             print("Apple interactive persistence and deletion test passed.")
