@@ -74,7 +74,10 @@ in [CI #320](https://github.com/Tenaciousp/LifeAdmin-AI/actions/runs/38466303133
 for source commit `3fb68c03f7bb1cc92a5d9694959cb404b14eaf3e`.
 Android compilation, native storage tests and packaged-app verification also
 passed in that run. The Apple artifact contains build logs and results, not a
-signed installable app. Interactive simulator testing remains outstanding.
+signed installable app. Later CI #329 passed the iPhone simulator save/plan,
+restart/reopen and cascading-deletion journey at source
+9460ead11e2ffdf154200e3672dbd738caf949e6. Expanded backup picker cancellation
+and JSON round-trip acceptance remain separate; consult issue #3 for results.
 
 For subsequent runs, save the build result and any errors. Compilation success
 does not establish iCloud backup, physical file-provider behaviour or store
@@ -87,6 +90,10 @@ https://capacitorjs.com/docs/updating/8-0
 
 - Upgrade an installed build with acknowledged records still present; confirm
   record and exported-backup compatibility. Do not uninstall as an upgrade test.
+- Test malformed JSON, an unsupported format/version, duplicate IDs, orphaned
+  plans and a file over 5 MB through the native picker. After each rejection,
+  verify unchanged bill/plan contents and reopen the app. Injected-bridge tests
+  cover these validation boundaries but do not replace native-picker checks.
 - Repeat backup selection with supported cloud file providers, including cancel,
   unavailable-file and interrupted-selection cases.
 - Check supported OS backup/restore and device-transfer routes separately from

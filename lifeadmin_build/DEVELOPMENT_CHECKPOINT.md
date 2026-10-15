@@ -1,30 +1,50 @@
-# Current release checkpoint: 14 October 2026
+# Current release checkpoint: 15 October 2026
 
-This section supersedes conflicting product, pricing and next-action instructions
-below. Historical test evidence applies only to its recorded build.
+This section supersedes conflicting instructions below. Issue #3 is the single
+active completion register. Historical evidence applies only to its recorded
+source revision.
 
-Agreed release: LifeAdmin, a £1.99 upfront Apple/Google store download (local
-equivalents), without trial, account, sign-in, in-app pricing or checkout.
-Household records stay on device. Manual JSON and platform-controlled backups
-are distinct; no publisher recovery copy or guaranteed restore.
-The website provides promotion, examples and support.
+Agreed release: LifeAdmin, a £1.99 upfront Apple/Google store download with local
+equivalents. No trial, account, sign-in, subscription, in-app pricing or checkout.
+Household records stay on device. Website: examples, promotion and support.
+Manual JSON recovery and OS backup/device transfer are separate. No publisher
+recovery copy or guaranteed restore.
 
 Current instructions: STORE_SUBMISSION.md, MONETISATION.md and
-native/DEVICE_TESTING.md.
+native/DEVICE_TESTING.md. Older hosted-account, Stripe, admin and server-backup
+gates are historical.
 
-CI #322 passed native build/storage/package checks and Apple install/launch/
-relaunch at source 0a2e22e14019cd55cff56b6336854fcbf20ab715. iPhone 11 / iOS 26.5
-startup screenshots were reviewed. CI #323 passed Android checks and Apple
-compilation but timed out during initial simulator launch, before the new
-interactive persistence/deletion test executed. Next run adds launch diagnostics
-and a bounded longer first-launch wait. Do not count interactive acceptance as passed.
+Verified baseline: CI #329 passed at
+9460ead11e2ffdf154200e3672dbd738caf949e6, including Android compilation,
+native storage/package checks and the iPhone simulator save/plan/restart/
+reopen/delete journey. This is simulator evidence, not physical-device acceptance.
 
-Next: resolve interactive-test findings, verify native backup/restore, upgrade
-and accessibility, then physical-device acceptance, with physical iPad QA last.
-The owner has no Android device. Signing, seller/privacy details, store listing/
-pricing and explicit release approval remain outstanding. Keep draft PR #2.
-No production app release, live payments, paid services or external messages
-are authorised by this update.
+CI #334 passed main/Android and Apple compilation, but failed import-picker
+Cancel lookup before the real backup round trip. Candidate
+1d02e7cbea1f63c351b207730adbe4e574b57c9b adjusts remote picker selection and
+bounded test timing. CI #335 records its acceptance result:
+https://github.com/Tenaciousp/LifeAdmin-AI/actions/runs/38787670843.
+Do not infer a pass from compilation or an in-progress job.
+
+Commit 8f670c746dbf846c19deb20a24fba1f17805dac8 adds native rejected-import
+preservation coverage. All nine native repository tests passed locally on Node
+24.19.0. Eight rejected inputs were checked for zero writes and unchanged bills
+and plans, followed by reconnect. Tests use an injected native bridge, so they
+do not establish physical SQLite durability or file-picker acceptance.
+Full CI #336: https://github.com/Tenaciousp/LifeAdmin-AI/actions/runs/38788499193.
+Consult the recorded result before describing full CI as passed.
+
+Next priority: native cancellation, real JSON export/delete/restore/restart,
+declined replacement and invalid-file picker acceptance. Then app update,
+interrupted writes/storage pressure, scope reconciliation, accessibility,
+network/package privacy, OS recovery, seller/signing/store preparation and
+signed physical-device acceptance. Editable messages and manual AI handoff
+remain unfinished native requirements; no removal approval is recorded.
+
+Owner has no Android device. Arrange Android coverage without requiring device
+ownership. Physical iPad testing stays last. Keep PR #2 draft. Obtain explicit
+owner approval before merge, submission or release. No spending, production
+changes, external messages or recurring automation are authorised here.
 
 # Historical checkpoints (superseded where inconsistent)
 

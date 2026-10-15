@@ -47,13 +47,13 @@ of times. Success is acknowledged only after native transaction commit.
 Synthetic JavaScript contract tests cover reconnect, save/restore, concurrent
 edits, failed commit, failed replacement, invalid imports, deletion and corrupt
 storage. These tests use an injected bridge and do not prove physical-device
-durability. Android compilation and four native SQLite tests passed in CI #313; Apple compilation still needs
-Mac/Xcode. Native file export and import now use the system document picker on both
+durability. Android compilation and native SQLite tests passed in CI #329. Apple simulator
+compilation and the basic persistence/deletion journey also passed in that run. Native file export and import now use the system document picker on both
 platforms. Selected UTF-8 backup files are bounded to 5 MB, then pass the same
 full snapshot validation before replacement. Exports use a customer-chosen
-destination; no permanent file-provider permission is retained. Cancellation
-preserves saved records. Apple export staging copies are deleted after completion
-or cancellation. Apple compilation, physical file-picker usability, app-update,
+destination; no permanent file-provider permission is retained. Cancellation is intended to
+preserve saved records; native picker acceptance remains an open gate. Apple export staging copies are deleted after completion
+or cancellation. Full native backup round-trip acceptance, physical file-picker usability, app-update,
 storage-pressure, interruption and OS backup/restore acceptance remain release gates. No guaranteed OS backup
 or reinstall recovery is promised. Existing server records are preserved.
 
@@ -74,8 +74,10 @@ Backup rule reference: https://developer.android.com/identity/data/autobackup
 The unsigned simulator build uses GitHub’s standard macOS runner, without an
 Apple account, signing secrets or store upload. The job is guarded to run only
 while the repository is public. Compilation evidence is retained for 14 days.
-The first run is pending; a configured job does not establish compilation or
-physical-device acceptance.
+CI #329 passed compilation and the iPhone simulator save/plan/restart/deletion
+journey at source 9460ead11e2ffdf154200e3672dbd738caf949e6. Expanded native
+backup acceptance is tracked separately in issue #3. Compilation and simulator
+results do not establish physical-device or store acceptance.
 
 ## Required device acceptance
 
