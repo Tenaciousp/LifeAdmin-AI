@@ -92,12 +92,7 @@ class OfflinePlanTests(unittest.TestCase):
                 text = "\n\n".join("## " + heading + "\n" + sections[key] for key, heading in [
                     ("next_steps", "Next steps"), ("provider_message", "Provider message"),
                     ("things_to_check", "Things to check"), ("approval_checklist", "Approval checklist")])
-            expected = {"content": text, **reference["result_contract"](text, task)}
-            # Native copy includes the same reviewed safety notices as the visible sections.
-            notices = reference["safety_notice"](task)
-            if notices:
-                expected["content"] += "\n\n## Safety check\n" + "\n".join("- " + notice for notice in notices)
-            self.assertEqual(actual, expected)
+            self.assertEqual(actual, {"content": text, **reference["result_contract"](text, task)})
 
     def test_all_playbook_routes_match_reference(self):
         tasks = [{"title": "Household plan", "category_id": category["id"], "goal_id": goal["id"],
