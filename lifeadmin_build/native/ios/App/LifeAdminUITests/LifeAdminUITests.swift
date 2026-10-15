@@ -65,28 +65,31 @@ final class LifeAdminUITests: XCTestCase {
         XCTAssertEqual(XCTWaiter.wait(for: [closed], timeout: 5), .completed)
     }
 
-    private func cancelFilePicker() {
-        // Apple exposes Cancel with different roles and duplicate containers.
-        // Wait for the actionable match rather than the first labelled wrapper.
-        let candidates = app.descendants(matching: .any).matching(
-            NSPredicate(format: "label == %@", "Cancel"))
-        let reachable = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in
-            candidates.allElementsBoundByIndex.contains { $0.isHittable }
-        }, object: nil)
-        guard XCTWaiter.wait(for: [reachable], timeout: 10) == .completed,
-              let cancel = candidates.allElementsBoundByIndex.first(where: { $0.isHittable }) else {
-            print("Backup picker controls:\n" + app.debugDescription)
-            XCTFail("Native backup picker Cancel control was not found")
-            return
+    private func cancelFilePicker(exporting: Bool = false) {
+        if exporting {
+            // The captured export sheet has Save but no visible Cancel button.
+            // Dismiss it with the native sheet gesture, without choosing a file.
+            let navigation = app.navigationBars["FullDocumentManagerViewControllerNavigationBar"]
+            XCTAssertTrue(navigation.waitForExistence(timeout: 10))
+            let start = navigation.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.1))
+            let end = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.8))
+            start.press(forDuration: 0.1, thenDragTo: end)
+        } else {
+            // Direct import Cancel tap was observed to succeed in CI #331.
+            let cancel = app.buttons["Cancel"].firstMatch
+            guard cancel.waitForExistence(timeout: 10) else {
+                print("Backup picker controls:\n" + app.debugDescription)
+                XCTFail("Native import picker Cancel control was not found")
+                return
+            }
+            cancel.tap()
         }
-        XCTAssertTrue(cancel.isHittable)
-        cancel.tap()
         XCTAssertTrue(app.staticTexts[
             "Backup action cancelled. Existing records are unchanged."
         ].waitForExistence(timeout: 10))
     }
 
-    func testBillAndPlanSurviveRestartAndDeletionPersists() throws {
+    func testNativeBackupRoundTripAndCancellationPreserveRecords() throws {
         // The CI runner creates a fresh disposable simulator. No customer data.
         app.launch()
         XCTAssertTrue(app.buttons["Search"].waitForExistence(timeout: 20))
@@ -140,7 +143,7 @@ final class LifeAdminUITests: XCTestCase {
         reveal(export)
         export.tap()
         confirm()
-        cancelFilePicker()
+        cancelFilePicker(exporting: true)
 
         // Cancellation must preserve both records through a process restart.
         app.terminate()
@@ -152,6 +155,19 @@ final class LifeAdminUITests: XCTestCase {
         XCTAssertTrue(app.otherElements["Saved plans (1)"].exists)
         open.tap()
         XCTAssertTrue(app.buttons["Copy plan"].waitForExistence(timeout: 5))
+
+        // Save a real JSON document through Apple's picker before deletion.
+        reveal(backups)
+        backups.tap()
+        reveal(export)
+        export.tap()
+        confirm()
+        let saveFile = app.buttons["Save"].firstMatch
+        XCTAssertTrue(saveFile.waitForExistence(timeout: 10))
+        saveFile.tap()
+        XCTAssertTrue(app.staticTexts[
+            "Backup export completed. Check the chosen file before relying on this copy."
+        ].waitForExistence(timeout: 15))
 
         // Restart at the top, then delete the bill and its associated plan.
         app.terminate()
@@ -169,5 +185,30 @@ final class LifeAdminUITests: XCTestCase {
         reveal(empty)
         XCTAssertTrue(app.otherElements["Saved plans (0)"].exists)
         XCTAssertFalse(app.buttons["Open plan"].exists)
+
+        // Restore the exported document, rather than injecting bridge data.
+        reveal(backups)
+        backups.tap()
+        reveal(restore)
+        restore.tap()
+        let document = app.descendants(matching: .any).matching(
+            NSPredicate(format: "label BEGINSWITH[c] %@", "lifeadmin-backup")).firstMatch
+        guard document.waitForExistence(timeout: 15) else {
+            print("Restore document controls:\n" + app.debugDescription)
+            XCTFail("Exported LifeAdmin document was not available for restore")
+            return
+        }
+        document.tap()
+        confirm()
+        XCTAssertTrue(app.staticTexts["Backup restored on this device."].waitForExistence(timeout: 10))
+        app.terminate()
+        app.launch()
+        XCTAssertTrue(app.buttons["Search"].waitForExistence(timeout: 20))
+        reveal(open)
+        XCTAssertTrue(app.staticTexts["CI sample subscription"].exists)
+        XCTAssertTrue(app.otherElements["Your bills (1)"].exists)
+        XCTAssertTrue(app.otherElements["Saved plans (1)"].exists)
+        open.tap()
+        XCTAssertTrue(app.buttons["Copy plan"].waitForExistence(timeout: 5))
     }
 }

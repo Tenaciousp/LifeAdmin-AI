@@ -93,7 +93,11 @@ def main():
     except Exception:
         ui_log = evidence / "ui-tests.log"
         if ui_log.exists():
-            print("Final UI-test diagnostics:\n" + ui_log.read_text(errors="replace")[-20000:], flush=True)
+            diagnostics = ui_log.read_text(errors="replace")
+            failures = [line for line in diagnostics.splitlines()
+                        if ": error:" in line or "failed -" in line]
+            print("UI-test failure assertions:\n" + "\n".join(failures), flush=True)
+            print("Final UI-test diagnostics:\n" + diagnostics[-20000:], flush=True)
         # Preserve synthetic simulator evidence before removing the disposable device.
         diagnostics = [
             ("failure-screen.log", ["io", device, "screenshot", str(evidence / "failure.png")]),
