@@ -113,11 +113,7 @@ export function generateLocalResult(input, mode = "full") {
   sections.known_details = { ...task.details };
   sections.missing_details = missingDetails(task);
   const notices = safetyNotices(task);
-  if (notices.length) {
-    const safety = "\n\n## Safety check\n" + notices.map(x => "- " + x).join("\n");
-    sections.things_to_check = (sections.things_to_check.trim() + safety).trim();
-    content = (content.trim() + safety).trim();
-  }
+  if (notices.length) sections.things_to_check = (sections.things_to_check.trim() + "\n\n## Safety check\n" + notices.map(x => "- " + x).join("\n")).trim();
   return { content, ...sections };
 }
 
@@ -134,4 +130,22 @@ export async function generateAndSaveLocalPlan(store, taskId, mode = "full") {
   };
   await store.savePlan(note);
   return note;
+}
+
+export function planTextForCopy(plan) {
+  const parts = ["# " + (plan.title || "Admin plan")];
+  if (plan.missing_details?.length) parts.push("Useful missing details: " + plan.missing_details.join(", "));
+  parts.push("General guidance only. Confirm current provider terms and official information before acting. Nothing is sent automatically.");
+  for (const [key, value] of Object.entries(plan.sections || {})) {
+    if (!String(value).trim() || (key === "provider_message" && plan.provider_email)) continue;
+    const text = String(value).replace(/^##\s+(Next steps|Provider message|Things to check|Approval checklist)\s*\n/i, "").trim();
+    parts.push("## " + key.replaceAll("_", " ") + "\n" + text);
+  }
+  if (!Object.values(plan.sections || {}).some(value => String(value).trim()) && plan.content) parts.push(plan.content);
+  if (plan.provider_email) {
+    const draft = plan.provider_email;
+    parts.push("## " + (draft.kind === "bank_query" ? "Bank-query draft" : "Provider-message draft") +
+      "\nSubject: " + draft.subject + "\n\n" + draft.body);
+  }
+  return parts.join("\n\n");
 }
