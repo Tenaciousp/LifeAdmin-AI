@@ -66,12 +66,15 @@ final class LifeAdminUITests: XCTestCase {
     }
 
     private func cancelFilePicker() {
-        let cancel = app.buttons["Cancel"].firstMatch
+        // Apple exposes export Cancel as Other and import Cancel as Button.
+        let cancel = app.descendants(matching: .any).matching(
+            NSPredicate(format: "label == %@", "Cancel")).firstMatch
         guard cancel.waitForExistence(timeout: 10) else {
             print("Backup picker controls:\n" + app.debugDescription)
             XCTFail("Native backup picker Cancel control was not found")
             return
         }
+        XCTAssertTrue(cancel.isHittable)
         cancel.tap()
         XCTAssertTrue(app.staticTexts[
             "Backup action cancelled. Existing records are unchanged."
