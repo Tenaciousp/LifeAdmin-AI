@@ -66,10 +66,15 @@ final class LifeAdminUITests: XCTestCase {
     }
 
     private func cancelFilePicker() {
-        // Apple exposes export Cancel as Other and import Cancel as Button.
-        let cancel = app.descendants(matching: .any).matching(
-            NSPredicate(format: "label == %@", "Cancel")).firstMatch
-        guard cancel.waitForExistence(timeout: 10) else {
+        // Apple exposes Cancel with different roles and duplicate containers.
+        // Wait for the actionable match rather than the first labelled wrapper.
+        let candidates = app.descendants(matching: .any).matching(
+            NSPredicate(format: "label == %@", "Cancel"))
+        let reachable = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in
+            candidates.allElementsBoundByIndex.contains { $0.isHittable }
+        }, object: nil)
+        guard XCTWaiter.wait(for: [reachable], timeout: 10) == .completed,
+              let cancel = candidates.allElementsBoundByIndex.first(where: { $0.isHittable }) else {
             print("Backup picker controls:\n" + app.debugDescription)
             XCTFail("Native backup picker Cancel control was not found")
             return
