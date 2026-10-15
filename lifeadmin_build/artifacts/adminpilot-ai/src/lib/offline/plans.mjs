@@ -113,7 +113,11 @@ export function generateLocalResult(input, mode = "full") {
   sections.known_details = { ...task.details };
   sections.missing_details = missingDetails(task);
   const notices = safetyNotices(task);
-  if (notices.length) sections.things_to_check = (sections.things_to_check.trim() + "\n\n## Safety check\n" + notices.map(x => "- " + x).join("\n")).trim();
+  if (notices.length) {
+    const safety = "\n\n## Safety check\n" + notices.map(x => "- " + x).join("\n");
+    sections.things_to_check = (sections.things_to_check.trim() + safety).trim();
+    content = (content.trim() + safety).trim();
+  }
   return { content, ...sections };
 }
 

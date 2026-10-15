@@ -42,3 +42,20 @@ test("customer placeholder-like text stays literal", () => {
   const result = generateLocalResult({ title: "Subscription", category_id: "subscriptions_memberships", goal_id: "cancel_switch", details: { provider: "__LIFEADMIN_CANCELLATION_ROUTE__" } });
   assert.match(result.content, /Provider: __LIFEADMIN_CANCELLATION_ROUTE__/);
 });
+
+test("copied and saved plan text retains visible safety guidance", () => {
+  const cases = [
+    ["other_regular_payment", "identify_payment", "fraud", "official fraud channel"],
+    ["energy_water", "prepare_renewal", "cannot pay arrears", "facing disconnection"],
+    ["rent_mortgage_property", "check_bill", "eviction", "qualified housing or debt advice"],
+    ["insurance", "check_bill", "urgent claim fire", "official claims or emergency route"],
+  ];
+  for (const [category_id, goal_id, notes, expected] of cases) {
+    const result = generateLocalResult({ title: "Synthetic bill", category_id, goal_id, notes, details: {} });
+    assert.ok(result.things_to_check.includes(expected), category_id + " visible guidance");
+    assert.ok(result.content.includes(expected), category_id + " copied/saved guidance");
+    assert.equal(result.content.split("## Safety check").length, 2);
+  }
+  const ordinary = generateLocalResult({ category_id: "subscriptions_memberships", goal_id: "cancel_switch", details: {} });
+  assert.ok(!ordinary.content.includes("## Safety check"));
+});
