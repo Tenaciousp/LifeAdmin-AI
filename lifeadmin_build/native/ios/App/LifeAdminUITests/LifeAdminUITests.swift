@@ -194,6 +194,13 @@ final class LifeAdminUITests: XCTestCase {
         restore.tap()
         let document = app.descendants(matching: .any).matching(
             NSPredicate(format: "label BEGINSWITH[c] %@", "lifeadmin-backup")).firstMatch
+        // Export saves to the local location, which need not appear in Recents.
+        pickerControl("Browse").coordinate(
+            withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
+        if !document.waitForExistence(timeout: 5) {
+            pickerControl("On My iPhone").coordinate(
+                withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
+        }
         guard document.waitForExistence(timeout: 45) else {
             print("Restore document controls:\n" + app.debugDescription)
             XCTFail("Exported LifeAdmin document was not available for restore")
