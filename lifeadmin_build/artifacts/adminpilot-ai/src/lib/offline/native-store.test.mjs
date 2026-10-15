@@ -100,3 +100,38 @@ test("persistent conflict errors stop after bounded retries", async () => {
   });
   await assert.rejects(store.createTask(bill), /Conflict/); assert.equal(attempts, 4);
 });
+
+test("rejected native backup inputs preserve bills and plans without writing", async () => {
+  const bridge = database();
+  let writes = 0;
+  const write = bridge.write;
+  bridge.write = async input => { writes++; return write(input); };
+  const store = await openNativeStore(bridge);
+  await store.createTask(bill);
+  await store.savePlan({ id: "saved", task_id: bill.id, title: "Saved plan", content: "Keep this plan." });
+  const before = await store.read();
+  const committedWrites = writes;
+  const backup = (tasks = [], plans = [], version = 1) =>
+    JSON.stringify({ format: "lifeadmin-backup", version, tasks, plans });
+  const rejected = [
+    ["malformed JSON", "{broken", /valid JSON/],
+    ["unsupported format", "{}", /Unsupported/],
+    ["future version", backup([], [], 2), /Unsupported/],
+    ["duplicate bills", backup([bill, bill]), /duplicate/],
+    ["duplicate plans", backup([bill], [before.plans[0], before.plans[0]]), /duplicate/],
+    ["orphaned plan", backup([], before.plans), /matching bill/],
+    ["forbidden field", '{"format":"lifeadmin-backup","version":1,"tasks":[],"plans":[],"__proto__":{}}', /Invalid backup field/],
+    ["oversized file", "x".repeat(5 * 1024 * 1024 + 1), /5 MB/],
+  ];
+  for (const [label, text, expected] of rejected) {
+    assert.throws(() => store.importBackup(text, { replace: true }), expected, label);
+    assert.equal(writes, committedWrites, label + " reached native write");
+    assert.deepEqual(await store.read(), before, label + " changed records");
+  }
+  assert.throws(() => store.importBackup(backup()), /Confirm replacement/);
+  assert.equal(writes, committedWrites);
+  store.close();
+  const reopened = await openNativeStore(bridge);
+  assert.deepEqual(await reopened.read(), before);
+  reopened.close();
+});
