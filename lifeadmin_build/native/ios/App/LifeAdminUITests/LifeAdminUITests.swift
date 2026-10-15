@@ -13,7 +13,9 @@ final class LifeAdminUITests: XCTestCase {
         screen.lifetime = .keepAlways
         add(screen)
         if let run = testRun, run.hasSucceeded == false {
-            let tree = XCTAttachment(string: app.debugDescription)
+            let description = app.debugDescription
+            print(description)
+            let tree = XCTAttachment(string: description)
             tree.name = "Accessibility tree on failure"
             tree.lifetime = .keepAlways
             add(tree)
@@ -65,7 +67,11 @@ final class LifeAdminUITests: XCTestCase {
 
     private func cancelFilePicker() {
         let cancel = app.buttons["Cancel"].firstMatch
-        XCTAssertTrue(cancel.waitForExistence(timeout: 10))
+        guard cancel.waitForExistence(timeout: 10) else {
+            print("Backup picker controls:\n" + app.debugDescription)
+            XCTFail("Native backup picker Cancel control was not found")
+            return
+        }
         cancel.tap()
         XCTAssertTrue(app.staticTexts[
             "Backup action cancelled. Existing records are unchanged."

@@ -110,6 +110,18 @@ def main():
                 pass
         raise
     finally:
+        # Export XCTest's in-app screenshots before cleanup. The outer failure
+        # screenshot is taken after tearDown and often shows the home screen.
+        if Path("apple-ui-tests.xcresult").is_dir():
+            try:
+                with (evidence / "attachment-export.log").open("w") as log:
+                    subprocess.run([
+                        "xcrun", "xcresulttool", "export", "attachments",
+                        "--path", "apple-ui-tests.xcresult",
+                        "--output-path", str(evidence / "ui-attachments"),
+                    ], stdout=log, stderr=subprocess.STDOUT, timeout=60, check=False)
+            except (OSError, subprocess.TimeoutExpired) as error:
+                print("XCTest attachment export failed: " + str(error), flush=True)
         subprocess.run(["xcrun", "simctl", "shutdown", device], check=False, timeout=60)
         subprocess.run(["xcrun", "simctl", "delete", device], check=False, timeout=60)
 
