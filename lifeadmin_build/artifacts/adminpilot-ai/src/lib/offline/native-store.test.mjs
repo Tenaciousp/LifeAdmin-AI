@@ -168,3 +168,31 @@ test("malformed plan fields fail before replacement while content-only plans sta
   assert.deepEqual((await reopened.read()).plans, [legacy]);
   reopened.close();
 });
+
+test("malformed bill display and detail fields never replace acknowledged records", async () => {
+  const bridge = database();
+  let writes = 0;
+  const write = bridge.write;
+  bridge.write = async input => { writes++; return write(input); };
+  const store = await openNativeStore(bridge);
+  await store.createTask(bill);
+  await store.savePlan({ id: "plan", task_id: bill.id, title: "Original plan", content: "Keep this plan" });
+  const before = await store.read(), committedWrites = writes;
+  const backup = task => JSON.stringify({ format: "lifeadmin-backup", version: 1, tasks: [task], plans: before.plans });
+  for (const fields of [
+    { category: {} }, { category_id: {} }, { goal_id: {} }, { status: {} }, { notes: {} },
+    { details: [] }, { details: "Provider" }, { details: { provider: { name: "Nested" } } },
+  ]) {
+    assert.throws(() => store.importBackup(backup({ ...bill, ...fields }), { replace: true }), /Invalid bill/);
+    assert.equal(writes, committedWrites);
+    assert.deepEqual(await store.read(), before);
+  }
+  store.close();
+  const reopened = await openNativeStore(bridge);
+  assert.deepEqual(await reopened.read(), before);
+  const compatible = { ...bill, category: "Energy and water", status: "Open", notes: "Keep",
+    details: { provider: "Example", amount: 12, opted_in: false, reference: null } };
+  await reopened.importBackup(backup(compatible), { replace: true });
+  assert.deepEqual((await reopened.read()).tasks, [compatible]);
+  reopened.close();
+});

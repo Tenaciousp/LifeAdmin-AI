@@ -48,6 +48,14 @@ export function record(value, kind) {
       typeof value.title !== "string" || value.title.length > 160) throw new Error("Invalid " + kind + " record.");
   if (kind === "plan" && (typeof value.task_id !== "string" || !value.task_id ||
       typeof value.content !== "string")) throw new Error("Invalid saved plan.");
+  if (kind === "task") {
+    for (const key of ["category", "category_id", "goal_id", "status", "notes"]) {
+      if (value[key] != null && typeof value[key] !== "string") throw new Error("Invalid bill " + key + ".");
+    }
+    if (value.details != null && (typeof value.details !== "object" || Array.isArray(value.details) ||
+        Object.values(value.details).some(item => item !== null &&
+          !["string", "number", "boolean"].includes(typeof item)))) throw new Error("Invalid bill details.");
+  }
   if (kind === "plan") {
     if (value.sections != null && (typeof value.sections !== "object" || Array.isArray(value.sections) ||
         Object.values(value.sections).some(text => typeof text !== "string"))) throw new Error("Invalid saved plan sections.");
