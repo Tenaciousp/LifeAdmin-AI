@@ -215,8 +215,8 @@ final class LifeAdminUITests: XCTestCase {
             return
         }
         XCTAssertTrue(document.frame.intersects(app.frame))
-        // The cell centre lies on the filename; select the visible document icon.
-        document.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.25)).tap()
+        // Activate the observed document cell using XCTest's native hit point.
+        document.tap()
         confirm(timeout: 30)
         XCTAssertTrue(app.staticTexts["Backup restored on this device."].waitForExistence(timeout: 10))
         app.terminate()

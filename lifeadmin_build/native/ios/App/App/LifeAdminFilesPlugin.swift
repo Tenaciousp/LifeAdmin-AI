@@ -17,7 +17,14 @@ public class LifeAdminFilesPlugin: CAPPlugin, CAPBridgedPlugin, UIDocumentPicker
     private var exporting = false
     private let limit = 5 * 1024 * 1024
 
+    private func trace(_ event: String) {
+        #if DEBUG
+        NSLog("LifeAdminFiles: %@", event)
+        #endif
+    }
+
     private func finish(_ value: [String: Any]? = nil, error: String? = nil, code: String? = nil) {
+        trace(error == nil ? "Request resolved" : "Request rejected")
         let call = pending
         pending = nil
         if let temporary { try? FileManager.default.removeItem(at: temporary.deletingLastPathComponent()) }
@@ -70,11 +77,13 @@ public class LifeAdminFilesPlugin: CAPPlugin, CAPBridgedPlugin, UIDocumentPicker
         finish(error: "Backup selection cancelled.", code: "cancelled")
     }
     public func documentPicker(_ controller: UIDocumentPickerViewController, didPickDocumentsAt urls: [URL]) {
+        trace(exporting ? "Export selection received" : "Import selection received")
         if exporting { finish(); return }
         guard let file = urls.first else { finish(error: "No backup selected.", code: "cancelled"); return }
         let access = file.startAccessingSecurityScopedResource()
         defer { if access { file.stopAccessingSecurityScopedResource() } }
         do {
+            trace("Import read started")
             let handle = try FileHandle(forReadingFrom: file)
             defer { try? handle.close() }
             var bytes = Data()
@@ -87,7 +96,11 @@ public class LifeAdminFilesPlugin: CAPPlugin, CAPBridgedPlugin, UIDocumentPicker
             guard let text = String(data: bytes, encoding: .utf8) else {
                 finish(error: "Backup must be a UTF-8 JSON file no larger than 5 MB.", code: "file_read"); return
             }
-            controller.dismiss(animated: true) { self.finish(["snapshot": text]) }
-        } catch { finish(error: "Backup file could not be opened.", code: "file_read") }
+            trace("Import read completed; dismissing picker")
+            controller.dismiss(animated: true) {
+                self.trace("Import dismissal completed")
+                self.finish(["snapshot": text])
+            }
+        } catch { trace("Import read failed"); finish(error: "Backup file could not be opened.", code: "file_read") }
     }
 }
