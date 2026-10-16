@@ -113,6 +113,20 @@ def configure_write_failure(device, bundle, enabled):
             connection.execute("DROP TRIGGER IF EXISTS ci_reject_snapshot")
 
 
+def configure_storage_version(device, bundle, version):
+    # Only synthetic supported/future versions on the disposable CI database.
+    if version not in (1, 2):
+        raise ValueError("Unexpected test storage version")
+    container = Path(sim("get_app_container", device, bundle, "data"))
+    database = container / "Library/Application Support/LifeAdmin/records-v1.sqlite"
+    with closing(sqlite3.connect(database.as_uri() + "?mode=rw", uri=True)) as connection, connection:
+        previous = connection.execute("PRAGMA user_version").fetchone()[0]
+        if previous not in (1, 2):
+            raise RuntimeError("Unexpected existing test storage version")
+        connection.execute(f"PRAGMA user_version={version}")
+        return previous
+
+
 def main():
     app = Path("build-ios-simulator/Build/Products/Debug-iphonesimulator/App.app")
     if not app.is_dir():
@@ -198,6 +212,24 @@ def main():
             verify_device_records(device, bundle, exports[0])
             recovery["successful_writes_after_rejection"] = True
             (evidence / "storage-recovery.json").write_text(json.dumps(recovery, indent=2) + "\n")
+            original_version = configure_storage_version(device, bundle, 2)
+            try:
+                if original_version != 1:
+                    raise RuntimeError("Expected supported storage version before future-version test")
+                run_ui_test(device, evidence, "testUnsupportedNativeStorageVersionBlocksWorkspace",
+                            "unsupported-storage-ui-tests.log", str(evidence / "unsupported-storage.xcresult"))
+                verify_device_records(device, bundle, exports[0])
+            finally:
+                preserved_version = configure_storage_version(device, bundle, original_version)
+            if preserved_version != 2:
+                raise RuntimeError("App rewrote the unsupported storage version")
+            run_ui_test(device, evidence, "testNativeStorageVersionRecoveryPreservesRecords",
+                        "storage-version-recovery-ui-tests.log", str(evidence / "storage-version-recovery.xcresult"))
+            verify_device_records(device, bundle, exports[0])
+            recovery["unsupported_storage_version_preserved"] = True
+            recovery["supported_storage_version_recovered"] = True
+            (evidence / "storage-recovery.json").write_text(json.dumps(recovery, indent=2) + "\n")
+            print("Unsupported native storage failed closed and recovery preserved exact records.")
             print("Native rejected-write recovery and package reinstallation preserved exact records.")
             print("Apple interactive persistence and deletion test passed.")
         results = []
@@ -217,7 +249,8 @@ def main():
         print("Apple simulator launch and relaunch completed; review screenshots.")
     except Exception:
         for filename in ("ui-tests.log", "interrupted-picker-ui-tests.log", "invalid-backup-ui-tests.log",
-                         "rejected-write-ui-tests.log", "write-recovery-ui-tests.log"):
+                         "rejected-write-ui-tests.log", "write-recovery-ui-tests.log",
+                         "unsupported-storage-ui-tests.log", "storage-version-recovery-ui-tests.log"):
             ui_log = evidence / filename
             if ui_log.exists():
                 diagnostics = ui_log.read_text(errors="replace")
@@ -267,6 +300,10 @@ def main():
              "rejected-write-attachment-export.log"),
             (str(evidence / "write-recovery.xcresult"), "write-recovery-attachments",
              "write-recovery-attachment-export.log"),
+            (str(evidence / "unsupported-storage.xcresult"), "unsupported-storage-attachments",
+             "unsupported-storage-attachment-export.log"),
+            (str(evidence / "storage-version-recovery.xcresult"), "storage-version-recovery-attachments",
+             "storage-version-recovery-attachment-export.log"),
         ):
             if Path(bundle).is_dir():
                 try:

@@ -426,4 +426,35 @@ final class LifeAdminUITests: XCTestCase {
         XCTAssertTrue(app.buttons["Copy plan"].waitForExistence(timeout: 5))
     }
 
+    func testUnsupportedNativeStorageVersionBlocksWorkspace() throws {
+        // The host sets user_version=2 on the populated disposable database.
+        app.launch()
+        XCTAssertTrue(app.staticTexts["Device records could not be opened."].waitForExistence(timeout: 20))
+        let retry = app.buttons["Retry storage"]
+        XCTAssertTrue(retry.exists)
+        XCTAssertFalse(app.buttons["Search"].exists)
+        XCTAssertFalse(app.buttons["Save bill"].exists)
+        XCTAssertFalse(app.buttons["Manage backups"].exists)
+        XCTAssertFalse(app.otherElements["Your bills (0)"].exists)
+        app.terminate()
+        app.launch()
+        XCTAssertTrue(app.staticTexts["Device records could not be opened."].waitForExistence(timeout: 20))
+        XCTAssertTrue(app.buttons["Retry storage"].exists)
+        XCTAssertFalse(app.buttons["Search"].exists)
+    }
+
+    func testNativeStorageVersionRecoveryPreservesRecords() throws {
+        // The host restores the supported version without touching record data.
+        app.launch()
+        XCTAssertTrue(app.buttons["Search"].waitForExistence(timeout: 20))
+        XCTAssertFalse(app.buttons["Retry storage"].exists)
+        let open = app.buttons["Open plan"]
+        reveal(open)
+        XCTAssertTrue(app.otherElements["Your bills (1)"].exists)
+        XCTAssertTrue(app.otherElements["Saved plans (1)"].exists)
+        XCTAssertTrue(app.staticTexts["CI sample subscription"].exists)
+        open.tap()
+        XCTAssertTrue(app.buttons["Copy plan"].waitForExistence(timeout: 5))
+    }
+
 }

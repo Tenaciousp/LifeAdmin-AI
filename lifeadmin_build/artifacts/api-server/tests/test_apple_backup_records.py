@@ -150,6 +150,35 @@ class ExportedRecordTests(unittest.TestCase):
             self.assertFalse(database.exists())
 
 
+    def test_future_storage_fixture_changes_only_version_and_restores_it(self):
+        with tempfile.TemporaryDirectory() as directory:
+            container = Path(directory)
+            database = container / "Library/Application Support/LifeAdmin/records-v1.sqlite"
+            database.parent.mkdir(parents=True)
+            with closing(sqlite3.connect(database)) as connection, connection:
+                connection.execute("PRAGMA user_version=1")
+                connection.execute("CREATE TABLE snapshot (id INTEGER PRIMARY KEY, revision TEXT, data TEXT)")
+                connection.execute("INSERT INTO snapshot VALUES (1, 'original', 'Original records')")
+            with patch.object(runner, "sim", return_value=str(container)):
+                self.assertEqual(runner.configure_storage_version("device", "bundle", 2), 1)
+                with closing(sqlite3.connect(database)) as connection:
+                    self.assertEqual(connection.execute("PRAGMA user_version").fetchone()[0], 2)
+                    self.assertEqual(connection.execute("SELECT * FROM snapshot").fetchone(),
+                                     (1, "original", "Original records"))
+                self.assertEqual(runner.configure_storage_version("device", "bundle", 1), 2)
+                with closing(sqlite3.connect(database)) as connection:
+                    self.assertEqual(connection.execute("PRAGMA user_version").fetchone()[0], 1)
+                    self.assertEqual(connection.execute("SELECT * FROM snapshot").fetchone(),
+                                     (1, "original", "Original records"))
+                with self.assertRaises(ValueError):
+                    runner.configure_storage_version("device", "bundle", 3)
+            database.unlink()
+            with patch.object(runner, "sim", return_value=str(container)):
+                with self.assertRaises(sqlite3.OperationalError):
+                    runner.configure_storage_version("device", "bundle", 2)
+            self.assertFalse(database.exists())
+
+
 if __name__ == "__main__":
     unittest.main()
 
