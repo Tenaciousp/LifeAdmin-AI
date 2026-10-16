@@ -73,12 +73,19 @@ final class LifeAdminUITests: XCTestCase {
         XCTAssertEqual(XCTWaiter.wait(for: [closed], timeout: 5), .completed)
     }
 
-    private func pickerControl(_ label: String) -> XCUIElement {
-        // Remote file-provider controls can be wrapped as Other in XCTest.
-        let control = app.descendants(matching: .any).matching(
+    private func pickerControl(
+        _ label: String, type: XCUIElement.ElementType = .button
+    ) -> XCUIElement {
+        // A labelled wrapper may appear before the actionable remote button.
+        let control = app.descendants(matching: type).matching(
             NSPredicate(format: "label == %@", label)).firstMatch
         XCTAssertTrue(control.waitForExistence(timeout: 45))
         XCTAssertTrue(control.frame.intersects(app.frame))
+        if type == .button {
+            let ready = XCTNSPredicateExpectation(
+                predicate: NSPredicate(format: "hittable == true"), object: control)
+            XCTAssertEqual(XCTWaiter.wait(for: [ready], timeout: 30), .completed)
+        }
         return control
     }
 
@@ -90,9 +97,7 @@ final class LifeAdminUITests: XCTestCase {
             let end = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.8))
             start.press(forDuration: 0.1, thenDragTo: end)
         } else {
-            // Touch the visible labelled Cancel bounds, independent of AX role.
-            pickerControl("Cancel").coordinate(
-                withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
+            pickerControl("Cancel").tap()
         }
         XCTAssertTrue(app.staticTexts[
             "Backup action cancelled. Existing records are unchanged."
@@ -172,8 +177,7 @@ final class LifeAdminUITests: XCTestCase {
         reveal(export)
         export.tap()
         confirm()
-        pickerControl("Save").coordinate(
-            withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
+        pickerControl("Save").tap()
         XCTAssertTrue(app.staticTexts[
             "Backup export completed. Check the chosen file before relying on this copy."
         ].waitForExistence(timeout: 15))
@@ -203,10 +207,9 @@ final class LifeAdminUITests: XCTestCase {
         let document = app.cells.matching(
             NSPredicate(format: "label BEGINSWITH[c] %@", "lifeadmin-backup")).firstMatch
         // Export saves to the local location, which need not appear in Recents.
-        pickerControl("Browse").coordinate(
-            withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
+        pickerControl("Browse").tap()
         if !document.waitForExistence(timeout: 5) {
-            pickerControl("On My iPhone").coordinate(
+            pickerControl("On My iPhone", type: .any).coordinate(
                 withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
         }
         guard document.waitForExistence(timeout: 45) else {
