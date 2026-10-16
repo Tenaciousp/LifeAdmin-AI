@@ -104,10 +104,7 @@ final class LifeAdminUITests: XCTestCase {
         ].waitForExistence(timeout: 30))
     }
 
-    func testNativeBackupRoundTripAndCancellationPreserveRecords() throws {
-        // The CI runner creates a fresh disposable simulator. No customer data.
-        app.launch()
-        XCTAssertTrue(app.buttons["Search"].waitForExistence(timeout: 20))
+    private func addSubscription(named name: String) {
         let search = app.textFields.firstMatch
         search.tap()
         dismissKeyboardTutorial()
@@ -123,13 +120,45 @@ final class LifeAdminUITests: XCTestCase {
         reveal(billName)
         billName.tap()
         dismissKeyboardTutorial()
-        enterText("CI sample subscription", into: billName)
-        XCTAssertEqual(billName.value as? String, "CI sample subscription")
+        enterText(name, into: billName)
+        XCTAssertEqual(billName.value as? String, name)
         closeKeyboard()
         let save = app.buttons["Save bill"]
         reveal(save)
         save.tap()
         XCTAssertTrue(app.staticTexts["Bill saved on this device."].waitForExistence(timeout: 10))
+    }
+
+    private func selectExportedBackup() {
+        let backups = app.buttons["Manage backups"]
+        reveal(backups)
+        backups.tap()
+        let restore = app.buttons["Restore backup"]
+        reveal(restore)
+        restore.tap()
+        let document = app.cells.matching(
+            NSPredicate(format: "label BEGINSWITH[c] %@", "lifeadmin-backup")).firstMatch
+        // Export saves to the local location, which need not appear in Recents.
+        pickerControl("Browse").tap()
+        if !document.waitForExistence(timeout: 5) {
+            pickerControl("On My iPhone", type: .any).coordinate(
+                withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
+        }
+        guard document.waitForExistence(timeout: 45) else {
+            print("Restore document controls:\n" + app.debugDescription)
+            XCTFail("Exported LifeAdmin document was not available for restore")
+            return
+        }
+        XCTAssertTrue(document.frame.intersects(app.frame))
+        // Activate the observed document cell using XCTest's native hit point.
+        document.tap()
+    }
+
+    func testNativeBackupRoundTripAndCancellationPreserveRecords() throws {
+        // The CI runner creates a fresh disposable simulator. No customer data.
+        app.launch()
+        XCTAssertTrue(app.buttons["Search"].waitForExistence(timeout: 20))
+        addSubscription(named: "CI sample subscription")
 
         let create = app.buttons["Create plan"]
         reveal(create)
@@ -199,27 +228,8 @@ final class LifeAdminUITests: XCTestCase {
         XCTAssertTrue(app.otherElements["Saved plans (0)"].exists)
         XCTAssertFalse(app.buttons["Open plan"].exists)
 
-        // Restore the exported document, rather than injecting bridge data.
-        reveal(backups)
-        backups.tap()
-        reveal(restore)
-        restore.tap()
-        let document = app.cells.matching(
-            NSPredicate(format: "label BEGINSWITH[c] %@", "lifeadmin-backup")).firstMatch
-        // Export saves to the local location, which need not appear in Recents.
-        pickerControl("Browse").tap()
-        if !document.waitForExistence(timeout: 5) {
-            pickerControl("On My iPhone", type: .any).coordinate(
-                withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
-        }
-        guard document.waitForExistence(timeout: 45) else {
-            print("Restore document controls:\n" + app.debugDescription)
-            XCTFail("Exported LifeAdmin document was not available for restore")
-            return
-        }
-        XCTAssertTrue(document.frame.intersects(app.frame))
-        // Activate the observed document cell using XCTest's native hit point.
-        document.tap()
+        // Restore the exported document through the system picker.
+        selectExportedBackup()
         confirm(timeout: 30)
         XCTAssertTrue(app.staticTexts["Backup restored on this device."].waitForExistence(timeout: 10))
         app.terminate()
@@ -229,6 +239,49 @@ final class LifeAdminUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["CI sample subscription"].exists)
         XCTAssertTrue(app.otherElements["Your bills (1)"].exists)
         XCTAssertTrue(app.otherElements["Saved plans (1)"].exists)
+        open.tap()
+        XCTAssertTrue(app.buttons["Copy plan"].waitForExistence(timeout: 5))
+
+        // Records created after export must survive a declined replacement.
+        app.terminate()
+        app.launch()
+        XCTAssertTrue(app.buttons["Search"].waitForExistence(timeout: 20))
+        addSubscription(named: "After backup")
+        app.terminate()
+        app.launch()
+        XCTAssertTrue(app.buttons["Search"].waitForExistence(timeout: 20))
+        selectExportedBackup()
+        let replacement = app.alerts.firstMatch
+        XCTAssertTrue(replacement.waitForExistence(timeout: 30))
+        let decline = replacement.buttons.matching(
+            NSPredicate(format: "label ==[c] %@", "Cancel")).firstMatch
+        XCTAssertTrue(decline.waitForExistence(timeout: 5))
+        decline.tap()
+        let ready = XCTNSPredicateExpectation(
+            predicate: NSPredicate(format: "enabled == true"),
+            object: app.buttons["Restore backup"])
+        XCTAssertEqual(XCTWaiter.wait(for: [ready], timeout: 10), .completed)
+        app.terminate()
+        app.launch()
+        XCTAssertTrue(app.buttons["Search"].waitForExistence(timeout: 20))
+        reveal(open)
+        XCTAssertTrue(app.otherElements["Your bills (2)"].exists)
+        XCTAssertTrue(app.otherElements["Saved plans (1)"].exists)
+        XCTAssertTrue(app.staticTexts["CI sample subscription"].exists)
+        XCTAssertTrue(app.staticTexts["After backup"].exists)
+
+        // Accepting the same backup must replace the later record.
+        selectExportedBackup()
+        confirm(timeout: 30)
+        XCTAssertTrue(app.staticTexts["Backup restored on this device."].waitForExistence(timeout: 10))
+        app.terminate()
+        app.launch()
+        XCTAssertTrue(app.buttons["Search"].waitForExistence(timeout: 20))
+        reveal(open)
+        XCTAssertTrue(app.otherElements["Your bills (1)"].exists)
+        XCTAssertTrue(app.otherElements["Saved plans (1)"].exists)
+        XCTAssertTrue(app.staticTexts["CI sample subscription"].exists)
+        XCTAssertFalse(app.staticTexts["After backup"].exists)
         open.tap()
         XCTAssertTrue(app.buttons["Copy plan"].waitForExistence(timeout: 5))
     }
