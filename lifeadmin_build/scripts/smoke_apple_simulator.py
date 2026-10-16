@@ -84,6 +84,13 @@ def verify_exported_records(backup_path, database_path):
     return {"exact_record_match": True, "tasks": 1, "plans": 1,
             "synthetic_details_preserved": True, "scope": "Disposable CI simulator only"}
 
+def verify_device_records(device, bundle, backup_path):
+    # XCTest installs can move the app data container between test commands.
+    container = Path(sim("get_app_container", device, bundle, "data"))
+    return verify_exported_records(
+        backup_path, container / "Library/Application Support/LifeAdmin/records-v1.sqlite")
+
+
 def main():
     app = Path("build-ios-simulator/Build/Products/Debug-iphonesimulator/App.app")
     if not app.is_dir():
@@ -123,23 +130,20 @@ def main():
                        if path.is_file() and "lifeadmin-export-" not in str(path)]
             if len(exports) != 1:
                 raise RuntimeError(f"Expected one exported JSON document, found {len(exports)}")
-            verification = verify_exported_records(
-                exports[0], container / "Library/Application Support/LifeAdmin/records-v1.sqlite")
+            verification = verify_device_records(device, bundle, exports[0])
             (evidence / "backup-round-trip.json").write_text(json.dumps(verification, indent=2) + "\n")
             print("Complete exported/restored native records match.", flush=True)
             run_ui_test(device, evidence, "testInterruptedBackupPickersPreserveRecords",
                         "interrupted-picker-ui-tests.log",
                         str(evidence / "interrupted-pickers.xcresult"))
-            verify_exported_records(
-                exports[0], container / "Library/Application Support/LifeAdmin/records-v1.sqlite")
+            verify_device_records(device, bundle, exports[0])
             verification["interrupted_picker_checks_passed"] = True
             (evidence / "backup-round-trip.json").write_text(json.dumps(verification, indent=2) + "\n")
             create_invalid_backups(exports[0])
             run_ui_test(device, evidence, "testNativeBackupRejectsInvalidFiles",
                         "invalid-backup-ui-tests.log",
                         str(evidence / "invalid-backups.xcresult"))
-            verification = verify_exported_records(
-                exports[0], container / "Library/Application Support/LifeAdmin/records-v1.sqlite")
+            verification = verify_device_records(device, bundle, exports[0])
             verification["interrupted_picker_checks_passed"] = True
             verification["invalid_file_checks_passed"] = True
             (evidence / "backup-round-trip.json").write_text(json.dumps(verification, indent=2) + "\n")

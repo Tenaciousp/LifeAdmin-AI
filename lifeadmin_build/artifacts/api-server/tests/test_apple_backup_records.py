@@ -6,6 +6,7 @@ from pathlib import Path
 import sqlite3
 import tempfile
 import unittest
+from unittest.mock import patch
 
 spec = importlib.util.spec_from_file_location(
     "apple_runner", Path(__file__).resolve().parents[3] / "scripts/smoke_apple_simulator.py")
@@ -74,6 +75,30 @@ class ExportedRecordTests(unittest.TestCase):
             self.assertEqual((folder / "ci-oversized.json").stat().st_size, 5 * 1024 * 1024 + 1)
             with self.assertRaises(json.JSONDecodeError):
                 json.loads((folder / "ci-malformed.json").read_text())
+
+
+    def test_native_verification_follows_relocated_app_container(self):
+        with tempfile.TemporaryDirectory() as directory:
+            folder = Path(directory)
+            data = {"format": "lifeadmin-backup", "version": 1,
+                    "tasks": [{"id": "bill", "notes": "Note7319",
+                               "details": {"provider": "Netflix", "account_reference": "REF-7319"}}],
+                    "plans": [{"id": "plan", "task_id": "bill", "content": "Synthetic plan"}]}
+            backup = folder / "lifeadmin-backup.json"
+            backup.write_text(json.dumps(data))
+            original = folder / "original-container"
+            relocated = folder / "relocated-container"
+            database = original / "Library/Application Support/LifeAdmin/records-v1.sqlite"
+            database.parent.mkdir(parents=True)
+            with closing(sqlite3.connect(database)) as connection, connection:
+                connection.execute("CREATE TABLE snapshot (id INTEGER PRIMARY KEY, data TEXT)")
+                connection.execute("INSERT INTO snapshot VALUES (1, ?)", (json.dumps(data),))
+            with patch.object(runner, "sim", return_value=str(original)) as resolve_container:
+                self.assertTrue(runner.verify_device_records("device", "bundle", backup)["exact_record_match"])
+                original.rename(relocated)
+                resolve_container.return_value = str(relocated)
+                self.assertTrue(runner.verify_device_records("device", "bundle", backup)["exact_record_match"])
+            self.assertFalse(original.exists())
 
 
 if __name__ == "__main__":
