@@ -32,11 +32,19 @@ final class LifeAdminUITests: XCTestCase {
         XCTFail("Control is not reachable: \(element)", file: file, line: line)
     }
 
-    private func confirm() {
+    private func enterText(_ value: String, into field: XCUIElement) {
+        // Separate keyboard events let the controlled web field settle between keys.
+        for character in value { field.typeText(String(character)) }
+        let complete = XCTNSPredicateExpectation(
+            predicate: NSPredicate(format: "value == %@", value), object: field)
+        XCTAssertEqual(XCTWaiter.wait(for: [complete], timeout: 10), .completed)
+    }
+
+    private func confirm(timeout: TimeInterval = 5) {
         let alert = app.alerts.firstMatch
-        XCTAssertTrue(alert.waitForExistence(timeout: 5))
+        XCTAssertTrue(alert.waitForExistence(timeout: timeout))
         let accept = alert.buttons.matching(NSPredicate(format: "label ==[c] %@", "OK")).firstMatch
-        XCTAssertTrue(accept.waitForExistence(timeout: 5))
+        XCTAssertTrue(accept.waitForExistence(timeout: timeout))
         accept.tap()
     }
 
@@ -98,7 +106,7 @@ final class LifeAdminUITests: XCTestCase {
         let search = app.textFields.firstMatch
         search.tap()
         dismissKeyboardTutorial()
-        search.typeText("Cancel Netflix")
+        enterText("Cancel Netflix", into: search)
         XCTAssertEqual(search.value as? String, "Cancel Netflix")
         closeKeyboard()
         app.buttons["Search"].tap()
@@ -110,7 +118,7 @@ final class LifeAdminUITests: XCTestCase {
         reveal(billName)
         billName.tap()
         dismissKeyboardTutorial()
-        billName.typeText("CI sample subscription")
+        enterText("CI sample subscription", into: billName)
         XCTAssertEqual(billName.value as? String, "CI sample subscription")
         closeKeyboard()
         let save = app.buttons["Save bill"]
@@ -192,7 +200,7 @@ final class LifeAdminUITests: XCTestCase {
         backups.tap()
         reveal(restore)
         restore.tap()
-        let document = app.descendants(matching: .any).matching(
+        let document = app.cells.matching(
             NSPredicate(format: "label BEGINSWITH[c] %@", "lifeadmin-backup")).firstMatch
         // Export saves to the local location, which need not appear in Recents.
         pickerControl("Browse").coordinate(
@@ -207,8 +215,9 @@ final class LifeAdminUITests: XCTestCase {
             return
         }
         XCTAssertTrue(document.frame.intersects(app.frame))
-        document.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
-        confirm()
+        // The cell centre lies on the filename; select the visible document icon.
+        document.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.25)).tap()
+        confirm(timeout: 30)
         XCTAssertTrue(app.staticTexts["Backup restored on this device."].waitForExistence(timeout: 10))
         app.terminate()
         app.launch()
