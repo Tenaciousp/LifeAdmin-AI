@@ -229,6 +229,11 @@ def main():
             recovery["unsupported_storage_version_preserved"] = True
             recovery["supported_storage_version_recovered"] = True
             (evidence / "storage-recovery.json").write_text(json.dumps(recovery, indent=2) + "\n")
+            run_ui_test(device, evidence, "testRotationPreservesSavedRecordsAndPlan",
+                        "rotation-ui-tests.log", str(evidence / "rotation.xcresult"))
+            rotation = verify_device_records(device, bundle, exports[0])
+            rotation["landscape_portrait_checks_passed"] = True
+            (evidence / "rotation.json").write_text(json.dumps(rotation, indent=2) + "\n")
             print("Unsupported native storage failed closed and recovery preserved exact records.")
             print("Native rejected-write recovery and package reinstallation preserved exact records.")
             print("Apple interactive persistence and deletion test passed.")
@@ -250,7 +255,8 @@ def main():
     except Exception:
         for filename in ("ui-tests.log", "interrupted-picker-ui-tests.log", "invalid-backup-ui-tests.log",
                          "rejected-write-ui-tests.log", "write-recovery-ui-tests.log",
-                         "unsupported-storage-ui-tests.log", "storage-version-recovery-ui-tests.log"):
+                         "unsupported-storage-ui-tests.log", "storage-version-recovery-ui-tests.log",
+                         "rotation-ui-tests.log"):
             ui_log = evidence / filename
             if ui_log.exists():
                 diagnostics = ui_log.read_text(errors="replace")
@@ -304,6 +310,8 @@ def main():
              "unsupported-storage-attachment-export.log"),
             (str(evidence / "storage-version-recovery.xcresult"), "storage-version-recovery-attachments",
              "storage-version-recovery-attachment-export.log"),
+            (str(evidence / "rotation.xcresult"), "rotation-attachments",
+             "rotation-attachment-export.log"),
         ):
             if Path(bundle).is_dir():
                 try:

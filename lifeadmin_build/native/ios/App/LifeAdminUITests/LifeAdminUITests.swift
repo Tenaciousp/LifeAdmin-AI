@@ -457,4 +457,43 @@ final class LifeAdminUITests: XCTestCase {
         XCTAssertTrue(app.buttons["Copy plan"].waitForExistence(timeout: 5))
     }
 
+    func testRotationPreservesSavedRecordsAndPlan() throws {
+        defer { XCUIDevice.shared.orientation = .portrait }
+        app.launch()
+        XCTAssertTrue(app.buttons["Search"].waitForExistence(timeout: 20))
+        let open = app.buttons["Open plan"]
+        reveal(open)
+        open.tap()
+        XCTAssertTrue(app.buttons["Copy plan"].waitForExistence(timeout: 5))
+
+        XCUIDevice.shared.orientation = .landscapeLeft
+        let landscape = XCTNSPredicateExpectation(
+            predicate: NSPredicate { _, _ in self.app.frame.width > self.app.frame.height },
+            object: app)
+        XCTAssertEqual(XCTWaiter.wait(for: [landscape], timeout: 10), .completed)
+        let nextSteps = app.staticTexts["Next Steps"]
+        reveal(nextSteps)
+        XCTAssertTrue(app.buttons["Copy plan"].exists)
+        let landscapeScreen = XCTAttachment(screenshot: app.screenshot())
+        landscapeScreen.name = "Saved plan in landscape"
+        landscapeScreen.lifetime = .keepAlways
+        add(landscapeScreen)
+
+        XCUIDevice.shared.orientation = .portrait
+        let portrait = XCTNSPredicateExpectation(
+            predicate: NSPredicate { _, _ in self.app.frame.height > self.app.frame.width },
+            object: app)
+        XCTAssertEqual(XCTWaiter.wait(for: [portrait], timeout: 10), .completed)
+        XCTAssertTrue(app.buttons["Copy plan"].exists)
+        app.terminate()
+        app.launch()
+        XCTAssertTrue(app.buttons["Search"].waitForExistence(timeout: 20))
+        reveal(open)
+        XCTAssertTrue(app.otherElements["Your bills (1)"].exists)
+        XCTAssertTrue(app.otherElements["Saved plans (1)"].exists)
+        XCTAssertTrue(app.staticTexts["CI sample subscription"].exists)
+        open.tap()
+        XCTAssertTrue(app.buttons["Copy plan"].waitForExistence(timeout: 5))
+    }
+
 }
