@@ -101,6 +101,27 @@ class ExportedRecordTests(unittest.TestCase):
             self.assertFalse(original.exists())
 
 
+    def test_staging_inspection_rejects_leftovers_without_deleting_files(self):
+        with tempfile.TemporaryDirectory() as directory:
+            folder = Path(directory)
+            with patch.object(runner, "sim", return_value=str(folder)):
+                with self.assertRaisesRegex(RuntimeError, "unavailable"):
+                    runner.verify_export_staging_removed("device", "bundle")
+                temporary = folder / "tmp"
+                temporary.mkdir()
+                saved = temporary / "unrelated.json"
+                saved.write_text("Keep this file")
+                runner.verify_export_staging_removed("device", "bundle")
+                staged = temporary / "lifeadmin-export-123"
+                staged.mkdir()
+                (staged / "lifeadmin-backup.json").write_text("Private copy")
+                with self.assertRaisesRegex(RuntimeError, "staging copy"):
+                    runner.verify_export_staging_removed("device", "bundle")
+                self.assertTrue(staged.exists())
+                self.assertEqual(saved.read_text(), "Keep this file")
+
+
 if __name__ == "__main__":
     unittest.main()
+
 

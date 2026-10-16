@@ -17,6 +17,20 @@ public class LifeAdminFilesPlugin: CAPPlugin, CAPBridgedPlugin, UIDocumentPicker
     private var exporting = false
     private let limit = 5 * 1024 * 1024
 
+    public override func load() {
+        // Force-close skips picker callbacks. Remove only our abandoned staging
+        // folders; customer-selected exports live outside this private directory.
+        let manager = FileManager.default
+        let folders = (try? manager.contentsOfDirectory(
+            at: manager.temporaryDirectory, includingPropertiesForKeys: nil)) ?? []
+        for folder in folders {
+            let name = folder.lastPathComponent
+            guard name.hasPrefix("lifeadmin-export-"),
+                  UUID(uuidString: String(name.dropFirst("lifeadmin-export-".count))) != nil else { continue }
+            try? manager.removeItem(at: folder)
+        }
+    }
+
     private func trace(_ event: String) {
         #if DEBUG
         NSLog("LifeAdminFiles: %@", event)

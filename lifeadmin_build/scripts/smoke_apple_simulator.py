@@ -91,6 +91,15 @@ def verify_device_records(device, bundle, backup_path):
         backup_path, container / "Library/Application Support/LifeAdmin/records-v1.sqlite")
 
 
+def verify_export_staging_removed(device, bundle):
+    container = Path(sim("get_app_container", device, bundle, "data"))
+    temporary = container / "tmp"
+    if not temporary.is_dir():
+        raise RuntimeError("Native temporary directory is unavailable for inspection")
+    if any(temporary.glob("lifeadmin-export-*")):
+        raise RuntimeError("Interrupted export left a private staging copy after restart")
+
+
 def main():
     app = Path("build-ios-simulator/Build/Products/Debug-iphonesimulator/App.app")
     if not app.is_dir():
@@ -137,6 +146,8 @@ def main():
                         "interrupted-picker-ui-tests.log",
                         str(evidence / "interrupted-pickers.xcresult"))
             verify_device_records(device, bundle, exports[0])
+            verify_export_staging_removed(device, bundle)
+            verification["export_staging_cleanup_passed"] = True
             verification["interrupted_picker_checks_passed"] = True
             (evidence / "backup-round-trip.json").write_text(json.dumps(verification, indent=2) + "\n")
             create_invalid_backups(exports[0])
@@ -144,6 +155,8 @@ def main():
                         "invalid-backup-ui-tests.log",
                         str(evidence / "invalid-backups.xcresult"))
             verification = verify_device_records(device, bundle, exports[0])
+            verify_export_staging_removed(device, bundle)
+            verification["export_staging_cleanup_passed"] = True
             verification["interrupted_picker_checks_passed"] = True
             verification["invalid_file_checks_passed"] = True
             (evidence / "backup-round-trip.json").write_text(json.dumps(verification, indent=2) + "\n")
@@ -227,4 +240,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
