@@ -127,12 +127,20 @@ def main():
                 exports[0], container / "Library/Application Support/LifeAdmin/records-v1.sqlite")
             (evidence / "backup-round-trip.json").write_text(json.dumps(verification, indent=2) + "\n")
             print("Complete exported/restored native records match.", flush=True)
+            run_ui_test(device, evidence, "testInterruptedBackupPickersPreserveRecords",
+                        "interrupted-picker-ui-tests.log",
+                        str(evidence / "interrupted-pickers.xcresult"))
+            verify_exported_records(
+                exports[0], container / "Library/Application Support/LifeAdmin/records-v1.sqlite")
+            verification["interrupted_picker_checks_passed"] = True
+            (evidence / "backup-round-trip.json").write_text(json.dumps(verification, indent=2) + "\n")
             create_invalid_backups(exports[0])
             run_ui_test(device, evidence, "testNativeBackupRejectsInvalidFiles",
                         "invalid-backup-ui-tests.log",
                         str(evidence / "invalid-backups.xcresult"))
             verification = verify_exported_records(
                 exports[0], container / "Library/Application Support/LifeAdmin/records-v1.sqlite")
+            verification["interrupted_picker_checks_passed"] = True
             verification["invalid_file_checks_passed"] = True
             (evidence / "backup-round-trip.json").write_text(json.dumps(verification, indent=2) + "\n")
             print("Native invalid-file rejection preserved the complete saved records.", flush=True)
@@ -153,7 +161,7 @@ def main():
         }, indent=2) + "\n")
         print("Apple simulator launch and relaunch completed; review screenshots.")
     except Exception:
-        for filename in ("ui-tests.log", "invalid-backup-ui-tests.log"):
+        for filename in ("ui-tests.log", "interrupted-picker-ui-tests.log", "invalid-backup-ui-tests.log"):
             ui_log = evidence / filename
             if ui_log.exists():
                 diagnostics = ui_log.read_text(errors="replace")
@@ -195,6 +203,8 @@ def main():
         # screenshot is taken after tearDown and often shows the home screen.
         for bundle, directory, filename in (
             ("apple-ui-tests.xcresult", "ui-attachments", "attachment-export.log"),
+            (str(evidence / "interrupted-pickers.xcresult"), "interrupted-picker-attachments",
+             "interrupted-picker-attachment-export.log"),
             (str(evidence / "invalid-backups.xcresult"), "invalid-backup-attachments",
              "invalid-backup-attachment-export.log"),
         ):

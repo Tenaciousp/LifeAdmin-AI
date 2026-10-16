@@ -329,5 +329,43 @@ final class LifeAdminUITests: XCTestCase {
         }
     }
 
-}
+    func testInterruptedBackupPickersPreserveRecords() throws {
+        // Run after the round-trip test has created acknowledged synthetic data.
+        for exporting in [false, true] {
+            app.launch()
+            XCTAssertTrue(app.buttons["Search"].waitForExistence(timeout: 20))
+            let backups = app.buttons["Manage backups"]
+            reveal(backups)
+            backups.tap()
+            let action = app.buttons[exporting ? "Export backup" : "Restore backup"]
+            reveal(action)
+            action.tap()
+            if exporting { confirm() }
+            _ = pickerControl(exporting ? "Save" : "Cancel")
+            // Simulate process termination while the native picker is open.
+            app.terminate()
+            app.launch()
+            XCTAssertTrue(app.buttons["Search"].waitForExistence(timeout: 20))
+            let open = app.buttons["Open plan"]
+            reveal(open)
+            XCTAssertTrue(app.otherElements["Your bills (1)"].exists)
+            XCTAssertTrue(app.otherElements["Saved plans (1)"].exists)
+            XCTAssertTrue(app.staticTexts["CI sample subscription"].exists)
+            open.tap()
+            XCTAssertTrue(app.buttons["Copy plan"].waitForExistence(timeout: 5))
+            app.terminate()
+        }
 
+        // A fresh request must work after termination clears the pending picker.
+        app.launch()
+        XCTAssertTrue(app.buttons["Search"].waitForExistence(timeout: 20))
+        let backups = app.buttons["Manage backups"]
+        reveal(backups)
+        backups.tap()
+        let restore = app.buttons["Restore backup"]
+        reveal(restore)
+        restore.tap()
+        cancelFilePicker()
+    }
+
+}
