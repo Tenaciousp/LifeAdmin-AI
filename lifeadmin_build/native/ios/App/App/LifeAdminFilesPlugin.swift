@@ -68,7 +68,7 @@ public class LifeAdminFilesPlugin: CAPPlugin, CAPBridgedPlugin, UIDocumentPicker
         DispatchQueue.main.async {
             guard self.pending == nil, let controller = self.bridge?.viewController, controller.presentedViewController == nil else { call.reject("Finish the current file selection.", "file_busy"); return }
             self.pending = call; self.exporting = false
-            let picker = UIDocumentPickerViewController(forOpeningContentTypes: [.json], asCopy: false)
+            let picker = UIDocumentPickerViewController(forOpeningContentTypes: [.json], asCopy: true)
             picker.allowsMultipleSelection = false; picker.delegate = self
             controller.present(picker, animated: true)
         }
@@ -80,8 +80,9 @@ public class LifeAdminFilesPlugin: CAPPlugin, CAPBridgedPlugin, UIDocumentPicker
         trace(exporting ? "Export selection received" : "Import selection received")
         if exporting { finish(); return }
         guard let file = urls.first else { finish(error: "No backup selected.", code: "cancelled"); return }
-        let access = file.startAccessingSecurityScopedResource()
-        defer { if access { file.stopAccessingSecurityScopedResource() } }
+        // Import mode returns a temporary copy. Remove this copy after the
+        // bounded read; the selected backup stays in its original location.
+        defer { try? FileManager.default.removeItem(at: file) }
         do {
             trace("Import read started")
             let handle = try FileHandle(forReadingFrom: file)
