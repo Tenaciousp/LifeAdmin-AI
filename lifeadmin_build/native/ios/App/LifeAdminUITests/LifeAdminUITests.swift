@@ -123,6 +123,16 @@ final class LifeAdminUITests: XCTestCase {
         enterText(name, into: billName)
         XCTAssertEqual(billName.value as? String, name)
         closeKeyboard()
+        let reference = app.textFields["Account or customer reference"]
+        reveal(reference)
+        reference.tap()
+        enterText("REF-7319", into: reference)
+        closeKeyboard()
+        let notes = app.textViews["Additional notes"]
+        reveal(notes)
+        notes.tap()
+        enterText("Note7319", into: notes)
+        closeKeyboard()
         let save = app.buttons["Save bill"]
         reveal(save)
         save.tap()

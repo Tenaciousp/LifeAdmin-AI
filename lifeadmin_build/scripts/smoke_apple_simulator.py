@@ -3,6 +3,8 @@
 Screenshots require human review. This is not household-data or device acceptance.
 """
 import json
+import sqlite3
+from contextlib import closing
 from pathlib import Path
 import subprocess
 import sys
@@ -30,6 +32,29 @@ def sim(*args, timeout=60):
                     handle.write(output.decode(errors="replace") if isinstance(output, bytes) else output)
         raise
 
+
+
+def verify_exported_records(backup_path, database_path):
+    exported = json.loads(backup_path.read_text())
+    with closing(sqlite3.connect(database_path.as_uri() + "?mode=ro", uri=True)) as connection:
+        row = connection.execute("SELECT data FROM snapshot WHERE id=1").fetchone()
+    if row is None:
+        raise RuntimeError("Restored native snapshot is missing")
+    restored = json.loads(row[0])
+    for snapshot in (exported, restored):
+        if snapshot.get("format") != "lifeadmin-backup" or snapshot.get("version") != 1:
+            raise RuntimeError("Unexpected native backup format")
+    if any(exported[key] != restored[key] for key in ("tasks", "plans")):
+        raise RuntimeError("Restored records differ from the exported backup")
+    if len(exported["tasks"]) != 1 or len(exported["plans"]) != 1:
+        raise RuntimeError("Expected one synthetic bill and plan after replacement")
+    task = exported["tasks"][0]
+    if (task.get("notes") != "Note7319" or
+            task.get("details", {}).get("account_reference") != "REF-7319" or
+            task.get("details", {}).get("provider") != "Netflix"):
+        raise RuntimeError("Synthetic bill details were not preserved")
+    return {"exact_record_match": True, "tasks": 1, "plans": 1,
+            "synthetic_details_preserved": True, "scope": "Disposable CI simulator only"}
 
 def main():
     app = Path("build-ios-simulator/Build/Products/Debug-iphonesimulator/App.app")
@@ -74,6 +99,16 @@ def main():
                     "-maximum-test-execution-time-allowance", "600",
                     "CODE_SIGNING_ALLOWED=NO", "test",
                 ], check=True, stdout=log, stderr=subprocess.STDOUT, timeout=900)
+            container = Path(sim("get_app_container", device, bundle, "data"))
+            device_data = next(parent for parent in container.parents if parent.name == "data")
+            exports = [path for path in device_data.rglob("lifeadmin-backup.json")
+                       if path.is_file() and "lifeadmin-export-" not in str(path)]
+            if len(exports) != 1:
+                raise RuntimeError(f"Expected one exported JSON document, found {len(exports)}")
+            verification = verify_exported_records(
+                exports[0], container / "Library/Application Support/LifeAdmin/records-v1.sqlite")
+            (evidence / "backup-round-trip.json").write_text(json.dumps(verification, indent=2) + "\n")
+            print("Complete exported/restored native records match.", flush=True)
             print("Apple interactive persistence and deletion test passed.")
         results = []
         labels = ("post-ui-launch", "relaunch") if "--ui-tests" in sys.argv else ("first-launch", "relaunch")
