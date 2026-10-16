@@ -139,7 +139,7 @@ final class LifeAdminUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["Bill saved on this device."].waitForExistence(timeout: 10))
     }
 
-    private func selectExportedBackup() {
+    private func selectExportedBackup(named prefix: String = "lifeadmin-backup") {
         let backups = app.buttons["Manage backups"]
         reveal(backups)
         backups.tap()
@@ -147,7 +147,7 @@ final class LifeAdminUITests: XCTestCase {
         reveal(restore)
         restore.tap()
         let document = app.cells.matching(
-            NSPredicate(format: "label BEGINSWITH[c] %@", "lifeadmin-backup")).firstMatch
+            NSPredicate(format: "label BEGINSWITH[c] %@", prefix)).firstMatch
         // Export saves to the local location, which need not appear in Recents.
         pickerControl("Browse").tap()
         if !document.waitForExistence(timeout: 5) {
@@ -295,4 +295,33 @@ final class LifeAdminUITests: XCTestCase {
         open.tap()
         XCTAssertTrue(app.buttons["Copy plan"].waitForExistence(timeout: 5))
     }
+
+    func testNativeBackupRejectsInvalidFiles() throws {
+        // The host creates these synthetic files beside the real export only
+        // after the round-trip test and its complete-record check pass.
+        let cases: [(String, Bool, String)] = [
+            ("ci-malformed.json", true, "Backup is not valid JSON."),
+            ("ci-future.json", true, "Unsupported LifeAdmin backup."),
+            ("ci-invalid-plan.json", true, "Invalid saved plan missing details."),
+            ("ci-oversized.json", false, "Backup exceeds 5 MB.")
+        ]
+        for (filename, needsConfirmation, message) in cases {
+            app.terminate()
+            app.launch()
+            XCTAssertTrue(app.buttons["Search"].waitForExistence(timeout: 20))
+            selectExportedBackup(named: filename)
+            if needsConfirmation { confirm(timeout: 30) }
+            XCTAssertTrue(app.staticTexts[message].waitForExistence(timeout: 30), filename)
+            app.terminate()
+            app.launch()
+            XCTAssertTrue(app.buttons["Search"].waitForExistence(timeout: 20))
+            let open = app.buttons["Open plan"]
+            reveal(open)
+            XCTAssertTrue(app.otherElements["Your bills (1)"].exists, filename)
+            XCTAssertTrue(app.otherElements["Saved plans (1)"].exists, filename)
+            XCTAssertTrue(app.staticTexts["CI sample subscription"].exists, filename)
+        }
+    }
+
 }
+

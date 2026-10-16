@@ -34,6 +34,34 @@ def sim(*args, timeout=60):
 
 
 
+def run_ui_test(device, evidence, method, log_name, result_path):
+    with (evidence / log_name).open("w") as log:
+        subprocess.run([
+            "xcodebuild", "-project", "ios/App/App.xcodeproj",
+            "-scheme", "LifeAdminAcceptance", "-configuration", "Debug",
+            "-destination", "platform=iOS Simulator,id=" + device,
+            "-derivedDataPath", "build-ios-simulator",
+            "-resultBundlePath", result_path,
+            "-parallel-testing-enabled", "NO",
+            "-test-timeouts-enabled", "YES",
+            "-default-test-execution-time-allowance", "600",
+            "-maximum-test-execution-time-allowance", "600",
+            "-only-testing:LifeAdminUITests/LifeAdminUITests/" + method,
+            "CODE_SIGNING_ALLOWED=NO", "test",
+        ], check=True, stdout=log, stderr=subprocess.STDOUT, timeout=900)
+
+
+def create_invalid_backups(export_path):
+    original = json.loads(export_path.read_text())
+    folder = export_path.parent
+    (folder / "ci-malformed.json").write_text("{broken")
+    (folder / "ci-future.json").write_text(json.dumps({**original, "version": 2}))
+    invalid_plan = json.loads(export_path.read_text())
+    invalid_plan["plans"][0]["missing_details"] = "Invalid list"
+    (folder / "ci-invalid-plan.json").write_text(json.dumps(invalid_plan))
+    (folder / "ci-oversized.json").write_bytes(b"x" * (5 * 1024 * 1024 + 1))
+
+
 def verify_exported_records(backup_path, database_path):
     exported = json.loads(backup_path.read_text())
     with closing(sqlite3.connect(database_path.as_uri() + "?mode=ro", uri=True)) as connection:
@@ -86,19 +114,9 @@ def main():
         # prevent collection of UI-test diagnostics. Both checks must still pass.
         if "--ui-tests" in sys.argv:
             print("Starting Apple interactive acceptance on a fresh installation.", flush=True)
-            with (evidence / "ui-tests.log").open("w") as log:
-                subprocess.run([
-                    "xcodebuild", "-project", "ios/App/App.xcodeproj",
-                    "-scheme", "LifeAdminAcceptance", "-configuration", "Debug",
-                    "-destination", "platform=iOS Simulator,id=" + device,
-                    "-derivedDataPath", "build-ios-simulator",
-                    "-resultBundlePath", "apple-ui-tests.xcresult",
-                    "-parallel-testing-enabled", "NO",
-                    "-test-timeouts-enabled", "YES",
-                    "-default-test-execution-time-allowance", "600",
-                    "-maximum-test-execution-time-allowance", "600",
-                    "CODE_SIGNING_ALLOWED=NO", "test",
-                ], check=True, stdout=log, stderr=subprocess.STDOUT, timeout=900)
+            run_ui_test(device, evidence,
+                        "testNativeBackupRoundTripAndCancellationPreserveRecords",
+                        "ui-tests.log", "apple-ui-tests.xcresult")
             container = Path(sim("get_app_container", device, bundle, "data"))
             device_data = next(parent for parent in container.parents if parent.name == "data")
             exports = [path for path in device_data.rglob("lifeadmin-backup.json")
@@ -109,6 +127,15 @@ def main():
                 exports[0], container / "Library/Application Support/LifeAdmin/records-v1.sqlite")
             (evidence / "backup-round-trip.json").write_text(json.dumps(verification, indent=2) + "\n")
             print("Complete exported/restored native records match.", flush=True)
+            create_invalid_backups(exports[0])
+            run_ui_test(device, evidence, "testNativeBackupRejectsInvalidFiles",
+                        "invalid-backup-ui-tests.log",
+                        str(evidence / "invalid-backups.xcresult"))
+            verification = verify_exported_records(
+                exports[0], container / "Library/Application Support/LifeAdmin/records-v1.sqlite")
+            verification["invalid_file_checks_passed"] = True
+            (evidence / "backup-round-trip.json").write_text(json.dumps(verification, indent=2) + "\n")
+            print("Native invalid-file rejection preserved the complete saved records.", flush=True)
             print("Apple interactive persistence and deletion test passed.")
         results = []
         labels = ("post-ui-launch", "relaunch") if "--ui-tests" in sys.argv else ("first-launch", "relaunch")
@@ -126,13 +153,14 @@ def main():
         }, indent=2) + "\n")
         print("Apple simulator launch and relaunch completed; review screenshots.")
     except Exception:
-        ui_log = evidence / "ui-tests.log"
-        if ui_log.exists():
-            diagnostics = ui_log.read_text(errors="replace")
-            failures = [line for line in diagnostics.splitlines()
-                        if ": error:" in line or "failed -" in line]
-            print("UI-test failure assertions:\n" + "\n".join(failures), flush=True)
-            print("Final UI-test diagnostics:\n" + diagnostics[-20000:], flush=True)
+        for filename in ("ui-tests.log", "invalid-backup-ui-tests.log"):
+            ui_log = evidence / filename
+            if ui_log.exists():
+                diagnostics = ui_log.read_text(errors="replace")
+                failures = [line for line in diagnostics.splitlines()
+                            if ": error:" in line or "failed -" in line]
+                print(filename + " failure assertions:\n" + "\n".join(failures), flush=True)
+                print("Final UI-test diagnostics:\n" + diagnostics[-20000:], flush=True)
         # Preserve synthetic simulator evidence before removing the disposable device.
         diagnostics = [
             ("failure-screen.log", ["io", device, "screenshot", str(evidence / "failure.png")]),
@@ -165,19 +193,24 @@ def main():
             print("Native file-stage collection failed: " + str(error), flush=True)
         # Export XCTest's in-app screenshots before cleanup. The outer failure
         # screenshot is taken after tearDown and often shows the home screen.
-        if Path("apple-ui-tests.xcresult").is_dir():
-            try:
-                with (evidence / "attachment-export.log").open("w") as log:
-                    subprocess.run([
-                        "xcrun", "xcresulttool", "export", "attachments",
-                        "--path", "apple-ui-tests.xcresult",
-                        "--output-path", str(evidence / "ui-attachments"),
-                    ], stdout=log, stderr=subprocess.STDOUT, timeout=60, check=False)
-            except (OSError, subprocess.TimeoutExpired) as error:
-                print("XCTest attachment export failed: " + str(error), flush=True)
+        for bundle, directory, filename in (
+            ("apple-ui-tests.xcresult", "ui-attachments", "attachment-export.log"),
+            (str(evidence / "invalid-backups.xcresult"), "invalid-backup-attachments",
+             "invalid-backup-attachment-export.log"),
+        ):
+            if Path(bundle).is_dir():
+                try:
+                    with (evidence / filename).open("w") as log:
+                        subprocess.run([
+                            "xcrun", "xcresulttool", "export", "attachments",
+                            "--path", bundle, "--output-path", str(evidence / directory),
+                        ], stdout=log, stderr=subprocess.STDOUT, timeout=60, check=False)
+                except (OSError, subprocess.TimeoutExpired) as error:
+                    print("XCTest attachment export failed: " + str(error), flush=True)
         subprocess.run(["xcrun", "simctl", "shutdown", device], check=False, timeout=60)
         subprocess.run(["xcrun", "simctl", "delete", device], check=False, timeout=60)
 
 
 if __name__ == "__main__":
     main()
+

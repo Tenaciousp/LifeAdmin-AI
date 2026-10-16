@@ -57,5 +57,25 @@ class ExportedRecordTests(unittest.TestCase):
                 runner.verify_exported_records(backup, database)
 
 
+    def test_invalid_fixtures_preserve_the_export_and_cover_native_size_limit(self):
+        with tempfile.TemporaryDirectory() as directory:
+            folder = Path(directory)
+            backup = folder / "lifeadmin-backup.json"
+            original = {"format": "lifeadmin-backup", "version": 1,
+                        "tasks": [{"id": "bill", "title": "Synthetic"}],
+                        "plans": [{"id": "plan", "task_id": "bill", "content": "Original"}]}
+            backup.write_text(json.dumps(original))
+            before = backup.read_bytes()
+            runner.create_invalid_backups(backup)
+            self.assertEqual(backup.read_bytes(), before)
+            self.assertEqual(json.loads((folder / "ci-future.json").read_text())["version"], 2)
+            invalid = json.loads((folder / "ci-invalid-plan.json").read_text())
+            self.assertIsInstance(invalid["plans"][0]["missing_details"], str)
+            self.assertEqual((folder / "ci-oversized.json").stat().st_size, 5 * 1024 * 1024 + 1)
+            with self.assertRaises(json.JSONDecodeError):
+                json.loads((folder / "ci-malformed.json").read_text())
+
+
 if __name__ == "__main__":
     unittest.main()
+
