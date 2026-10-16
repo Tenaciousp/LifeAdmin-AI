@@ -135,3 +135,36 @@ test("rejected native backup inputs preserve bills and plans without writing", a
   assert.deepEqual(await reopened.read(), before);
   reopened.close();
 });
+
+test("malformed plan fields fail before replacement while content-only plans stay compatible", async () => {
+  const bridge = database();
+  let writes = 0;
+  const write = bridge.write;
+  bridge.write = async input => { writes++; return write(input); };
+  const store = await openNativeStore(bridge);
+  await store.createTask(bill);
+  const saved = { id: "plan", task_id: bill.id, title: "Saved plan", content: "Original plan",
+    sections: { next_steps: "Review the bill" }, missing_details: ["Payment date"],
+    provider_email: { subject: "Bill query", body: "Please review", kind: "provider" } };
+  await store.savePlan(saved);
+  const before = await store.read(), committedWrites = writes;
+  const backup = plan => JSON.stringify({ format: "lifeadmin-backup", version: 1, tasks: [bill], plans: [plan] });
+  for (const fields of [
+    { sections: [] }, { sections: { next_steps: { text: "Invalid nested value" } } },
+    { missing_details: "Payment date" }, { missing_details: [{}] },
+    { provider_email: "Message" }, { provider_email: { subject: {}, body: "Message" } },
+    { provider_email: { subject: "Query", body: [] } },
+    { provider_email: { subject: "Query", body: "Message", kind: {} } },
+  ]) {
+    assert.throws(() => store.importBackup(backup({ ...saved, ...fields }), { replace: true }), /Invalid saved plan/);
+    assert.equal(writes, committedWrites);
+    assert.deepEqual(await store.read(), before);
+  }
+  store.close();
+  const reopened = await openNativeStore(bridge);
+  assert.deepEqual(await reopened.read(), before);
+  const legacy = { id: "legacy", task_id: bill.id, title: "Older plan", content: "Retained legacy body" };
+  await reopened.importBackup(backup(legacy), { replace: true });
+  assert.deepEqual((await reopened.read()).plans, [legacy]);
+  reopened.close();
+});

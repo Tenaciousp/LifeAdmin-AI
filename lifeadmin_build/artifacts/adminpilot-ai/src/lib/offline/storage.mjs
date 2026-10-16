@@ -48,6 +48,16 @@ export function record(value, kind) {
       typeof value.title !== "string" || value.title.length > 160) throw new Error("Invalid " + kind + " record.");
   if (kind === "plan" && (typeof value.task_id !== "string" || !value.task_id ||
       typeof value.content !== "string")) throw new Error("Invalid saved plan.");
+  if (kind === "plan") {
+    if (value.sections != null && (typeof value.sections !== "object" || Array.isArray(value.sections) ||
+        Object.values(value.sections).some(text => typeof text !== "string"))) throw new Error("Invalid saved plan sections.");
+    if (value.missing_details != null && (!Array.isArray(value.missing_details) ||
+        value.missing_details.some(text => typeof text !== "string"))) throw new Error("Invalid saved plan missing details.");
+    const draft = value.provider_email;
+    if (draft != null && (typeof draft !== "object" || Array.isArray(draft) ||
+        typeof draft.subject !== "string" || typeof draft.body !== "string" ||
+        (draft.kind != null && typeof draft.kind !== "string"))) throw new Error("Invalid saved plan message.");
+  }
   return structuredClone(value);
 }
 
