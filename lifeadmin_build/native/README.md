@@ -9,6 +9,13 @@ live reload endpoint, account, Stripe checkout or analytics integration.
 Initial icons and splash screens use LifeAdmin branding; final store artwork
 and screenshots still need review.
 
+Apple deployment requires iOS/iPadOS 16.4 or later, matching the bundled Tailwind 4 UI.
+The native configuration check rejects a lower deployment target. Older Apple
+systems are outside this release's support floor; minimum-version device acceptance
+remains required before store submission.
+
+Reference: https://tailwindcss.com/docs/upgrade-guide
+
 ## Prepare and synchronize
 
 Use Node 22 or later for the native toolchain. Install the root JavaScript

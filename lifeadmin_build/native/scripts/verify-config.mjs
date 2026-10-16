@@ -13,6 +13,13 @@ assert.match(await nativeFile("android/app/src/main/java/uk/co/tenaciouspl/lifea
 assert.match(await nativeFile("ios/App/App/SceneDelegate.swift"), /LifeAdminViewController\(\)/);
 assert.match(await nativeFile("ios/App/App/LifeAdminViewController.swift"), /registerPluginInstance\(LifeAdminStoragePlugin\(\)\)/);
 const project = await nativeFile("ios/App/App.xcodeproj/project.pbxproj");
+const appleTargets = [...project.matchAll(/IPHONEOS_DEPLOYMENT_TARGET = ([0-9.]+);/g)];
+assert.ok(appleTargets.length > 0, "Apple deployment targets must be declared.");
+for (const [, target] of appleTargets) {
+  const [major, minor = 0] = target.split(".").map(Number);
+  assert.ok(major > 16 || (major === 16 && minor >= 4),
+    "The bundled Tailwind 4 UI requires iOS 16.4 or later.");
+}
 assert.match(project, /LifeAdminStoragePlugin\.swift in Sources/);
 assert.match(project, /LifeAdminViewController\.swift in Sources/);
 console.log("Native repository is registered on both platforms.");
