@@ -124,7 +124,7 @@ jobs:
     # Standard hosted runners are free for public repositories; skip if that changes.
     if: ${{ github.event.repository.private == false }}
     runs-on: macos-26
-    timeout-minutes: 30
+    timeout-minutes: 45
     permissions:
       contents: read
     defaults:

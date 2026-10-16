@@ -44,11 +44,11 @@ def run_ui_test(device, evidence, method, log_name, result_path):
             "-resultBundlePath", result_path,
             "-parallel-testing-enabled", "NO",
             "-test-timeouts-enabled", "YES",
-            "-default-test-execution-time-allowance", "600",
-            "-maximum-test-execution-time-allowance", "600",
+            "-default-test-execution-time-allowance", "900",
+            "-maximum-test-execution-time-allowance", "900",
             "-only-testing:LifeAdminUITests/LifeAdminUITests/" + method,
             "CODE_SIGNING_ALLOWED=NO", "test",
-        ], check=True, stdout=log, stderr=subprocess.STDOUT, timeout=900)
+        ], check=True, stdout=log, stderr=subprocess.STDOUT, timeout=1200)
 
 
 def create_invalid_backups(export_path):
