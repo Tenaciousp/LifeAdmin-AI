@@ -114,6 +114,20 @@ def main():
                 pass
         raise
     finally:
+        # The broad two-minute failure log can start after file selection.
+        # Preserve fixed-message native stages across the complete UI journey.
+        trace_path = evidence / "native-file-events.log"
+        try:
+            with trace_path.open("w") as trace:
+                subprocess.run([
+                    "xcrun", "simctl", "spawn", device, "log", "show",
+                    "--last", "30m", "--style", "compact", "--predicate",
+                    'eventMessage CONTAINS "LifeAdminFiles:"',
+                ], stdout=trace, stderr=subprocess.STDOUT, timeout=30, check=False)
+            print("Native file-stage diagnostics:\n" +
+                  trace_path.read_text(errors="replace")[-12000:], flush=True)
+        except (OSError, subprocess.TimeoutExpired) as error:
+            print("Native file-stage collection failed: " + str(error), flush=True)
         # Export XCTest's in-app screenshots before cleanup. The outer failure
         # screenshot is taken after tearDown and often shows the home screen.
         if Path("apple-ui-tests.xcresult").is_dir():
