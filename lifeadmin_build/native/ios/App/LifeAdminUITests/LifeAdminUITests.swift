@@ -309,19 +309,21 @@ final class LifeAdminUITests: XCTestCase {
     func testNativeBackupRejectsInvalidFiles() throws {
         // The host creates these synthetic files beside the real export only
         // after the round-trip test and its complete-record check pass.
-        let cases: [(String, Bool, String)] = [
-            ("ci-malformed.json", true, "Backup is not valid JSON."),
-            ("ci-future.json", true, "Unsupported LifeAdmin backup."),
-            ("ci-invalid-plan.json", true, "Invalid saved plan missing details."),
-            ("ci-oversized.json", false, "Backup exceeds 5 MB.")
+        // Native file selection validates before offering record replacement.
+        // Invalid files must show an error without a destructive confirmation.
+        let cases: [(String, String)] = [
+            ("ci-malformed.json", "Backup is not valid JSON."),
+            ("ci-future.json", "Unsupported LifeAdmin backup."),
+            ("ci-invalid-plan.json", "Invalid saved plan missing details."),
+            ("ci-oversized.json", "Backup exceeds 5 MB.")
         ]
-        for (filename, needsConfirmation, message) in cases {
+        for (filename, message) in cases {
             app.terminate()
             app.launch()
             XCTAssertTrue(app.buttons["Search"].waitForExistence(timeout: 20))
             selectExportedBackup(named: filename)
-            if needsConfirmation { confirm(timeout: 30) }
             XCTAssertTrue(app.staticTexts[message].waitForExistence(timeout: 30), filename)
+            XCTAssertFalse(app.alerts.firstMatch.exists, filename)
             app.terminate()
             app.launch()
             XCTAssertTrue(app.buttons["Search"].waitForExistence(timeout: 20))
