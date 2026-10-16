@@ -171,9 +171,13 @@ final class LifeAdminUITests: XCTestCase {
     }
 
     func testNativeBackupRoundTripAndCancellationPreserveRecords() throws {
-        // The CI runner creates a fresh disposable simulator. No customer data.
+        // Cold simulator startup may wait on OS navigation services before
+        // loading the bundled page. Keep later process-restart checks at 20s.
+        let started = Date()
         app.launch()
-        XCTAssertTrue(app.buttons["Search"].waitForExistence(timeout: 20))
+        let ready = app.buttons["Search"].waitForExistence(timeout: 60)
+        print("Initial customer UI ready: \(ready); elapsed: \(Date().timeIntervalSince(started))s")
+        XCTAssertTrue(ready, "Initial customer UI did not load within 60 seconds")
         addSubscription(named: "CI sample subscription")
 
         let create = app.buttons["Create plan"]
