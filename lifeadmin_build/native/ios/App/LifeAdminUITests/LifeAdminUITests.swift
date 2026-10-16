@@ -160,8 +160,14 @@ final class LifeAdminUITests: XCTestCase {
             return
         }
         XCTAssertTrue(document.frame.intersects(app.frame))
-        // Activate the observed document cell using XCTest's native hit point.
-        document.tap()
+        // In icon mode the cell centre falls in the filename area. Target the
+        // document image observed inside this cell, above the filename.
+        let icon = document.images.firstMatch
+        XCTAssertTrue(icon.waitForExistence(timeout: 10))
+        XCTAssertTrue(icon.frame.intersects(app.frame))
+        XCTAssertGreaterThan(icon.frame.width, 0)
+        XCTAssertGreaterThan(icon.frame.height, 0)
+        icon.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
     }
 
     func testNativeBackupRoundTripAndCancellationPreserveRecords() throws {
