@@ -54,15 +54,25 @@ of times. Success is acknowledged only after native transaction commit.
 Synthetic JavaScript contract tests cover reconnect, save/restore, concurrent
 edits, failed commit, failed replacement, invalid imports, deletion and corrupt
 storage. These tests use an injected bridge and do not prove physical-device
-durability. Android compilation and native SQLite tests passed in CI #329. Apple simulator
-compilation and the basic persistence/deletion journey also passed in that run. Native file export and import now use the system document picker on both
-platforms. Selected UTF-8 backup files are bounded to 5 MB, then pass the same
-full snapshot validation before replacement. Exports use a customer-chosen
-destination; no permanent file-provider permission is retained. Cancellation is intended to
-preserve saved records; native picker acceptance remains an open gate. Apple export staging copies are deleted after completion
-or cancellation. Full native backup round-trip acceptance, physical file-picker usability, app-update,
-storage-pressure, interruption and OS backup/restore acceptance remain release gates. No guaranteed OS backup
-or reinstall recovery is promised. Existing server records are preserved.
+durability. Android compilation and native SQLite tests passed in CI #361.
+Native file export and import use the system document picker on both platforms.
+Selected UTF-8 backup files are bounded to 5 MiB and pass full snapshot
+validation before replacement. Exports use a customer-chosen destination;
+no permanent file-provider permission is retained.
+
+Apple simulator acceptance passed in CI #361, including backup round-trip,
+cancellation, replacement decisions, process interruption, invalid-file rejection
+and exact bill/plan field comparison against the real exported JSON.
+Apple export staging copies are removed after completion or cancellation;
+abandoned staging folders are removed on the next plugin load after force-close.
+Temporary import copies are removed after reading, preserving the original
+selected backup.
+
+Physical file-picker usability, cross-version app updates, disk exhaustion,
+interrupted writes, OS backup/restore and device transfer remain release gates.
+The passing same-build package reinstall does not prove uninstall/re-download
+recovery or cross-version migration. No guaranteed OS backup or reinstall
+recovery is promised. Existing server records are preserved.
 
 Keep the version-1 export format and local result contract compatible when the
 native repository is connected. Import validation must complete before
@@ -81,10 +91,30 @@ Backup rule reference: https://developer.android.com/identity/data/autobackup
 The unsigned simulator build uses GitHub’s standard macOS runner, without an
 Apple account, signing secrets or store upload. The job is guarded to run only
 while the repository is public. Compilation evidence is retained for 14 days.
-CI #329 passed compilation and the iPhone simulator save/plan/restart/deletion
-journey at source 9460ead11e2ffdf154200e3672dbd738caf949e6. Expanded native
-backup acceptance is tracked separately in issue #3. Compilation and simulator
-results do not establish physical-device or store acceptance.
+[CI #361](https://github.com/Tenaciousp/LifeAdmin-AI/actions/runs/38945509433)
+passed at source `00e9218a978be7754c487856daeb35c458d17745`, using an
+iPhone 11 simulator with iOS 26.5 and synthetic records only.
+
+| Simulator check | Verified result |
+| --- | --- |
+| Export/delete/restore and replacement decisions | Exact original bill and plan fields restored |
+| Import/export picker cancellation and force-close | Records preserved; fresh picker requests work |
+| Malformed JSON, future version, invalid plan and oversized file | Rejected without replacement confirmation; records preserved after restart |
+| Abandoned export staging | No private staging folders after restart; original exported backup retained |
+| Same-build package reinstall over the populated app | Exact saved fields retained |
+| Injected SQLite INSERT rejection | Failure reported without a success message; saved records unchanged after restart |
+| Saving after rejection is removed | Done/Open changes persisted across restarts; final records match the original export |
+| Final launch/relaunch | Both passed; customer screenshots reviewed |
+
+The rejected-write test uses a host-created SQLite trigger on the disposable
+simulator, with removal in a finally block. No failure hook is shipped in the app.
+SQL rejection is not a disk-full or power-loss test.
+
+Reviewed evidence includes `backup-round-trip.json`, `storage-recovery.json`,
+`result.json`, UI logs and customer screenshots. All recorded acceptance flags
+passed. Expanded native backup work is tracked in issue #3; approved public QA
+results are recorded on PR #2. Minimum-supported-OS, cloud-provider, physical-device
+and store acceptance remain separate.
 
 ## Required device acceptance
 
