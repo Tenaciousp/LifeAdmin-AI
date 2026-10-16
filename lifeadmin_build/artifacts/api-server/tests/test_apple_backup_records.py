@@ -121,6 +121,35 @@ class ExportedRecordTests(unittest.TestCase):
                 self.assertEqual(saved.read_text(), "Keep this file")
 
 
+    def test_injected_native_write_rejection_rolls_back_and_is_removable(self):
+        with tempfile.TemporaryDirectory() as directory:
+            container = Path(directory)
+            database = container / "Library/Application Support/LifeAdmin/records-v1.sqlite"
+            database.parent.mkdir(parents=True)
+            with closing(sqlite3.connect(database)) as connection, connection:
+                connection.execute("CREATE TABLE snapshot (id INTEGER PRIMARY KEY, revision TEXT, data TEXT)")
+                connection.execute("INSERT INTO snapshot VALUES (1, 'original', 'Original records')")
+            with patch.object(runner, "sim", return_value=str(container)):
+                runner.configure_write_failure("device", "bundle", True)
+                with closing(sqlite3.connect(database)) as connection:
+                    connection.execute("BEGIN IMMEDIATE")
+                    with self.assertRaisesRegex(sqlite3.IntegrityError, "Synthetic CI write rejection"):
+                        connection.execute("INSERT OR REPLACE INTO snapshot VALUES (1, 'changed', 'Changed records')")
+                    connection.rollback()
+                    self.assertEqual(connection.execute("SELECT revision, data FROM snapshot").fetchone(),
+                                     ("original", "Original records"))
+                runner.configure_write_failure("device", "bundle", False)
+                with closing(sqlite3.connect(database)) as connection, connection:
+                    connection.execute("INSERT OR REPLACE INTO snapshot VALUES (1, 'recovered', 'Recovered save')")
+                    self.assertEqual(connection.execute("SELECT revision, data FROM snapshot").fetchone(),
+                                     ("recovered", "Recovered save"))
+            database.unlink()
+            with patch.object(runner, "sim", return_value=str(container)):
+                with self.assertRaises(sqlite3.OperationalError):
+                    runner.configure_write_failure("device", "bundle", True)
+            self.assertFalse(database.exists())
+
+
 if __name__ == "__main__":
     unittest.main()
 

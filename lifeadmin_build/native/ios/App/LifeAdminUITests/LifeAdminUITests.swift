@@ -374,4 +374,56 @@ final class LifeAdminUITests: XCTestCase {
         cancelFilePicker()
     }
 
+    func testRejectedNativeWritePreservesRecords() throws {
+        // The host installs a test-only SQLite trigger while the app is stopped.
+        app.launch()
+        XCTAssertTrue(app.buttons["Search"].waitForExistence(timeout: 20))
+        let markDone = app.buttons["Mark done"]
+        reveal(markDone)
+        markDone.tap()
+        XCTAssertTrue(app.staticTexts[
+            "The save failed. Existing records were preserved."
+        ].waitForExistence(timeout: 20))
+        XCTAssertFalse(app.staticTexts["Bill status saved."].exists)
+        app.terminate()
+        app.launch()
+        XCTAssertTrue(app.buttons["Search"].waitForExistence(timeout: 20))
+        reveal(markDone)
+        XCTAssertTrue(app.otherElements["Your bills (1)"].exists)
+        XCTAssertTrue(app.otherElements["Saved plans (1)"].exists)
+        XCTAssertTrue(app.staticTexts["CI sample subscription"].exists)
+        XCTAssertFalse(app.buttons["Reopen"].exists)
+        let open = app.buttons["Open plan"]
+        reveal(open)
+        open.tap()
+        XCTAssertTrue(app.buttons["Copy plan"].waitForExistence(timeout: 5))
+    }
+
+    func testNativeWriteRecoversAfterRejection() throws {
+        // The host removed the injected failure before starting this test.
+        app.launch()
+        XCTAssertTrue(app.buttons["Search"].waitForExistence(timeout: 20))
+        let markDone = app.buttons["Mark done"]
+        reveal(markDone)
+        markDone.tap()
+        XCTAssertTrue(app.staticTexts["Bill status saved."].waitForExistence(timeout: 20))
+        app.terminate()
+        app.launch()
+        XCTAssertTrue(app.buttons["Search"].waitForExistence(timeout: 20))
+        let reopen = app.buttons["Reopen"]
+        reveal(reopen)
+        reopen.tap()
+        XCTAssertTrue(app.staticTexts["Bill status saved."].waitForExistence(timeout: 20))
+        app.terminate()
+        app.launch()
+        XCTAssertTrue(app.buttons["Search"].waitForExistence(timeout: 20))
+        reveal(markDone)
+        XCTAssertTrue(app.otherElements["Your bills (1)"].exists)
+        XCTAssertTrue(app.otherElements["Saved plans (1)"].exists)
+        let open = app.buttons["Open plan"]
+        reveal(open)
+        open.tap()
+        XCTAssertTrue(app.buttons["Copy plan"].waitForExistence(timeout: 5))
+    }
+
 }

@@ -100,6 +100,19 @@ def verify_export_staging_removed(device, bundle):
         raise RuntimeError("Interrupted export left a private staging copy after restart")
 
 
+def configure_write_failure(device, bundle, enabled):
+    # Disposable simulator only. A trigger aborts the real INSERT statement;
+    # no test bypass or failure switch is added to the shipped native plugin.
+    container = Path(sim("get_app_container", device, bundle, "data"))
+    database = container / "Library/Application Support/LifeAdmin/records-v1.sqlite"
+    with closing(sqlite3.connect(database.as_uri() + "?mode=rw", uri=True)) as connection, connection:
+        if enabled:
+            connection.execute("CREATE TRIGGER ci_reject_snapshot AFTER INSERT ON snapshot "
+                               "BEGIN SELECT RAISE(ABORT, 'Synthetic CI write rejection'); END")
+        else:
+            connection.execute("DROP TRIGGER IF EXISTS ci_reject_snapshot")
+
+
 def main():
     app = Path("build-ios-simulator/Build/Products/Debug-iphonesimulator/App.app")
     if not app.is_dir():
@@ -161,6 +174,31 @@ def main():
             verification["invalid_file_checks_passed"] = True
             (evidence / "backup-round-trip.json").write_text(json.dumps(verification, indent=2) + "\n")
             print("Native invalid-file rejection preserved the complete saved records.", flush=True)
+            # Install over the populated app without uninstalling. This checks
+            # same-build replacement, not cross-version schema migration.
+            sim("install", device, str(app.resolve()), timeout=120)
+            sim("launch", device, bundle, timeout=120)
+            time.sleep(10)
+            sim("io", device, "screenshot", str(evidence / "package-reinstall.png"))
+            sim("terminate", device, bundle)
+            verify_device_records(device, bundle, exports[0])
+            recovery = {"package_reinstall_preserved_records": True,
+                        "scope": "Disposable CI simulator; same-build reinstall and injected SQL rejection only"}
+            (evidence / "storage-recovery.json").write_text(json.dumps(recovery, indent=2) + "\n")
+            configure_write_failure(device, bundle, True)
+            try:
+                run_ui_test(device, evidence, "testRejectedNativeWritePreservesRecords",
+                            "rejected-write-ui-tests.log", str(evidence / "rejected-write.xcresult"))
+                verify_device_records(device, bundle, exports[0])
+                recovery["rejected_write_preserved_records"] = True
+            finally:
+                configure_write_failure(device, bundle, False)
+            run_ui_test(device, evidence, "testNativeWriteRecoversAfterRejection",
+                        "write-recovery-ui-tests.log", str(evidence / "write-recovery.xcresult"))
+            verify_device_records(device, bundle, exports[0])
+            recovery["successful_writes_after_rejection"] = True
+            (evidence / "storage-recovery.json").write_text(json.dumps(recovery, indent=2) + "\n")
+            print("Native rejected-write recovery and package reinstallation preserved exact records.")
             print("Apple interactive persistence and deletion test passed.")
         results = []
         labels = ("post-ui-launch", "relaunch") if "--ui-tests" in sys.argv else ("first-launch", "relaunch")
@@ -178,7 +216,8 @@ def main():
         }, indent=2) + "\n")
         print("Apple simulator launch and relaunch completed; review screenshots.")
     except Exception:
-        for filename in ("ui-tests.log", "interrupted-picker-ui-tests.log", "invalid-backup-ui-tests.log"):
+        for filename in ("ui-tests.log", "interrupted-picker-ui-tests.log", "invalid-backup-ui-tests.log",
+                         "rejected-write-ui-tests.log", "write-recovery-ui-tests.log"):
             ui_log = evidence / filename
             if ui_log.exists():
                 diagnostics = ui_log.read_text(errors="replace")
@@ -224,6 +263,10 @@ def main():
              "interrupted-picker-attachment-export.log"),
             (str(evidence / "invalid-backups.xcresult"), "invalid-backup-attachments",
              "invalid-backup-attachment-export.log"),
+            (str(evidence / "rejected-write.xcresult"), "rejected-write-attachments",
+             "rejected-write-attachment-export.log"),
+            (str(evidence / "write-recovery.xcresult"), "write-recovery-attachments",
+             "write-recovery-attachment-export.log"),
         ):
             if Path(bundle).is_dir():
                 try:
