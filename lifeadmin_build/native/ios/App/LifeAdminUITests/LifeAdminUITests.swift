@@ -622,8 +622,22 @@ final class LifeAdminUITests: XCTestCase {
         let nextSteps = app.staticTexts["Next Steps"]
         reveal(nextSteps)
         try audit("saved-plan content")
+
+        // Reveal the entire footer rather than relying on off-screen tree
+        // presence. Do not activate email or open external pages during QA.
+        let email = app.links["Email Tenaciouspl support"]
+        let privacy = app.links["App privacy policy"]
+        reveal(privacy)
+        for link in [email, privacy] {
+            XCTAssertTrue(link.exists)
+            XCTAssertTrue(link.isHittable)
+            XCTAssertTrue(app.frame.contains(link.frame), "Footer link is partly outside the display")
+            print("Footer link geometry: label=\(link.label), frame=\(link.frame)")
+        }
+        try audit("support and privacy footer")
         XCTAssertTrue(findings.isEmpty, "Apple accessibility audit found \(findings.count) issue(s); see the complete findings attachment.")
     }
 
 }
+
 
