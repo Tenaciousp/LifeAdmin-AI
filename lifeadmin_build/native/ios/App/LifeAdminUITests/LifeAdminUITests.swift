@@ -720,6 +720,12 @@ final class LifeAdminUITests: XCTestCase {
         }
         func audit(_ stage: String) throws {
             print("Apple accessibility audit: " + stage)
+            let web = app.webViews.firstMatch.frame
+            print("Portrait safe-area geometry: app=\(app.frame), web=\(web)")
+            XCTAssertGreaterThan(web.minY, app.frame.minY,
+                                 "Scrolling web content must stay below the status bar")
+            XCTAssertLessThanOrEqual(web.maxY, app.frame.maxY,
+                                     "Web content must remain inside the app window")
             try app.performAccessibilityAudit { issue in
                 let element = issue.element
                 findings.append([
