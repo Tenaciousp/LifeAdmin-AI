@@ -124,7 +124,8 @@ jobs:
     # Standard hosted runners are free for public repositories; skip if that changes.
     if: ${{ github.event.repository.private == false }}
     runs-on: macos-26
-    timeout-minutes: 45
+    # Include build time and post-test evidence export, beyond the UI cases.
+    timeout-minutes: 60
     strategy:
       fail-fast: false
       matrix:
@@ -277,6 +278,7 @@ jobs:
             lifeadmin_build/native/unsigned-device-archive.json
           if-no-files-found: warn
           retention-days: 14
+
 
 
 

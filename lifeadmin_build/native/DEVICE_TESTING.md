@@ -117,9 +117,20 @@ record matching after restoration. All four cumulative accessibility reports
 are empty arrays, including the fully revealed footer; its screenshot was
 reviewed. This repeats the earlier simulator gates above.
 
-Manual AI handoff and the additional editor/prompt accessibility checks are new
-candidate work. Use PR #2 for current verified results, distinguished from
-pending checks: https://github.com/Tenaciousp/LifeAdmin-AI/pull/2.
+CI #383 tested source `ed54356c90f2c2f35a8d8582451d2a13907840b8`:
+https://github.com/Tenaciousp/LifeAdmin-AI/actions/runs/39071526610.
+Reviewed iPhone 11 and iPad (10th generation) evidence on iOS 26.2 covers every
+functional gate above, message editing, manual AI review/copy/local paste,
+exact record preservation, and final launch/relaunch. All six cumulative
+accessibility reports on each device contain zero findings. The iPad editor
+and AI-review screenshots were reviewed, including the native safe-area fix.
+
+The iPad job passed. The iPhone's functional and final launch reports also
+passed, but its overall job was cancelled at the former 45-minute workflow
+limit during post-test cleanup/evidence collection. The simulator job now has
+a 60-minute budget for build, tests and evidence export; individual test limits
+and assertions are unchanged. Use PR #2 for the current CI result:
+https://github.com/Tenaciousp/LifeAdmin-AI/pull/2.
 
 For subsequent runs, save the build result and any errors. Compilation success
 does not establish iCloud backup, physical file-provider behaviour or store
@@ -150,4 +161,5 @@ https://capacitorjs.com/docs/updating/8-0
 
 There is no Tenaciouspl recovery copy and no guaranteed OS restore route. Test
 results must distinguish configured support from observed successful recovery.
+
 
