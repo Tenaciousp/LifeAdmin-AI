@@ -563,12 +563,12 @@ final class LifeAdminUITests: XCTestCase {
         app.launch()
         XCTAssertTrue(app.buttons["Search"].waitForExistence(timeout: 60))
         var findings: [[String: String]] = []
-        defer {
+        func recordFindings(_ stage: String) {
             let data = (try? JSONSerialization.data(withJSONObject: findings, options: [.prettyPrinted, .sortedKeys])) ?? Data()
             let report = String(data: data, encoding: .utf8) ?? "Audit report encoding failed"
             print("Apple accessibility findings: " + report)
             let attachment = XCTAttachment(string: report)
-            attachment.name = "Complete Apple accessibility findings"
+            attachment.name = "Apple accessibility findings: " + stage
             attachment.lifetime = .keepAlways
             add(attachment)
         }
@@ -585,10 +585,15 @@ final class LifeAdminUITests: XCTestCase {
                     "element_label": element?.label ?? "Unavailable",
                     "element_frame": element.map { String(describing: $0.frame) } ?? "Unavailable"
                 ])
+                if let data = try? JSONSerialization.data(withJSONObject: findings.last ?? [:], options: [.sortedKeys]),
+                   let report = String(data: data, encoding: .utf8) {
+                    print("Apple accessibility finding: " + report)
+                }
                 // Collect every issue and view before failing the aggregate.
                 // No finding is accepted or excluded from the final assertion.
                 return true
             }
+            recordFindings(stage)
             let screen = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
             screen.name = "Accessibility audit: " + stage
             screen.lifetime = .keepAlways
