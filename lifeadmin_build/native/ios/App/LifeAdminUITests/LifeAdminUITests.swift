@@ -33,8 +33,8 @@ final class LifeAdminUITests: XCTestCase {
     }
 
     private func enterText(_ value: String, into field: XCUIElement) {
-        // Separate keyboard events let the controlled web field settle between keys.
-        for character in value { field.typeText(String(character)) }
+        // Use one native typing operation; verify the complete controlled value.
+        field.typeText(value)
         let complete = XCTNSPredicateExpectation(
             predicate: NSPredicate(format: "value == %@", value), object: field)
         XCTAssertEqual(XCTWaiter.wait(for: [complete], timeout: 10), .completed)
@@ -809,6 +809,7 @@ final class LifeAdminUITests: XCTestCase {
     }
 
 }
+
 
 
 
