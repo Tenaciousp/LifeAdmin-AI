@@ -209,6 +209,22 @@ class ExportedRecordTests(unittest.TestCase):
                 locate.assert_not_called()
 
 
+    def test_ios_runtime_is_pinned_and_never_falls_back_to_newest(self):
+        pinned = {"identifier": "com.apple.CoreSimulator.SimRuntime.iOS-26-2",
+                  "version": "26.2", "isAvailable": True}
+        newest = {"identifier": "com.apple.CoreSimulator.SimRuntime.iOS-26-5",
+                  "version": "26.5", "isAvailable": True}
+        other = {"identifier": "com.apple.CoreSimulator.SimRuntime.tvOS-26-2",
+                 "version": "26.2", "isAvailable": True}
+        self.assertEqual(runner.select_ios_runtime([newest, other, pinned]), pinned)
+        with self.assertRaisesRegex(RuntimeError, "iOS 26.2"):
+            runner.select_ios_runtime([newest, other])
+        with self.assertRaises(RuntimeError):
+            runner.select_ios_runtime([{**pinned, "isAvailable": False}, newest])
+        with self.assertRaises(RuntimeError):
+            runner.select_ios_runtime([pinned, pinned])
+
+
 if __name__ == "__main__":
     unittest.main()
 

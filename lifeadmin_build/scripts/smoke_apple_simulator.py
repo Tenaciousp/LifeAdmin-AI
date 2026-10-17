@@ -169,6 +169,18 @@ process.stdout.write(text);
     return backup
 
 
+def select_ios_runtime(runtimes):
+    # Keep simulator results reproducible. CI #369's automatically selected
+    # iOS 26.5 WebKit networking process stalled before the audit could start.
+    matches = [runtime for runtime in runtimes
+               if runtime.get("isAvailable") and
+               runtime.get("identifier", "").startswith("com.apple.CoreSimulator.SimRuntime.iOS-") and
+               runtime.get("version") == "26.2"]
+    if len(matches) != 1:
+        raise RuntimeError("Exactly one available iOS 26.2 simulator runtime is required")
+    return matches[0]
+
+
 def main():
     app = Path("build-ios-simulator/Build/Products/Debug-iphonesimulator/App.app")
     if not app.is_dir():
@@ -176,11 +188,7 @@ def main():
     evidence = Path("apple-launch-evidence")
     evidence.mkdir(exist_ok=True)
     runtimes = json.loads(sim("list", "runtimes", "--json"))["runtimes"]
-    runtimes = [r for r in runtimes if r.get("isAvailable") and 
-                r["identifier"].startswith("com.apple.CoreSimulator.SimRuntime.iOS-")]
-    if not runtimes:
-        raise RuntimeError("No available iOS simulator runtime")
-    runtime = max(runtimes, key=lambda r: tuple(map(int, r["version"].split("."))))
+    runtime = select_ios_runtime(runtimes)
     types = json.loads(sim("list", "devicetypes", "--json"))["devicetypes"]
     parts = [int(n) for n in runtime["version"].split(".")]
     parts = (parts + [0, 0])[:3]
@@ -189,6 +197,10 @@ def main():
               d.get("minRuntimeVersion", 0) <= version <= d.get("maxRuntimeVersion", 0xffffffff)]
     if not phones:
         raise RuntimeError("No compatible iPhone simulator type")
+    (evidence / "simulator-environment.json").write_text(json.dumps({
+        "runtime": runtime["version"], "runtime_build": runtime["buildversion"],
+        "device": phones[-1]["name"], "scope": "Pinned disposable CI simulator",
+    }, indent=2) + "\n")
     device = sim("create", "LifeAdmin CI smoke", phones[-1]["identifier"], runtime["identifier"])
     bundle = "uk.co.tenaciouspl.lifeadmin"
     try:
