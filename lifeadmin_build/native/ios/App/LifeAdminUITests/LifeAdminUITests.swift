@@ -471,10 +471,21 @@ final class LifeAdminUITests: XCTestCase {
             predicate: NSPredicate { _, _ in self.app.frame.width > self.app.frame.height },
             object: app)
         XCTAssertEqual(XCTWaiter.wait(for: [landscape], timeout: 10), .completed)
+        let webLayout = XCTNSPredicateExpectation(
+            predicate: NSPredicate { _, _ in
+                let frame = self.app.webViews.firstMatch.frame
+                return frame.width > frame.height
+            }, object: app)
+        XCTAssertEqual(XCTWaiter.wait(for: [webLayout], timeout: 10), .completed)
         let nextSteps = app.staticTexts["Next Steps"]
         reveal(nextSteps)
         XCTAssertTrue(app.buttons["Copy plan"].exists)
-        let landscapeScreen = XCTAttachment(screenshot: app.screenshot())
+        // App-region capture used a portrait crop after rotation in CI #364.
+        // Capture the full display and reject a non-landscape image.
+        let fullScreen = XCUIScreen.main.screenshot()
+        print("Landscape geometry: app=\(app.frame), web=\(app.webViews.firstMatch.frame), image=\(fullScreen.image.size)")
+        XCTAssertGreaterThan(fullScreen.image.size.width, fullScreen.image.size.height)
+        let landscapeScreen = XCTAttachment(screenshot: fullScreen)
         landscapeScreen.name = "Saved plan in landscape"
         landscapeScreen.lifetime = .keepAlways
         add(landscapeScreen)
