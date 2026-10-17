@@ -401,10 +401,24 @@ final class LifeAdminUITests: XCTestCase {
 
     func testNativeWriteRecoversAfterRejection() throws {
         // The host removed the injected failure before starting this test.
+        try verifyNativeSavesAndOriginalPlan()
+    }
+
+    func testInterruptedSnapshotRecoveryPreservesRecords() throws {
+        // Host writer was SIGKILLed with a hot rollback journal. The app must
+        // recover the original snapshot before saving new acknowledged changes.
+        try verifyNativeSavesAndOriginalPlan()
+    }
+
+    private func verifyNativeSavesAndOriginalPlan() throws {
         app.launch()
         XCTAssertTrue(app.buttons["Search"].waitForExistence(timeout: 20))
         let markDone = app.buttons["Mark done"]
         reveal(markDone)
+        XCTAssertTrue(app.otherElements["Your bills (1)"].exists)
+        XCTAssertTrue(app.otherElements["Saved plans (1)"].exists)
+        XCTAssertTrue(app.staticTexts["CI sample subscription"].exists)
+        XCTAssertFalse(app.buttons["Reopen"].exists)
         markDone.tap()
         XCTAssertTrue(app.staticTexts["Bill status saved."].waitForExistence(timeout: 20))
         app.terminate()
@@ -612,3 +626,4 @@ final class LifeAdminUITests: XCTestCase {
     }
 
 }
+

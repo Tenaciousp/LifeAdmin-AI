@@ -3,6 +3,8 @@
 Screenshots require human review. This is not household-data or device acceptance.
 """
 import json
+import selectors
+import signal
 import sqlite3
 from contextlib import closing
 from pathlib import Path
@@ -125,6 +127,62 @@ def configure_storage_version(device, bundle, version):
             raise RuntimeError("Unexpected existing test storage version")
         connection.execute(f"PRAGMA user_version={version}")
         return previous
+
+
+def interrupt_snapshot_transaction(device, bundle):
+    # Host-side writer on a stopped disposable app's synthetic database only.
+    # Force dirty pages out of a small cache so native reopening must recover
+    # a real hot rollback journal, not merely discard an in-memory UPDATE.
+    container = Path(sim("get_app_container", device, bundle, "data"))
+    database = container / "Library/Application Support/LifeAdmin/records-v1.sqlite"
+    script = """
+import json, sqlite3, sys
+from pathlib import Path
+database = Path(sys.argv[1])
+db = sqlite3.connect(database.as_uri() + "?mode=rw", uri=True)
+assert db.execute("PRAGMA user_version").fetchone()[0] == 1
+assert db.execute("PRAGMA journal_mode=DELETE").fetchone()[0] == "delete"
+db.execute("PRAGMA synchronous=FULL")
+db.execute("PRAGMA cache_size=5")
+db.execute("PRAGMA cache_spill=ON")
+db.execute("BEGIN IMMEDIATE")
+row = db.execute("SELECT data FROM snapshot WHERE id=1").fetchone()
+assert row is not None
+changed = json.loads(row[0])
+assert len(changed["tasks"]) == len(changed["plans"]) == 1
+changed["tasks"][0]["notes"] = "UNCOMMITTED CI WRITE " + "x" * (2 * 1024 * 1024)
+db.execute("INSERT OR REPLACE INTO snapshot (id, revision, data) VALUES (1, ?, ?)",
+           ("ci-uncommitted", json.dumps(changed)))
+assert db.execute("SELECT revision FROM snapshot WHERE id=1").fetchone()[0] == "ci-uncommitted"
+journal = Path(str(database) + "-journal")
+assert journal.read_bytes()[:8] == bytes.fromhex("d9d505f920a163d7")
+print("HOT JOURNAL READY", flush=True)
+sys.stdin.read(1)  # Parent kills this process without COMMIT or close/rollback.
+raise RuntimeError("Interrupted writer unexpectedly resumed")
+"""
+    with subprocess.Popen([sys.executable, "-c", script, str(database)],
+                          stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+                          stderr=subprocess.PIPE, text=True) as writer:
+        try:
+            with selectors.DefaultSelector() as ready:
+                ready.register(writer.stdout, selectors.EVENT_READ)
+                if not ready.select(timeout=20):
+                    raise RuntimeError("Interrupted writer did not reach the journal barrier")
+            if writer.stdout.readline().strip() != "HOT JOURNAL READY":
+                raise RuntimeError("Interrupted writer failed before the journal barrier")
+            writer.kill()
+            writer.communicate(timeout=10)
+            if writer.returncode != -signal.SIGKILL:
+                raise RuntimeError("Interrupted writer was not killed without cleanup")
+        finally:
+            if writer.poll() is None:
+                writer.kill()
+                writer.communicate(timeout=10)
+    journal = Path(str(database) + "-journal")
+    if journal.read_bytes()[:8] != bytes.fromhex("d9d505f920a163d7"):
+        raise RuntimeError("Interrupted transaction did not retain a hot rollback journal")
+    return {"hot_journal_before_native_launch": True, "writer_sigkill_confirmed": True,
+            "scope": "Host-injected uncommitted SQLite transaction on disposable simulator; not native-process interruption or power loss"}
 
 
 def prepare_accessibility_fixture(device, bundle, evidence):
@@ -293,6 +351,16 @@ def main():
             recovery["unsupported_storage_version_preserved"] = True
             recovery["supported_storage_version_recovered"] = True
             (evidence / "storage-recovery.json").write_text(json.dumps(recovery, indent=2) + "\n")
+            interrupted = interrupt_snapshot_transaction(device, bundle)
+            (evidence / "interrupted-transaction.json").write_text(json.dumps(interrupted, indent=2) + "\n")
+            # No host SQLite read between SIGKILL and native app launch: native
+            # SQLite must be the first opener of the hot journal.
+            run_ui_test(device, evidence, "testInterruptedSnapshotRecoveryPreservesRecords",
+                        "interrupted-transaction-ui-tests.log", str(evidence / "interrupted-transaction.xcresult"))
+            interrupted.update(verify_device_records(device, bundle, exports[0]))
+            interrupted["native_reopen_and_subsequent_saves_passed"] = True
+            interrupted["scope"] = "Host-injected hot rollback journal; native reopen and saves on disposable simulator only"
+            (evidence / "interrupted-transaction.json").write_text(json.dumps(interrupted, indent=2) + "\n")
             run_ui_test(device, evidence, "testRotationPreservesSavedRecordsAndPlan",
                         "rotation-ui-tests.log", str(evidence / "rotation.xcresult"))
             rotation = verify_device_records(device, bundle, exports[0])
@@ -325,7 +393,8 @@ def main():
         for filename in ("ui-tests.log", "interrupted-picker-ui-tests.log", "invalid-backup-ui-tests.log",
                          "rejected-write-ui-tests.log", "write-recovery-ui-tests.log",
                          "unsupported-storage-ui-tests.log", "storage-version-recovery-ui-tests.log",
-                         "rotation-ui-tests.log", "clipboard-ui-tests.log", "accessibility-ui-tests.log"):
+                         "rotation-ui-tests.log", "clipboard-ui-tests.log", "accessibility-ui-tests.log",
+                         "interrupted-transaction-ui-tests.log"):
             ui_log = evidence / filename
             if ui_log.exists():
                 diagnostics = ui_log.read_text(errors="replace")
@@ -385,6 +454,8 @@ def main():
              "clipboard-attachment-export.log"),
             (str(evidence / "accessibility.xcresult"), "accessibility-attachments",
              "accessibility-attachment-export.log"),
+            (str(evidence / "interrupted-transaction.xcresult"), "interrupted-transaction-attachments",
+             "interrupted-transaction-attachment-export.log"),
         ):
             if Path(bundle).is_dir():
                 try:
@@ -401,5 +472,6 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 

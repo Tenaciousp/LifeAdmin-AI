@@ -225,7 +225,59 @@ class ExportedRecordTests(unittest.TestCase):
             runner.select_ios_runtime([pinned, pinned])
 
 
+    def test_killed_writer_leaves_hot_journal_and_exact_records_recover(self):
+        with tempfile.TemporaryDirectory() as directory:
+            container = Path(directory)
+            database = container / "Library/Application Support/LifeAdmin/records-v1.sqlite"
+            database.parent.mkdir(parents=True)
+            data = {"format": "lifeadmin-backup", "version": 1,
+                    "tasks": [{"id": "bill", "notes": "Note7319",
+                               "details": {"provider": "Netflix", "account_reference": "REF-7319"}}],
+                    "plans": [{"id": "plan", "task_id": "bill", "content": "Original plan"}]}
+            backup = container / "backup.json"
+            backup.write_text(json.dumps(data))
+            with closing(sqlite3.connect(database)) as connection, connection:
+                connection.execute("PRAGMA user_version=1")
+                connection.execute("CREATE TABLE snapshot (id INTEGER PRIMARY KEY, revision TEXT, data TEXT)")
+                connection.execute("INSERT INTO snapshot VALUES (1, 'original', ?)", (json.dumps(data),))
+            before = database.read_bytes()
+            with patch.object(runner, "sim", return_value=str(container)):
+                result = runner.interrupt_snapshot_transaction("device", "bundle")
+            self.assertTrue(result["hot_journal_before_native_launch"])
+            self.assertTrue(result["writer_sigkill_confirmed"])
+            self.assertNotEqual(database.read_bytes(), before)  # Dirty pages really reached disk.
+            # This local test uses host SQLite recovery. Apple UI CI separately
+            # requires the native app to be the first opener after SIGKILL.
+            with closing(sqlite3.connect(database)) as connection, connection:
+                self.assertEqual(connection.execute("SELECT revision FROM snapshot").fetchone()[0], "original")
+                self.assertEqual(connection.execute("PRAGMA integrity_check").fetchone()[0], "ok")
+                self.assertEqual(connection.execute("PRAGMA user_version").fetchone()[0], 1)
+                connection.execute("UPDATE snapshot SET revision='recovered' WHERE id=1")
+            self.assertTrue(runner.verify_exported_records(backup, database)["exact_record_match"])
+            self.assertFalse(Path(str(database) + "-journal").exists())
+
+    def test_interrupted_writer_rejects_missing_database_and_future_version(self):
+        with tempfile.TemporaryDirectory() as directory:
+            container = Path(directory)
+            database = container / "Library/Application Support/LifeAdmin/records-v1.sqlite"
+            database.parent.mkdir(parents=True)
+            with patch.object(runner, "sim", return_value=str(container)):
+                with self.assertRaisesRegex(RuntimeError, "journal barrier"):
+                    runner.interrupt_snapshot_transaction("device", "bundle")
+                self.assertFalse(database.exists())
+                with closing(sqlite3.connect(database)) as connection, connection:
+                    connection.execute("PRAGMA user_version=2")
+                    connection.execute("CREATE TABLE snapshot (id INTEGER PRIMARY KEY, revision TEXT, data TEXT)")
+                    connection.execute("INSERT INTO snapshot VALUES (1, 'original', 'Keep records')")
+                before = database.read_bytes()
+                with self.assertRaisesRegex(RuntimeError, "journal barrier"):
+                    runner.interrupt_snapshot_transaction("device", "bundle")
+                self.assertEqual(database.read_bytes(), before)
+                self.assertFalse(Path(str(database) + "-journal").exists())
+
+
 if __name__ == "__main__":
     unittest.main()
+
 
 
