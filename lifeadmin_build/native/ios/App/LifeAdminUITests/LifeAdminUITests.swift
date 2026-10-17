@@ -151,7 +151,11 @@ final class LifeAdminUITests: XCTestCase {
         // Export saves to the local location, which need not appear in Recents.
         pickerControl("Browse").tap()
         if !document.waitForExistence(timeout: 5) {
-            pickerControl("On My iPhone", type: .any).coordinate(
+            let local = app.descendants(matching: .any).matching(
+                NSPredicate(format: "label IN %@", ["On My iPhone", "On My iPad"])).firstMatch
+            XCTAssertTrue(local.waitForExistence(timeout: 45))
+            XCTAssertTrue(local.frame.intersects(app.frame))
+            local.coordinate(
                 withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
         }
         guard document.waitForExistence(timeout: 45) else {
@@ -785,6 +789,7 @@ final class LifeAdminUITests: XCTestCase {
     }
 
 }
+
 
 
 

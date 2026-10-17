@@ -225,6 +225,22 @@ class ExportedRecordTests(unittest.TestCase):
             runner.select_ios_runtime([pinned, pinned])
 
 
+    def test_simulator_family_selection_rejects_missing_or_incompatible_tablet(self):
+        runtime = {"version": "26.2"}
+        phone = {"name": "iPhone 11", "identifier": "phone"}
+        tablet = {"name": "iPad (10th generation)",
+                  "identifier": "com.apple.CoreSimulator.SimDeviceType.iPad-10th-generation"}
+        future = {"name": "iPad Air future", "identifier": "future", "minRuntimeVersion": 0x1a0300}
+        self.assertEqual(runner.select_simulator_type([phone, tablet, future], runtime, "iphone"), phone)
+        self.assertEqual(runner.select_simulator_type([phone, tablet, future], runtime, "ipad"), tablet)
+        with self.assertRaisesRegex(RuntimeError, "ipad"):
+            runner.select_simulator_type([phone, future], runtime, "ipad")
+        with self.assertRaisesRegex(RuntimeError, "ipad"):
+            runner.select_simulator_type([phone, {**tablet, "maxRuntimeVersion": 0x120000}], runtime, "ipad")
+        with self.assertRaisesRegex(RuntimeError, "iphone"):
+            runner.select_simulator_type([tablet], runtime, "iphone")
+
+
     def test_killed_writer_leaves_hot_journal_and_exact_records_recover(self):
         with tempfile.TemporaryDirectory() as directory:
             container = Path(directory)
@@ -278,6 +294,7 @@ class ExportedRecordTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
 
 
 

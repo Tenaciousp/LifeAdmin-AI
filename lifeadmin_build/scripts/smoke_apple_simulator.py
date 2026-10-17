@@ -1,7 +1,8 @@
-"""Launch the compiled customer app in a disposable CI iPhone simulator.
+"""Launch the compiled customer app in a disposable CI Apple simulator.
 
 Screenshots require human review. This is not household-data or device acceptance.
 """
+import argparse
 import json
 import selectors
 import signal
@@ -239,7 +240,27 @@ def select_ios_runtime(runtimes):
     return matches[0]
 
 
+def select_simulator_type(types, runtime, family):
+    parts = [int(n) for n in runtime["version"].split(".")]
+    parts = (parts + [0, 0])[:3]
+    version = (parts[0] << 16) | (parts[1] << 8) | parts[2]
+    compatible = [d for d in types
+                  if d["name"].startswith("iPhone" if family == "iphone" else "iPad") and
+                  d.get("minRuntimeVersion", 0) <= version <= d.get("maxRuntimeVersion", 0xffffffff)]
+    if family == "ipad":
+        # Pin a representative tablet rather than silently changing screen size.
+        compatible = [d for d in compatible if d["identifier"] ==
+                      "com.apple.CoreSimulator.SimDeviceType.iPad-10th-generation"]
+    if not compatible:
+        raise RuntimeError(f"No compatible {family} simulator type")
+    return compatible[-1]
+
+
 def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--ui-tests", action="store_true")
+    parser.add_argument("--device-family", choices=("iphone", "ipad"), default="iphone")
+    args = parser.parse_args()
     app = Path("build-ios-simulator/Build/Products/Debug-iphonesimulator/App.app")
     if not app.is_dir():
         raise RuntimeError("Compiled simulator app missing")
@@ -248,18 +269,13 @@ def main():
     runtimes = json.loads(sim("list", "runtimes", "--json"))["runtimes"]
     runtime = select_ios_runtime(runtimes)
     types = json.loads(sim("list", "devicetypes", "--json"))["devicetypes"]
-    parts = [int(n) for n in runtime["version"].split(".")]
-    parts = (parts + [0, 0])[:3]
-    version = (parts[0] << 16) | (parts[1] << 8) | parts[2]
-    phones = [d for d in types if d["name"].startswith("iPhone") and
-              d.get("minRuntimeVersion", 0) <= version <= d.get("maxRuntimeVersion", 0xffffffff)]
-    if not phones:
-        raise RuntimeError("No compatible iPhone simulator type")
+    selected = select_simulator_type(types, runtime, args.device_family)
     (evidence / "simulator-environment.json").write_text(json.dumps({
         "runtime": runtime["version"], "runtime_build": runtime["buildversion"],
-        "device": phones[-1]["name"], "scope": "Pinned disposable CI simulator",
+        "device": selected["name"], "device_family": args.device_family,
+        "scope": "Pinned disposable CI simulator",
     }, indent=2) + "\n")
-    device = sim("create", "LifeAdmin CI smoke", phones[-1]["identifier"], runtime["identifier"])
+    device = sim("create", "LifeAdmin CI smoke", selected["identifier"], runtime["identifier"])
     bundle = "uk.co.tenaciouspl.lifeadmin"
     try:
         sim("boot", device)
@@ -267,13 +283,13 @@ def main():
         sim("install", device, str(app.resolve()), timeout=120)
         # Let XCTest own the initial launch so a simctl launch timeout does not
         # prevent collection of UI-test diagnostics. Both checks must still pass.
-        if "--ui-tests" in sys.argv:
+        if args.ui_tests:
             fixture = prepare_accessibility_fixture(device, bundle, evidence)
             run_ui_test(device, evidence, "testAppleAccessibilityAuditOnBillsAndPlan",
                         "accessibility-ui-tests.log", str(evidence / "accessibility.xcresult"))
             accessibility = verify_device_records(device, bundle, fixture)
             accessibility["sampled_screen_accessibility_audits_passed"] = True
-            accessibility["scope"] = "Synthetic seeded fixture on disposable iPhone simulator; manual assistive-technology acceptance outstanding"
+            accessibility["scope"] = f"Synthetic seeded fixture on disposable {args.device_family} simulator; manual assistive-technology acceptance outstanding"
             (evidence / "accessibility.json").write_text(json.dumps(accessibility, indent=2) + "\n")
             # Reset after the audit; the backup journey must still start empty.
             sim("uninstall", device, bundle, timeout=120)
@@ -385,7 +401,7 @@ def main():
             print("Native rejected-write recovery and package reinstallation preserved exact records.")
             print("Apple interactive persistence and deletion test passed.")
         results = []
-        labels = ("post-ui-launch", "relaunch") if "--ui-tests" in sys.argv else ("first-launch", "relaunch")
+        labels = ("post-ui-launch", "relaunch") if args.ui_tests else ("first-launch", "relaunch")
         for label in labels:
             launched = sim("launch", device, bundle, timeout=120)
             results.append({"stage": label, "launch": launched})
@@ -394,8 +410,9 @@ def main():
             # Termination fails if the app already crashed or exited.
             sim("terminate", device, bundle)
         (evidence / "result.json").write_text(json.dumps({
-            "runtime": runtime["version"], "device": phones[-1]["name"],
-            "interactive_acceptance_passed": "--ui-tests" in sys.argv,
+            "runtime": runtime["version"], "device": selected["name"],
+            "device_family": args.device_family,
+            "interactive_acceptance_passed": args.ui_tests,
             "launches": results, "scope": "Simulator only; physical-device acceptance outstanding",
         }, indent=2) + "\n")
         print("Apple simulator launch and relaunch completed; review screenshots.")
@@ -487,6 +504,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
