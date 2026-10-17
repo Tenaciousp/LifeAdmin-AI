@@ -97,11 +97,16 @@ final class LifeAdminUITests: XCTestCase {
 
     private func cancelFilePicker(exporting: Bool = false) {
         if exporting {
-            // The captured export sheet has Save but no visible Cancel button.
             _ = pickerControl("Save")
-            let start = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.1))
-            let end = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.8))
-            start.press(forDuration: 0.1, thenDragTo: end)
+            if app.buttons["Cancel"].exists {
+                // The iPad export picker exposes Cancel in its sidebar.
+                pickerControl("Cancel").tap()
+            } else {
+                // The iPhone sheet has no Cancel button and supports dismissal.
+                let start = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.1))
+                let end = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.8))
+                start.press(forDuration: 0.1, thenDragTo: end)
+            }
         } else {
             pickerControl("Cancel").tap()
         }
@@ -155,7 +160,10 @@ final class LifeAdminUITests: XCTestCase {
         let document = app.cells.matching(
             NSPredicate(format: "label BEGINSWITH[c] %@", prefix)).firstMatch
         // Export saves to the local location, which need not appear in Recents.
-        pickerControl("Browse").tap()
+        // iPad already displays Browse as a sidebar; iPhone uses a Browse tab.
+        if !app.cells["DOC.sidebar.item.On My iPad"].waitForExistence(timeout: 3) {
+            pickerControl("Browse").tap()
+        }
         if !document.waitForExistence(timeout: 5) {
             let local = app.descendants(matching: .any).matching(
                 NSPredicate(format: "label IN %@", ["On My iPhone", "On My iPad"])).firstMatch
@@ -801,6 +809,7 @@ final class LifeAdminUITests: XCTestCase {
     }
 
 }
+
 
 
 
