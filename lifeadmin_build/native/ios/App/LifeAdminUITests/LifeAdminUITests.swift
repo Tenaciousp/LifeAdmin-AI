@@ -561,18 +561,48 @@ final class LifeAdminUITests: XCTestCase {
         }
         app.launch()
         XCTAssertTrue(app.buttons["Search"].waitForExistence(timeout: 20))
-        print("Apple accessibility audit: initial bill-entry screen")
-        try app.performAccessibilityAudit()
+        var findings: [[String: String]] = []
+        defer {
+            let data = (try? JSONSerialization.data(withJSONObject: findings, options: [.prettyPrinted, .sortedKeys])) ?? Data()
+            let report = String(data: data, encoding: .utf8) ?? "Audit report encoding failed"
+            print("Apple accessibility findings: " + report)
+            let attachment = XCTAttachment(string: report)
+            attachment.name = "Complete Apple accessibility findings"
+            attachment.lifetime = .keepAlways
+            add(attachment)
+        }
+        func audit(_ stage: String) throws {
+            print("Apple accessibility audit: " + stage)
+            try app.performAccessibilityAudit { issue in
+                let element = issue.element
+                findings.append([
+                    "stage": stage,
+                    "audit_type": String(describing: issue.auditType),
+                    "summary": issue.compactDescription,
+                    "details": issue.detailedDescription,
+                    "element_type": element.map { String(describing: $0.elementType) } ?? "Unavailable",
+                    "element_label": element?.label ?? "Unavailable",
+                    "element_frame": element.map { String(describing: $0.frame) } ?? "Unavailable"
+                ])
+                // Collect every issue and view before failing the aggregate.
+                // No finding is accepted or excluded from the final assertion.
+                return true
+            }
+            let screen = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
+            screen.name = "Accessibility audit: " + stage
+            screen.lifetime = .keepAlways
+            add(screen)
+        }
+        try audit("initial bill-entry screen")
 
         let open = app.buttons["Open plan"]
         reveal(open)
-        print("Apple accessibility audit: saved bill and plan controls")
-        try app.performAccessibilityAudit()
+        try audit("saved bill and plan controls")
         open.tap()
         let nextSteps = app.staticTexts["Next Steps"]
         reveal(nextSteps)
-        print("Apple accessibility audit: saved-plan content")
-        try app.performAccessibilityAudit()
+        try audit("saved-plan content")
+        XCTAssertTrue(findings.isEmpty, "Apple accessibility audit found \(findings.count) issue(s); see the complete findings attachment.")
     }
 
 }
