@@ -186,9 +186,9 @@ raise RuntimeError("Interrupted writer unexpectedly resumed")
             "scope": "Host-injected uncommitted SQLite transaction on disposable simulator; not native-process interruption or power loss"}
 
 
-def prepare_accessibility_fixture(device, bundle, evidence):
-    # Seed only the disposable, not-yet-launched simulator app. Use the real
-    # planner and backup validator so accessibility sees a representative plan.
+def generate_accessibility_fixture():
+    # Generate before booting the simulator so host Node does not compete with
+    # cold iOS startup. Keep a bounded allowance for hosted-runner startup.
     script = """
 import { generateAndSaveLocalPlan } from "../artifacts/adminpilot-ai/src/lib/offline/plans.mjs";
 import { serialise, parseBackup } from "../artifacts/adminpilot-ai/src/lib/offline/storage.mjs";
@@ -208,11 +208,21 @@ const text = serialise(snapshot);
 parseBackup(text);
 process.stdout.write(text);
 """
+    started = time.monotonic()
     generated = subprocess.run(["node", "--input-type=module", "-e", script],
-                               check=True, text=True, capture_output=True, timeout=30)
+                               check=True, text=True, capture_output=True, timeout=120)
+    print(f"Synthetic planner fixture generated in {time.monotonic() - started:.1f}s", flush=True)
+    return generated.stdout
+
+
+def prepare_accessibility_fixture(device, bundle, evidence, fixture_text=None):
+    # Seed only the disposable, not-yet-launched simulator app. Use the real
+    # planner and backup validator so accessibility sees a representative plan.
+    if fixture_text is None:
+        fixture_text = generate_accessibility_fixture()
     backup = evidence / "accessibility-fixture.json"
     # Parse before touching the native database, even if fixture generation fails.
-    snapshot = json.loads(generated.stdout)
+    snapshot = json.loads(fixture_text)
     if snapshot.get("format") != "lifeadmin-backup" or snapshot.get("version") != 1:
         raise RuntimeError("Invalid generated accessibility fixture")
     container = Path(sim("get_app_container", device, bundle, "data"))
@@ -222,9 +232,9 @@ process.stdout.write(text);
         if connection.execute("SELECT name FROM sqlite_master").fetchone() is not None:
             raise RuntimeError("Accessibility fixture requires an unused native database")
         connection.execute("CREATE TABLE snapshot (id INTEGER PRIMARY KEY CHECK(id=1), revision TEXT NOT NULL, data TEXT NOT NULL)")
-        connection.execute("INSERT INTO snapshot VALUES (1, ?, ?)", ("ci-accessibility-fixture", generated.stdout))
+        connection.execute("INSERT INTO snapshot VALUES (1, ?, ?)", ("ci-accessibility-fixture", fixture_text))
         connection.execute("PRAGMA user_version=1")
-    backup.write_text(generated.stdout)
+    backup.write_text(fixture_text)
     return backup
 
 
@@ -275,6 +285,7 @@ def main():
         "device": selected["name"], "device_family": args.device_family,
         "scope": "Pinned disposable CI simulator",
     }, indent=2) + "\n")
+    fixture_text = generate_accessibility_fixture() if args.ui_tests else None
     device = sim("create", "LifeAdmin CI smoke", selected["identifier"], runtime["identifier"])
     bundle = "uk.co.tenaciouspl.lifeadmin"
     try:
@@ -284,7 +295,7 @@ def main():
         # Let XCTest own the initial launch so a simctl launch timeout does not
         # prevent collection of UI-test diagnostics. Both checks must still pass.
         if args.ui_tests:
-            fixture = prepare_accessibility_fixture(device, bundle, evidence)
+            fixture = prepare_accessibility_fixture(device, bundle, evidence, fixture_text)
             run_ui_test(device, evidence, "testAppleAccessibilityAuditOnBillsAndPlan",
                         "accessibility-ui-tests.log", str(evidence / "accessibility.xcresult"))
             accessibility = verify_device_records(device, bundle, fixture)
@@ -504,6 +515,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 

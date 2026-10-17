@@ -64,10 +64,16 @@ final class LifeAdminUITests: XCTestCase {
 
     private func closeKeyboard() {
         dismissKeyboardTutorial()
-        let done = app.toolbars.buttons["Done"]
-        XCTAssertTrue(done.waitForExistence(timeout: 5))
-        XCTAssertTrue(done.isHittable)
-        done.tap()
+        let hide = app.keyboards.buttons["Hide keyboard"]
+        if hide.exists {
+            XCTAssertTrue(hide.isHittable)
+            hide.tap()
+        } else {
+            let done = app.toolbars.buttons["Done"]
+            XCTAssertTrue(done.waitForExistence(timeout: 5))
+            XCTAssertTrue(done.isHittable)
+            done.tap()
+        }
         let closed = XCTNSPredicateExpectation(
             predicate: NSPredicate(format: "exists == false"), object: app.keyboards.firstMatch)
         XCTAssertEqual(XCTWaiter.wait(for: [closed], timeout: 5), .completed)
@@ -795,6 +801,7 @@ final class LifeAdminUITests: XCTestCase {
     }
 
 }
+
 
 
 
