@@ -7,18 +7,20 @@
   ],
   "scripts": {
     "dev:web": "npm --workspace @workspace/adminpilot-ai run dev",
-    "dev:api": "npm --workspace @workspace/api-server run dev",
+    "dev:api": "node scripts/dev_api.mjs",
     "build:web": "npm --workspace @workspace/adminpilot-ai run build",
     "typecheck": "npm --workspace @workspace/adminpilot-ai run typecheck && npm --workspace @workspace/api-server run typecheck",
     "test": "npm --workspace @workspace/api-server run test",
     "build": "npm run typecheck && npm run build:web",
-    "start": "npm --workspace @workspace/api-server run start"
+    "start": "npm --workspace @workspace/api-server run start",
+    "build:local": "node scripts/build_local.mjs"
   },
   "devDependencies": {
-    "typescript": "~5.9.3"
+    "typescript": "~5.9.3",
+    "fake-indexeddb": "6.2.5"
   },
   "engines": {
-    "node": ">=20",
+    "node": ">=20.12.0",
     "npm": ">=10"
   }
 }

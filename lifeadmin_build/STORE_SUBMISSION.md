@@ -1,106 +1,113 @@
-# LifeAdmin AI release and store submission pack
+# LifeAdmin store submission pack
 
-## Customer-facing listing copy
+Updated 14 October 2026. This pack supersedes earlier account-based web release plans.
 
-**App name:** LifeAdmin AI  
-**Short description:** Sort bills, renewals and subscriptions without the admin headache.  
-**One-line pitch:** Get a clear plan, provider message and checklist for household bills and recurring payments.
+## Agreed offer
 
-### Description
+LifeAdmin is a paid download: £1.99 in the UK, with store-managed local equivalents.
+All planning features shipped in this release are included. No trial, subscription,
+LifeAdmin account, sign-in, in-app checkout or separate upgrade. Prices belong in
+the store and promotional website, not inside the app. Separate future products
+are outside this purchase promise. Store price configuration still needs verification.
 
-LifeAdmin AI guides you through everyday household admin without requiring a bank connection or mailbox access.
+## Listing copy
 
-Search for a bill, provider or payment, choose what you want to achieve, add only the details you know and receive practical next steps, a provider-ready message where appropriate, things to check and an approval checklist.
+App name: **LifeAdmin**
+Apple subtitle: **Household bills, made simpler**
+Google short description: **Manage household bills in one place. List, plan and save.**
+Strapline: **List, plan and save.**
+Keywords: bills,household,renewals,subscriptions,planner,budget,energy,insurance,cancellation
 
-The current product covers 12 household categories and seven goals, including bill checks, renewals, price reduction, cancellation/switching, disputed charges, provider contact and unknown-payment identification.
+### Full description
 
-LifeAdmin AI does not automatically contact providers, cancel services, make purchases or send information to another AI assistant. You review every action yourself.
+Keep household bills and practical next steps together with LifeAdmin.
 
-### Key features
+Search for a bill or provider, choose your goal and add the details you know.
+Build a clear plan for reviewing a bill, preparing for renewal, considering a
+switch, cancelling a service, querying a charge or contacting a provider.
 
-- Search-first bill and payment picker
-- 12 household bill/payment categories
-- Seven practical customer goals
-- Smart suggested routing
-- Category- and goal-specific detail fields
-- Dedicated unknown recurring-payment flow
-- Structured next steps, provider message, checks and approval list
-- Manual, privacy-warned AI handoff
-- Try before creating an account
-- Private account storage and in-app deletion
-- One-time Core and All Access pricing, no subscription
+LifeAdmin includes 12 household categories and seven goals, with planning styles
+for different situations. Save bills and plans, update bill status, reopen saved
+plans and copy draft messages when you are ready to act.
 
-### Suggested keywords
+Household records stay in the app's storage on your device. No LifeAdmin account,
+bank connection or mailbox access is required. Planning uses bundled guidance
+and works offline. LifeAdmin does not automatically contact providers, send
+household details to an AI service or act on your behalf.
 
-life admin, household bills, subscriptions, renewals, bill checker, cancellation, recurring payments, insurance renewal, energy bill, council tax
+Export a readable JSON backup to a private location of your choice. Restore
+replaces existing records after confirmation. Device and cloud backups depend
+on your settings; downloading the app again does not guarantee recovery of bills.
 
-## Screenshot plan
+Visit the Tenaciouspl website for examples and support. Review draft messages,
+current provider terms and official information before acting. Plans provide
+general guidance and do not guarantee savings.
 
-Use real final-build screenshots without customer data:
+## Listing details
 
-1. Landing page with “Start with a bill”.
-2. Search-first picker and popular household examples.
-3. Goal selection and dynamic details.
-4. Structured result with next steps and provider message.
-5. Unknown-payment identification route.
-6. Privacy-safe AI handoff preview.
-7. One-time Core and All Access pricing.
-8. Account/save and deletion controls.
+| Field | Value / status |
+| --- | --- |
+| Brand | Tenaciouspl |
+| Publisher | Paul Lonergan trading as Tenaciouspl |
+| Support contact | tenaciouspl@icloud.com |
+| Support / marketing URL | https://tenaciouspl.co.uk |
+| App privacy policy | https://tenaciouspl.co.uk/app-privacy.html |
+| App identifier | uk.co.tenaciouspl.lifeadmin |
+| Initial version | 1.0, build 1 |
+| Seller address | Privacy-preserving arrangement outstanding; never insert the home address |
+| Store accounts / signing | Outstanding |
+| Ratings | Complete store questionnaires from the final app |
+| Refunds | Applicable rights and store processes; no voluntary 14-day promise approved |
 
-## Privacy and data-safety summary
+Verify store field limits, price availability and seller requirements in the
+relevant console before submission. The trading name does not replace verified
+legal identity. Draft copy is not evidence of store approval.
 
-Validate this section against the final production/native binaries before submission:
+## Screenshots
 
-- Email address is collected only for registered account authentication and optional checkout receipt prefill.
-- Task details and generated plans are user content used to provide app functionality.
-- Purchase entitlements and transaction references are used to provide paid access.
-- No bank or mailbox account connection is required.
-- No customer task content should be sent to advertising analytics.
-- Nothing is automatically sent to ChatGPT, Claude or another external AI assistant from the handoff feature.
-- Account deletion is available inside the product and removes account-linked records.
-- Production traffic must use HTTPS.
+Use final native screens and invented records: home/search, bill and goal,
+saved bill, readable plan/message, saved plans and backup controls. Exclude
+account, trial, pricing-tier, checkout and external-AI handoff screens from the
+older hosted product. Startup captures are not a complete store screenshot set.
 
-The publisher still needs final legal identity, privacy contact, support URL, privacy-policy URL, terms URL and retention policy.
+## Privacy review
 
-## Current web readiness
+Review final signed binaries, dependencies and both store questionnaires:
+- Bills/plans use app-private device storage.
+- No LifeAdmin sign-in, advertising analytics or automatic external AI upload
+  in the native customer build.
+- Export and clipboard actions are user initiated; external copies stay under
+  the user's control.
+- OS backup/device transfer depends on platform settings and package rules.
+- Support email and website visits involve separate services and disclosures.
+- Store sales/accounting records are separate from household records.
+- Deleting a bill deletes associated plans, not external backup copies.
 
-### Implemented and locally validated
+Do not claim a verified store privacy classification before final binary, SDK,
+required-reason declarations and questionnaire review.
 
-- [x] LifeAdmin AI household-bill positioning and responsive landing page
-- [x] Search/suggestion domain for 12 categories and seven goals
-- [x] Dynamic category/goal fields
-- [x] Dedicated unknown-payment plan and bank-query draft
-- [x] Four structured result sections
-- [x] Genuine provider-message email gating
-- [x] Manual privacy-safe AI handoff
-- [x] Guest workspace isolation and signed-in account storage
-- [x] Password hashing, protected sessions and account deletion
-- [x] Stripe checkout integration points and paid-status entitlement checks
-- [x] Protected admin metrics endpoint/dashboard
-- [x] Privacy-light analytics bridge for later GA4/Google Ads measurement
-- [x] Automated regression contracts including nine representative scenarios
+## Evidence and remaining gates
 
-### Owner/platform actions before paid web launch
+CI #322 passed at source 0a2e22e14019cd55cff56b6336854fcbf20ab715:
+automated tests, backup checks, type checks, Android compilation/storage/package
+checks and Apple compilation/install/launch/relaunch. iPhone 11 / iOS 26.5
+startup screenshots were reviewed.
+https://github.com/Tenaciousp/LifeAdmin-AI/actions/runs/38557220882
 
-- [ ] Add production `DATABASE_URL`
-- [ ] Add production AI provider credential/configuration if live-model output is required
-- [ ] Configure Stripe secret, webhook secret and final Core/All Access price IDs
-- [ ] Add final legal/business contact details and hosted privacy/terms/support URLs
-- [ ] Configure administrator allowlist
-- [ ] Run final browser/device QA in the deployed environment
+CI #323 passed Android checks and Apple compilation, but the first simulator
+launch timed out before the interactive UI test began. The next run includes
+a bounded first-launch wait adjustment and failure diagnostics.
+https://github.com/Tenaciousp/LifeAdmin-AI/actions/runs/38559775890
 
-## Native-store actions later
+Outstanding: interactive persistence/deletion; native JSON export/restore,
+cancel and invalid files; upgrade and OS recovery; accessibility and device
+coverage; final seller/privacy details, signing, store pricing/screenshots/review.
+The owner has no Android device. Physical iPad QA follows the other checks.
+Keep PR #2 draft pending explicit final release approval.
 
-- [ ] Build and test iOS and Android packages
-- [ ] Configure secure native session storage
-- [ ] Create Core and All Access in-app products
-- [ ] Implement and verify StoreKit/Google Play Billing and Restore Purchases
-- [ ] Configure signing and developer accounts
-- [ ] Complete App Privacy and Google Data Safety forms from final binaries
-- [ ] Test physical devices and accessibility
-- [ ] Upload screenshots, ratings, declarations and reviewer notes
-- [ ] Submit and resolve store-review feedback
+## Reviewer notes
 
-## Reviewer note
-
-LifeAdmin AI prepares household-admin plans and draft messages. It does not access a customer's bank or provider account and does not perform cancellations or other real-world actions. Reviewers can use the non-account planning flow to exercise the product before testing purchase/account features.
+No LifeAdmin account or reviewer login is required. Use invented bill details.
+LifeAdmin prepares plans and draft messages without accessing bank/provider
+accounts or automatically sending messages. Payment is the store's upfront
+app purchase; no in-app purchase products form part of this offer.

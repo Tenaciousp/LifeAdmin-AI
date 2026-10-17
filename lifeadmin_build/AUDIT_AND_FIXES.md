@@ -2,6 +2,8 @@
 
 Date: 22 September 2026
 
+> Historical record: test counts and local-environment limitations below describe the original September audit passes. For current branch validation and the remaining owner/browser checks, use `FINAL_QA.md` and the latest pull-request workflow. As of 4 October 2026, the clean CI suite runs 141 tests, TypeScript/Python checks, a live API smoke test and the production frontend build.
+
 ## Executive summary
 
 The exported project contained a solid web/API foundation but several gaps between the approved LifeAdmin AI product specification and the implementation. The most important issues were inconsistent client/server contracts, incomplete dynamic routing fields, unsafe payment-readiness assumptions, weak portable database setup, misleading analytics events, and customer-flow friction.

@@ -1,56 +1,45 @@
-# LifeAdmin AI
+# LifeAdmin
 
-LifeAdmin AI helps people sort household bills, renewals, subscriptions and recurring payments with clear next steps, provider-ready messages and review checklists.
+LifeAdmin helps people organise household bills, renewals, subscriptions and recurring payments into next steps, message drafts and review checklists.
 
-The working application lives in [`lifeadmin_build/`](lifeadmin_build/).
+## Current release
 
-## Quick start
+The agreed product is a **£1.99 upfront Apple/Google store download**, with local store equivalents. No LifeAdmin account, sign-in, trial, subscription or in-app checkout. Household bills and plans use device-local storage. The website provides examples, promotion and support.
 
-Requirements: Node.js 20+ and Python 3.11+.
+Draft [PR #2](https://github.com/Tenaciousp/LifeAdmin-AI/pull/2) is unmerged. Development packages are not signed store releases. [Issue #3](https://github.com/Tenaciousp/LifeAdmin-AI/issues/3) is the current completion register. No release or live sales approval is recorded.
 
-```bash
-cd lifeadmin_build
-npm install
-npm run dev:api
-```
+Implemented native functions include 12 bill/payment categories, seven goals, search suggestions, planning styles, saved bills/plans, deletion, native clipboard, and manual JSON backup export/restore. Native editable messages and manual AI handoff remain unfinished agreed requirements. Implementation does not establish device acceptance.
 
-In a second terminal:
+## Native development
+
+Use Node 22 or later, plus the platform toolchain. From the repository root:
 
 ```bash
 cd lifeadmin_build
-npm run dev:web
+npm ci
+cd native
+npm ci
+npm run sync -- android
+npm run android
 ```
 
-For a production build:
+For Apple, use a Mac with Xcode 26 or later and replace the last two commands with:
 
 ```bash
-cd lifeadmin_build
-npm install
-npm run build
-npm start
+npm run sync -- ios
+npm run ios
 ```
 
-## Current status
+See [native setup](lifeadmin_build/native/README.md), [device acceptance](lifeadmin_build/native/DEVICE_TESTING.md), [release checkpoint](lifeadmin_build/DEVELOPMENT_CHECKPOINT.md), and [store preparation](lifeadmin_build/STORE_SUBMISSION.md).
 
-- 12 household bill/payment categories
-- 7 action-based goals
-- Search-first smart routing
-- Dynamic detail forms
-- Dedicated unknown-payment journey
-- Structured Next steps, Provider message, Things to check and Approval checklist
-- Account creation, saved plans and account deletion
-- Privacy-safe manual AI handoff
-- One-time Core and All Access pricing model
-- Protected admin dashboard
-- Opt-in analytics readiness
-- Automated GitHub Actions validation for tests, type checks and production frontend build
+## Privacy and recovery
 
-See [FINAL_QA.md](lifeadmin_build/FINAL_QA.md) for the latest verification status and [DEPLOYMENT.md](lifeadmin_build/DEPLOYMENT.md) for production setup.
+No bank or mailbox connection is required. The app does not automatically contact providers or another AI assistant. Customers choose copying, external links and backup destinations.
 
-## Privacy model
+Backup files contain readable personal information. Restore replaces existing bills and plans after confirmation and validation. Tenaciouspl holds no household-data recovery copy. OS cloud backup and device transfer depend on settings and observed platform support; purchase re-download alone does not restore household records.
 
-LifeAdmin AI does not require bank access or mailbox access. It does not automatically contact providers or send data to another AI assistant. Users review actions before using them.
+## Historical web application
 
-## Development approach
+The repository retains the earlier Vite/Python account-based web application and its test evidence. Its accounts, hosted administration, Stripe and server-backup requirements do not govern the native release. Earlier web QA is not native acceptance evidence. Historical development commands and evidence remain in [lifeadmin_build](lifeadmin_build/README.md) and [FINAL_QA.md](lifeadmin_build/FINAL_QA.md).
 
-This repository is independent of Replit Agent. Standard npm, Vite and Python tooling is used so the app can run in GitHub Codespaces or another compatible host.
+Publisher: Paul Lonergan trading as Tenaciouspl. Support: tenaciouspl@icloud.com. Website: https://tenaciouspl.co.uk.

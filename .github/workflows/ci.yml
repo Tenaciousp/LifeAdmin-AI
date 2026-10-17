@@ -28,13 +28,24 @@ jobs:
           python-version: "3.11"
 
       - name: Install JavaScript dependencies
-        run: npm install
+        run: npm ci
 
       - name: Install Python dependencies
         run: pip install -r requirements.txt
 
       - name: Run automated tests
         run: npm test
+
+      - name: Run backup locking and HTTP integration tests
+        run: |
+          python -m unittest discover -s scripts -p test_backup_lock.py -v
+          python -m unittest discover -s scripts -p test_backup_http_integration.py -v
+
+
+      - name: Test encrypted backup and offline restore (synthetic only)
+        run: |
+          pip install 'cryptography>=45,<47'
+          python -m unittest discover -s scripts -p test_secure_backup.py -v
 
       - name: Run type checks
         run: npm run typecheck
@@ -51,19 +62,221 @@ jobs:
             fi
             sleep 1
           done
-          python - <<'PY'
-          import json
-          import urllib.request
-
-          with urllib.request.urlopen("http://127.0.0.1:8000/api/health", timeout=5) as response:
-              health = json.load(response)
-          assert health["status"] == "ok"
-
-          with urllib.request.urlopen("http://127.0.0.1:8000/api/catalog", timeout=5) as response:
-              catalog = json.load(response)
-          assert len(catalog["categories"]) == 12
-          assert len(catalog["goals"]) == 7
-          PY
+          python scripts/smoke_api.py
 
       - name: Build production frontend
         run: npm run build:web
+
+      - name: Build and verify local customer package
+        run: |
+          npm run build:local
+          node scripts/verify_local_bundle.mjs
+
+      - name: Check native scaffold configuration
+        run: node native/scripts/verify-config.mjs
+
+      - name: Set up native Node toolchain
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Set up Android Java toolchain
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Synchronize Android development assets
+        working-directory: lifeadmin_build/native
+        run: |
+          npm ci
+          npm exec cap sync android
+
+      - name: Compile Android development package
+        working-directory: lifeadmin_build/native/android
+        run: ./gradlew assembleDebug testDebugUnitTest --no-daemon
+
+      - name: Verify compiled Android customer package
+        run: python scripts/verify_android_package.py
+
+      - name: Save Android device-test package
+        uses: actions/upload-artifact@v4
+        with:
+          name: lifeadmin-android-debug-${{ github.sha }}
+          path: lifeadmin_build/native/android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Save native storage test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lifeadmin-android-storage-tests-${{ github.sha }}
+          path: |
+            lifeadmin_build/native/android/app/build/test-results/testDebugUnitTest/
+            lifeadmin_build/native/android/app/build/reports/tests/testDebugUnitTest/
+          if-no-files-found: warn
+          retention-days: 14
+
+
+  verify-apple:
+    name: Apple simulator (${{ matrix.device-family }})
+    # Standard hosted runners are free for public repositories; skip if that changes.
+    if: ${{ github.event.repository.private == false }}
+    runs-on: macos-26
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        device-family: [iphone, ipad]
+    permissions:
+      contents: read
+    defaults:
+      run:
+        working-directory: lifeadmin_build
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up native Node toolchain
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Check Apple toolchain
+        run: |
+          xcodebuild -version
+          python -c 'import subprocess; v=subprocess.check_output(["xcodebuild","-version"],text=True); assert int(v.splitlines()[0].split()[1].split(".")[0]) >= 26, "Xcode 26 or later required"'
+
+      - name: Build and verify offline customer assets
+        run: |
+          npm ci
+          npm run build:local
+          node scripts/verify_local_bundle.mjs
+          node native/scripts/verify-config.mjs
+
+      - name: Synchronize Apple development assets
+        working-directory: lifeadmin_build/native
+        run: |
+          npm ci
+          npm exec cap sync ios
+
+      - name: Compile unsigned Apple simulator package
+        working-directory: lifeadmin_build/native
+        run: |
+          xcodebuild -project ios/App/App.xcodeproj -scheme App \
+            -configuration Debug -sdk iphonesimulator \
+            -destination 'generic/platform=iOS Simulator' \
+            -derivedDataPath build-ios-simulator \
+            -resultBundlePath build-ios-simulator.xcresult \
+            CODE_SIGNING_ALLOWED=NO build 2>&1 | tee apple-build.log
+
+      - name: Check Apple startup and interactive persistence
+        working-directory: lifeadmin_build/native
+        run: python ../scripts/smoke_apple_simulator.py --ui-tests --device-family ${{ matrix.device-family }}
+
+      - name: Save Apple compilation evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lifeadmin-apple-compilation-${{ matrix.device-family }}-${{ github.sha }}
+          path: |
+            lifeadmin_build/native/apple-ui-tests.xcresult/
+            lifeadmin_build/native/apple-launch-evidence/
+            lifeadmin_build/native/apple-build.log
+            lifeadmin_build/native/build-ios-simulator.xcresult/
+          if-no-files-found: warn
+          retention-days: 14
+
+  verify-apple-device:
+    name: Compile unsigned Apple device archive
+    if: ${{ github.event.repository.private == false }}
+    runs-on: macos-26
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    defaults:
+      run:
+        working-directory: lifeadmin_build
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up native Node toolchain
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Build and verify offline customer assets
+        run: |
+          npm ci
+          npm run build:local
+          node scripts/verify_local_bundle.mjs
+          node native/scripts/verify-config.mjs
+
+      - name: Synchronize Apple development assets
+        working-directory: lifeadmin_build/native
+        run: |
+          npm ci
+          npm exec cap sync ios
+
+      - name: Archive unsigned iPhone and iPad package
+        working-directory: lifeadmin_build/native
+        run: |
+          xcodebuild -project ios/App/App.xcodeproj -scheme App \
+            -configuration Release -sdk iphoneos \
+            -destination 'generic/platform=iOS' \
+            -archivePath build-ios-device.xcarchive \
+            -resultBundlePath build-ios-device.xcresult \
+            CODE_SIGNING_ALLOWED=NO archive 2>&1 | tee apple-device-build.log
+
+      - name: Verify device archive identity and platform
+        working-directory: lifeadmin_build/native
+        run: |
+          python - <<'PY'
+          import json, os, plistlib, subprocess
+          from pathlib import Path
+          app = Path("build-ios-device.xcarchive/Products/Applications/App.app")
+          info = plistlib.loads((app / "Info.plist").read_bytes())
+          if info.get("CFBundleIdentifier") != "uk.co.tenaciouspl.lifeadmin":
+              raise RuntimeError("Unexpected archived application identity")
+          if info.get("DTPlatformName") != "iphoneos" or info.get("CFBundleSupportedPlatforms") != ["iPhoneOS"]:
+              raise RuntimeError("Archive is not an iPhone/iPad device build")
+          if info.get("MinimumOSVersion") != "16.4":
+              raise RuntimeError("Unexpected archived minimum OS")
+          architectures = subprocess.check_output(["xcrun", "lipo", "-archs", str(app / info["CFBundleExecutable"])], text=True).split()
+          if architectures != ["arm64"]:
+              raise RuntimeError("Unexpected device architectures")
+          Path("unsigned-device-archive.json").write_text(json.dumps({
+              "source_commit": os.environ["GITHUB_SHA"],
+              "bundle": info["CFBundleIdentifier"], "platform": info["DTPlatformName"],
+              "minimum_os": info["MinimumOSVersion"], "architectures": architectures,
+              "scope": "Unsigned Release archive only; signing, installation and physical-device acceptance outstanding"
+          }, indent=2) + "\n")
+          PY
+
+      - name: Save unsigned Apple device archive
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lifeadmin-apple-device-unsigned-${{ github.sha }}
+          path: |
+            lifeadmin_build/native/build-ios-device.xcarchive/
+            lifeadmin_build/native/build-ios-device.xcresult/
+            lifeadmin_build/native/apple-device-build.log
+            lifeadmin_build/native/unsigned-device-archive.json
+          if-no-files-found: warn
+          retention-days: 14
+
+
+

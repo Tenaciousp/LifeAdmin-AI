@@ -1,5 +1,24 @@
 # LifeAdmin AI
 
+> Release target changed on 12 October 2026. The approved direction is a paid Apple App Store and Google Play download, £1.99 GBP or local store equivalent, without a trial, subscription or LifeAdmin account. Household planning and saved data must run locally, without automatic transmission to Tenaciouspl or AI providers. The website serves examples, support and future product promotion/sales.
+>
+> The code described below is still the hosted web implementation. Its server storage, account flow and Stripe checkout do not satisfy the new release target. Do not publish the hosted privacy or access descriptions as native-app promises. Read [LAUNCH_POLICIES_REVIEW.md](LAUNCH_POLICIES_REVIEW.md) for the current requirements and backup acceptance checks.
+
+## Native migration sequence
+
+1. Bundle the category/goal catalogue and move routing, task normalisation and plan generation into the client. Preserve the four output sections and existing energy-comparison safeguards. Planning must work offline without a Python server or external AI.
+2. Replace server task/plan operations with persistent device storage, including schema upgrades and safe writes. Retain saved work across restart and app updates.
+3. Replace the customer account, password recovery and Stripe purchase journey with the paid-store download flow. Keep price information in store listings and promotional material, not app working screens.
+4. Add customer-controlled export/import with validated, versioned backups and safe failure handling.
+5. Package the client for Apple and Android, configure eligible operating-system backups and verify native persistence and restoration. A browser-storage experiment is not evidence of native backup support.
+6. Remove automatic household-data network paths and analytics from the native customer flow. Support and examples open the website without appending household data.
+7. Verify offline journeys, network behaviour, update retention, deletion, exports and native restore using synthetic records. Test store installation and purchase re-download separately from data restoration.
+8. Rewrite public support/privacy/refund wording for the verified native behaviour, then complete platform requirements and release review. Preserve existing production data and release safeguards throughout migration.
+
+This is a migration plan, not an implemented native release. Existing hosted tests remain useful regression coverage but do not establish native readiness.
+
+## Existing hosted implementation
+
 LifeAdmin AI is a privacy-light household-admin assistant for bills, renewals, subscriptions and recurring payments.
 
 **Promise:** Sort bills, renewals and subscriptions without the admin headache.
@@ -11,7 +30,7 @@ Customers search for or choose a household bill, select a goal, add only what th
 3. Things to check
 4. Approval checklist
 
-The product includes 12 household categories, seven action-based goals, smart routing, dynamic forms, a dedicated unknown-payment journey, saved plans, manual AI handoff, account controls, a protected admin dashboard and one-time pricing.
+The product includes 12 household categories, seven action-based goals, savings-first shortcuts, category-specific plans, a dedicated unknown-payment journey, saved plans, manual AI comparison handoff, account controls, a protected admin dashboard and one-time pricing.
 
 ## Privacy model
 
@@ -22,22 +41,21 @@ The product includes 12 household categories, seven action-based goals, smart ro
 - Guest work is isolated with a signed browser cookie
 - Signed-in data is separated by account
 - Analytics is opt-in and excludes bill text, provider messages, addresses and account details
-- Account deletion removes account-linked records
+- Account and saved-plan deletion are owner-scoped
 
 ## Pricing
 
-- **Core:** £0.99 / $0.99 one time
-- **All Access:** an additional £1.99 / $1.99 one time
+- **LifeAdmin AI Complete:** £1.99 UK / $1.99 US one time, all planning modes included
 - No subscription
 
-Equivalent local store tiers can be used later for native stores.
+Equivalent local store tiers can be considered later only as part of a separately approved native release.
 
 ## Run locally without Replit
 
 Requirements: Python 3.11+ and Node.js 20+.
 
 ```text
-npm install
+npm ci
 npm run dev:api
 npm run dev:web
 ```
@@ -47,7 +65,7 @@ The web app runs with Vite and proxies API calls to the Python service. SQLite i
 For a production-style single-server build:
 
 ```text
-npm install
+npm ci
 npm run build:web
 npm start
 ```
@@ -60,38 +78,40 @@ Development needs no external database. LifeAdmin AI uses SQLite by default. Set
 
 ## Production configuration
 
-Copy `.env.example` and configure only the services you intend to use. Important production values include:
+Copy `.env.example` and configure only services that the owner has approved. Important production values may include:
 
 - `SESSION_SECRET`
 - `APP_BASE_URL`
 - `DATABASE_URL` for PostgreSQL, if used
-- `OPENAI_API_KEY` and optional `OPENAI_MODEL`
-- `STRIPE_SECRET_KEY`
-- `STRIPE_WEBHOOK_SECRET`
-- Stripe Core and All Access price IDs
+- Stripe credentials and the one-time complete-product Price ID, only if live payments are approved
 - `ADMIN_EMAILS`
 
 Never commit live credentials.
 
 ## Payments
 
-Stripe is optional during development. The interface remains in preview mode until both one-time products and Stripe credentials are configured. Checkout success is verified with the backend before an entitlement is shown as unlocked.
+Checkout is not live by default. The interface remains in preview until the complete-product Stripe Price ID and Stripe credentials are configured. Enabling live checkout, hosting or any paid service requires explicit owner approval.
 
-## Analytics and ads readiness
+## Manual AI comparison
 
-Analytics is disabled until a visitor explicitly opts in. The event layer supports privacy-conscious web analytics and GA4/Google Tag Manager style event forwarding. Do not send free-text bill content or sensitive details to advertising systems.
+Customers can edit and copy a privacy-reminded comparison prompt to Gemini, Microsoft Copilot, ChatGPT, Claude or Perplexity. The app opens the selected assistant but does not automatically transmit customer details or require paid AI usage.
 
-Recommended launch events include first open, bill search, suggested match accepted, plan generated, provider message copied, email draft opened, AI handoff copied, account created and verified purchases.
+## Analytics readiness
+
+Analytics is disabled until a visitor explicitly opts in. Do not send free-text bill content, provider messages, addresses, customer references or other sensitive details to analytics or advertising systems.
 
 ## Validation
 
-Run the API/domain/frontend-contract suite:
+From `lifeadmin_build`, run the same core checks used by CI:
 
 ```text
-cd artifacts/api-server
-python -m unittest discover -s tests -v
+npm ci
+pip install -r requirements.txt
+npm test
+npm run typecheck
+npm run build:web
 ```
 
-The repository is intentionally independent of Replit Agent and contains no Replit runtime dependency.
+CI also starts the Python API and runs `scripts/smoke_api.py` against the live process. The smoke path checks health, the 12-category / seven-goal catalog, preview-only pricing, guest energy-task creation, provider/reference preservation, structured plan generation, cross-guest isolation, guest-to-account migration, sign-out/sign-in isolation, saved-plan/task deletion and permanent account deletion. Passing CI is not a substitute for browser, iPad/mobile, clipboard, popup or physical-device QA.
 
-See `DEPLOYMENT.md` for deployment guidance and `AUDIT_AND_FIXES.md` for the audit history and known external launch requirements.
+See `FINAL_QA.md` for the owner-review checklist, `DEPLOYMENT.md` for deployment guidance and `AUDIT_AND_FIXES.md` for the historical audit record.

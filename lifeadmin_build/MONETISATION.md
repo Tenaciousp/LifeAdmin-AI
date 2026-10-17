@@ -1,36 +1,38 @@
-# LifeAdmin AI monetisation and growth
+# LifeAdmin purchase model
 
-## One-time pricing
+Updated 14 October 2026. Supersedes the earlier hosted web pricing plan.
 
-**Core: £0.99 UK / $0.99 US once**
+## Agreed native release
 
-Includes the complete everyday household-admin workflow: 12 categories, seven goals, next steps, provider messages, things to check, approval checklists, unknown-payment support and manual AI handoff.
+£1.99 upfront UK download, with store-managed local equivalents. All planning
+features shipped in this release are included. No free trial, subscription,
+LifeAdmin account, sign-in, in-app pricing, checkout or separate upgrade.
+Separate future apps and products are outside this purchase promise.
 
-**All Access: an additional £1.99 UK / $1.99 US once**
+Apple/Google handle the store purchase. The native customer app does not require
+a Stripe entitlement, Core/All Access tiers or in-app purchase products for this
+upfront-download offer. Final store configuration and purchase/re-download
+behaviour need verification.
 
-Adds deeper negotiation support, complaint and escalation help, switching guidance, comparison prompts and advanced planning modes.
+## Website and records
 
-Core + All Access is £2.98 / $2.98 total. There is no subscription. Native stores can use an equivalent attractive local price tier where their pricing system requires it.
+https://tenaciouspl.co.uk provides promotion, examples, support and privacy
+information. Future direct website sales need separate reviewed implementation
+and approval; existing Stripe setup does not establish a direct-sales route.
 
-## Web payments
+Household records stay in app-private device storage. Store sales, support and
+necessary tax/accounting records are separate. Retain only the minimum appropriate
+records for the purpose and applicable requirements. Do not add app sign-in or
+household-data uploads for sales reporting.
 
-Live Stripe checkout is enabled only when both the Stripe secret and the matching product price ID are configured. The customer UI remains in preview mode when payment configuration is incomplete. A purchase entitlement is granted only after Stripe reports a paid session.
+The customer build has no advertising analytics or automatic external AI upload.
+Analytics SDKs and paid advertising require separate approval and privacy review.
 
-Required production secrets:
+## Historical hosted web implementation
 
-- `STRIPE_SECRET_KEY`
-- `STRIPE_WEBHOOK_SECRET`
-- `STRIPE_PRICE_CORE_APP`
-- `STRIPE_PRICE_ALL_ACCESS`
+Older account, Stripe and analytics code remains in the hosted build. Earlier
+Core/All Access tiers, checkout rules and account entitlements are historical,
+not requirements for the account-free native app. Do not reintroduce them.
 
-Never place live secrets in client code or source control.
-
-## Ads and measurement readiness
-
-Paid acquisition should start only after the final product, live payments, privacy disclosures and conversion tracking have been verified.
-
-The web client contains a privacy-light analytics bridge suitable for Umami and later GA4 / Google Tag Manager configuration. Useful conversion events include start flow, bill search, category and goal selection, suggestion accepted, plan generated, provider message copied, email opened, AI handoff opened, account created and checkout started.
-
-Do not send free-text bill descriptions, provider messages, email addresses, account identifiers, postal addresses or payment details as advertising/analytics event properties.
-
-A sensible launch sequence is: product QA, measurement QA, small campaign test, conversion-quality review, then controlled scaling.
+No voluntary 14-day refund policy is approved. Apply relevant consumer rights
+and store processes without publishing an additional refund promise.

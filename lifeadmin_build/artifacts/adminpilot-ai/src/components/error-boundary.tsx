@@ -37,9 +37,9 @@ function toError(value: unknown): Error {
 
 function DefaultFallback({ error, resetError }: ErrorFallbackProps) {
   return (
-    <div className="min-h-screen w-full flex items-center justify-center bg-gray-50 p-6">
-      <div className="max-w-lg w-full text-center">
-        <h1 className="text-xl font-semibold text-gray-900">
+    <main className="min-h-screen w-full flex items-center justify-center bg-gray-50 p-6">
+      <div role="alert" aria-labelledby="app-error-heading" className="max-w-lg w-full text-center">
+        <h1 id="app-error-heading" className="text-xl font-semibold text-gray-900">
           Something went wrong
         </h1>
         <p className="mt-2 text-sm text-gray-600">
@@ -55,12 +55,12 @@ function DefaultFallback({ error, resetError }: ErrorFallbackProps) {
         <button
           type="button"
           onClick={resetError}
-          className="mt-4 rounded bg-gray-900 px-4 py-2 text-sm text-white hover:bg-gray-700"
+          className="mt-4 min-h-[44px] rounded-lg bg-gray-900 px-4 py-2 text-sm font-bold text-white hover:bg-gray-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-900 focus-visible:ring-offset-2"
         >
           Try again
         </button>
       </div>
-    </div>
+    </main>
   );
 }
 

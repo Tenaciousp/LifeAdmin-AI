@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { useAdminOverview } from "@/hooks/use-api";
 import { Link } from "wouter";
 import {
+  AlertTriangle,
   ArrowLeft,
   CheckCircle2,
   CheckSquare,
@@ -43,7 +44,7 @@ const GOAL_LABELS: Record<string, string> = {
 };
 
 export function AdminDashboard() {
-  const { data, isLoading, error } = useAdminOverview();
+  const { data, isLoading, error, refetch: retryDashboard } = useAdminOverview();
   const [activityFilter, setActivityFilter] = useState("all");
 
   const metrics = data || {
@@ -92,17 +93,37 @@ export function AdminDashboard() {
   }
 
   if (error) {
+    const accessDenied = error instanceof Error && error.message === "Admin access required";
     return (
       <main className="min-h-screen bg-slate-50 grid place-items-center p-6">
-        <div className="bg-white max-w-md w-full rounded-2xl p-8 border border-slate-200 shadow-xl text-center">
+        <div role="alert" className="bg-white max-w-md w-full rounded-2xl p-8 border border-slate-200 shadow-xl text-center">
           <div className="w-16 h-16 bg-red-50 text-red-600 rounded-full grid place-items-center mx-auto mb-6">
-            <LockKeyhole className="w-8 h-8" aria-hidden="true" />
+            {accessDenied
+              ? <LockKeyhole className="w-8 h-8" aria-hidden="true" />
+              : <AlertTriangle className="w-8 h-8" aria-hidden="true" />}
           </div>
-          <h1 className="text-2xl font-extrabold text-slate-900 mb-2">Admin access required</h1>
-          <p className="text-slate-600 mb-8">Sign in with an administrator account to view operational metrics.</p>
-          <Link href="/#account" className="inline-flex min-h-[44px] w-full items-center justify-center py-3 bg-primary hover:bg-blue-700 text-white font-bold rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2">
-            Go to sign in
-          </Link>
+          <h1 className="text-2xl font-extrabold text-slate-900 mb-2">
+            {accessDenied ? "Admin access required" : "Dashboard unavailable"}
+          </h1>
+          <p className="text-slate-600 mb-8">
+            {accessDenied
+              ? "Sign in with an administrator account to view operational metrics."
+              : "The dashboard could not be loaded. Check your connection and try again."}
+          </p>
+          {accessDenied ? (
+            <Link href="/#account" className="inline-flex min-h-[44px] w-full items-center justify-center py-3 bg-primary hover:bg-blue-700 text-white font-bold rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2">
+              Go to sign in
+            </Link>
+          ) : (
+            <div className="grid gap-3">
+              <button type="button" onClick={() => void retryDashboard()} className="min-h-[44px] w-full py-3 bg-primary hover:bg-blue-700 text-white font-bold rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2">
+                Retry dashboard
+              </button>
+              <Link href="/" className="inline-flex min-h-[44px] w-full items-center justify-center py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2">
+                Return home
+              </Link>
+            </div>
+          )}
         </div>
       </main>
     );
@@ -187,8 +208,9 @@ export function AdminDashboard() {
           {filteredActivity.length > 0 ? (
             <div className="overflow-x-auto">
               <table className="w-full text-sm text-left min-w-[620px]">
+                <caption className="sr-only">Recent privacy-light operational activity</caption>
                 <thead className="text-xs text-slate-500 uppercase bg-slate-50 border-y border-slate-200">
-                  <tr><th className="px-4 py-3">Type</th><th className="px-4 py-3">Category</th><th className="px-4 py-3 text-right">Time</th></tr>
+                  <tr><th scope="col" className="px-4 py-3">Type</th><th scope="col" className="px-4 py-3">Category</th><th scope="col" className="px-4 py-3 text-right">Time</th></tr>
                 </thead>
                 <tbody>
                   {filteredActivity.map((activity: any, index: number) => (
@@ -229,7 +251,16 @@ function MetricChart({ title, icon, data, empty }: { title: string; icon: React.
   return (
     <article className="bg-white border border-slate-200 rounded-2xl p-5 sm:p-6 shadow-sm">
       <h2 className="text-lg font-extrabold mb-6 flex items-center gap-2 text-slate-900">{icon}{title}</h2>
-      <div className="h-[270px] w-full" aria-label={`${title} chart`}>
+      <table className="sr-only">
+        <caption>{title} values</caption>
+        <thead><tr><th scope="col">Category or goal</th><th scope="col">Tasks</th></tr></thead>
+        <tbody>
+          {data.length ? data.map((item) => (
+            <tr key={item.name}><th scope="row">{item.name}</th><td>{item.count}</td></tr>
+          )) : <tr><td colSpan={2}>{empty}</td></tr>}
+        </tbody>
+      </table>
+      <div className="h-[270px] w-full" aria-hidden="true">
         {data.length ? (
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={data} layout="vertical" margin={{ top: 0, right: 20, left: 25, bottom: 0 }}>
