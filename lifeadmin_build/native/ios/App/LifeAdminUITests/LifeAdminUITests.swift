@@ -1,4 +1,5 @@
 import XCTest
+import UIKit
 
 final class LifeAdminUITests: XCTestCase {
     private let app = XCUIApplication()
@@ -161,7 +162,7 @@ final class LifeAdminUITests: XCTestCase {
             NSPredicate(format: "label BEGINSWITH[c] %@", prefix)).firstMatch
         // Export saves to the local location, which need not appear in Recents.
         // iPad already displays Browse as a sidebar; iPhone uses a Browse tab.
-        if !app.cells["DOC.sidebar.item.On My iPad"].waitForExistence(timeout: 3) {
+        if UIDevice.current.userInterfaceIdiom != .pad {
             pickerControl("Browse").tap()
         }
         if !document.waitForExistence(timeout: 5) {
@@ -809,6 +810,7 @@ final class LifeAdminUITests: XCTestCase {
     }
 
 }
+
 
 
 
