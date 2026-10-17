@@ -45,6 +45,31 @@ Send the device/build details, failed step and exact error text through the
 existing support route. A description is usually sufficient; household records
 or backup files are not needed for the initial report.
 
+## Message editing and manual AI review
+
+These are candidate checks. Record the exact source/build and result. Automated
+coverage does not establish physical-device or assistive-technology acceptance.
+
+1. Open a saved plan with a provider or bank-query draft. Choose **Edit message**,
+   change the subject/body, then choose **Cancel message edit**. The saved draft
+   must remain unchanged.
+2. Edit again and choose **Save message**. Restart the app offline. Confirm the
+   revised subject/body, unchanged guidance and unchanged bill details.
+3. Copy the message and plan into an unsent local test note. Both must use the
+   revised draft. Export a private JSON backup, restore it and confirm the edits.
+4. Choose **Prepare AI prompt**. Review the preview, remove private details and
+   edit the prompt. Choose **Copy AI prompt**, then paste into an unsent local
+   note. The pasted text must match the reviewed preview. Do not save a new bill
+   during this clipboard check.
+5. Close/reopen the app. Temporary prompt edits must be gone; saved bill, plan
+   and message edits must remain.
+6. If testing an external service, use invented details only. Choose its named
+   link, paste the reviewed prompt yourself and review the reply before acting.
+   No prompt or household details should appear in the link address. Provider
+   and bank contact remains a separate customer decision.
+7. Check keyboard access, large text, focus and VoiceOver/TalkBack on the message
+   editor, prompt preview, Copy/Close controls and external links.
+
 ## Apple compilation on a Mac
 
 This project uses Capacitor 8.5.3, Node 22 or later and Xcode 26 or later.
@@ -73,11 +98,28 @@ Unsigned simulator compilation passed on the GitHub Mac runner with Xcode 26.6
 in [CI #320](https://github.com/Tenaciousp/LifeAdmin-AI/actions/runs/38466303133),
 for source commit `3fb68c03f7bb1cc92a5d9694959cb404b14eaf3e`.
 Android compilation, native storage tests and packaged-app verification also
-passed in that run. The Apple artifact contains build logs and results, not a
-signed installable app. Later CI #329 passed the iPhone simulator save/plan,
-restart/reopen and cascading-deletion journey at source
-9460ead11e2ffdf154200e3672dbd738caf949e6. Expanded backup picker cancellation
-and JSON round-trip acceptance remain separate; consult issue #3 for results.
+passed in that run. The Apple artifact contains build logs and results.
+CI #373 passed both jobs for source
+`d3ff6a160648fc7a6f5176ced1ea41e1f21608d3`:
+https://github.com/Tenaciousp/LifeAdmin-AI/actions/runs/39047565990.
+Reviewed iPhone 11 / iOS 26.2 evidence covers JSON backup replacement,
+cancellation, interrupted pickers, invalid files, exact record preservation,
+staging cleanup, same-build reinstall, SQL rejection/recovery, unsupported
+storage versions, rotation, clipboard, relaunch and three sampled accessibility
+audits. Native reopening and subsequent saves also passed after a host writer
+was killed with a hot SQLite rollback journal.
+
+CI #375 passed both jobs for source
+`3149925df7f9ed74da651214fd43e695b3a08238`:
+https://github.com/Tenaciousp/LifeAdmin-AI/actions/runs/39055042310.
+The message Cancel/Save/restart/backup-restore case passed with exact original
+record matching after restoration. All four cumulative accessibility reports
+are empty arrays, including the fully revealed footer; its screenshot was
+reviewed. This repeats the earlier simulator gates above.
+
+Manual AI handoff and the additional editor/prompt accessibility checks are new
+candidate work. Use PR #2 for current verified results, distinguished from
+pending checks: https://github.com/Tenaciousp/LifeAdmin-AI/pull/2.
 
 For subsequent runs, save the build result and any errors. Compilation success
 does not establish iCloud backup, physical file-provider behaviour or store
@@ -108,3 +150,4 @@ https://capacitorjs.com/docs/updating/8-0
 
 There is no Tenaciouspl recovery copy and no guaranteed OS restore route. Test
 results must distinguish configured support from observed successful recovery.
+

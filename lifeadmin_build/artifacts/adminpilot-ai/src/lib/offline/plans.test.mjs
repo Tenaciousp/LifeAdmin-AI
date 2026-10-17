@@ -1,4 +1,5 @@
 import { test } from "node:test";
+import "./handoff.test.mjs";
 import assert from "node:assert/strict";
 import { IDBFactory } from "fake-indexeddb";
 import { openLocalStore } from "./storage.mjs";
@@ -86,3 +87,4 @@ test("content-only restored plans retain their readable body when copied", () =>
   assert.ok(copied.includes("Legacy bill"));
   assert.ok(copied.includes("Retained legacy plan body."));
 });
+

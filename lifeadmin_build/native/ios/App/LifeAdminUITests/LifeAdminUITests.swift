@@ -640,6 +640,61 @@ final class LifeAdminUITests: XCTestCase {
         cancel.tap()
     }
 
+    func testManualAiPromptReviewAndCopyPreserveRecords() throws {
+        app.launch()
+        XCTAssertTrue(app.buttons["Search"].waitForExistence(timeout: 20))
+        let open = app.buttons["Open plan"]
+        reveal(open)
+        open.tap()
+        let prepare = app.buttons["Prepare AI prompt"]
+        reveal(prepare)
+        prepare.tap()
+        let prompt = app.textViews["AI prompt"]
+        XCTAssertTrue(prompt.waitForExistence(timeout: 10))
+        reveal(prompt)
+        XCTAssertTrue((prompt.value as? String ?? "").contains("REF-7319"))
+        prompt.tap()
+        prompt.typeText(" CI reviewed prompt 7319")
+        closeKeyboard()
+        let reviewed = try XCTUnwrap(prompt.value as? String)
+        XCTAssertTrue(reviewed.contains("CI reviewed prompt 7319"))
+        let copy = app.buttons["Copy AI prompt"]
+        reveal(copy)
+        for name in ["Open ChatGPT", "Open Gemini", "Open Copilot", "Open Claude", "Open Perplexity"] {
+            XCTAssertTrue(app.links[name].exists)
+        }
+        copy.tap()
+        XCTAssertTrue(app.staticTexts[
+            "AI prompt copied. Paste into your chosen service after reviewing the details."
+        ].waitForExistence(timeout: 10))
+        XCTAssertEqual(app.state, .runningForeground)
+
+        // Paste into an unsaved local note, never into an external service.
+        app.terminate()
+        app.launch()
+        XCTAssertTrue(app.buttons["Search"].waitForExistence(timeout: 20))
+        let note = app.textViews["Additional notes"]
+        reveal(note)
+        note.tap()
+        note.press(forDuration: 1)
+        let menuPaste = app.menuItems["Paste"]
+        let paste = menuPaste.waitForExistence(timeout: 3) ? menuPaste : app.buttons["Paste"]
+        XCTAssertTrue(paste.waitForExistence(timeout: 10))
+        paste.tap()
+        let pasted = XCTNSPredicateExpectation(
+            predicate: NSPredicate(format: "value == %@", reviewed), object: note)
+        XCTAssertEqual(XCTWaiter.wait(for: [pasted], timeout: 10), .completed)
+        app.terminate()
+        app.launch()
+        XCTAssertTrue(app.buttons["Search"].waitForExistence(timeout: 20))
+        reveal(open)
+        XCTAssertTrue(app.otherElements["Your bills (1)"].exists)
+        XCTAssertTrue(app.otherElements["Saved plans (1)"].exists)
+        open.tap()
+        reveal(prepare)
+        XCTAssertFalse(app.textViews["AI prompt"].exists)
+    }
+
     @MainActor
     func testAppleAccessibilityAuditOnBillsAndPlan() throws {
         guard #available(iOS 17.0, *) else {
@@ -696,6 +751,24 @@ final class LifeAdminUITests: XCTestCase {
         reveal(nextSteps)
         try audit("saved-plan content")
 
+        let edit = app.buttons["Edit message"]
+        reveal(edit)
+        edit.tap()
+        let subject = app.textFields["Message subject"]
+        reveal(subject)
+        try audit("message editor")
+        let cancel = app.buttons["Cancel message edit"]
+        reveal(cancel)
+        cancel.tap()
+
+        let prepare = app.buttons["Prepare AI prompt"]
+        reveal(prepare)
+        prepare.tap()
+        let copyPrompt = app.buttons["Copy AI prompt"]
+        reveal(copyPrompt)
+        try audit("AI prompt review and copy controls")
+        app.buttons["Close AI prompt"].tap()
+
         // Reveal the entire footer rather than relying on off-screen tree
         // presence. Do not activate email or open external pages during QA.
         let email = app.links["Email Tenaciouspl support"]
@@ -712,6 +785,7 @@ final class LifeAdminUITests: XCTestCase {
     }
 
 }
+
 
 
 
