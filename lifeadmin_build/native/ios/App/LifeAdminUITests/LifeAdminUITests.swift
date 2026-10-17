@@ -507,4 +507,50 @@ final class LifeAdminUITests: XCTestCase {
         XCTAssertTrue(app.buttons["Copy plan"].waitForExistence(timeout: 5))
     }
 
+    func testNativePlanClipboardPastePreservesRecords() throws {
+        app.launch()
+        XCTAssertTrue(app.buttons["Search"].waitForExistence(timeout: 20))
+        let open = app.buttons["Open plan"]
+        reveal(open)
+        open.tap()
+        let copy = app.buttons["Copy plan"]
+        reveal(copy)
+        copy.tap()
+        XCTAssertTrue(app.staticTexts[
+            "Plan copied. Review before sharing."
+        ].waitForExistence(timeout: 10))
+
+        // A fresh process provides an empty, unsaved field. Use the customer's
+        // Paste action rather than reading the clipboard from the test runner.
+        app.terminate()
+        app.launch()
+        XCTAssertTrue(app.buttons["Search"].waitForExistence(timeout: 20))
+        let field = app.textFields["Bill or provider"]
+        XCTAssertTrue(field.exists)
+        field.tap()
+        field.press(forDuration: 1)
+        let menuPaste = app.menuItems["Paste"]
+        let paste = menuPaste.waitForExistence(timeout: 3) ? menuPaste : app.buttons["Paste"]
+        XCTAssertTrue(paste.waitForExistence(timeout: 10))
+        paste.tap()
+        let pasted = XCTNSPredicateExpectation(
+            predicate: NSPredicate(
+                format: "value CONTAINS %@ AND value CONTAINS %@ AND value CONTAINS %@ AND value CONTAINS %@",
+                "# CI sample subscription", "REF-7319",
+                "Nothing is sent automatically.", "## next steps"),
+            object: field)
+        XCTAssertEqual(XCTWaiter.wait(for: [pasted], timeout: 10), .completed)
+
+        // Do not submit the pasted text or save a new bill.
+        app.terminate()
+        app.launch()
+        XCTAssertTrue(app.buttons["Search"].waitForExistence(timeout: 20))
+        reveal(open)
+        XCTAssertTrue(app.otherElements["Your bills (1)"].exists)
+        XCTAssertTrue(app.otherElements["Saved plans (1)"].exists)
+        XCTAssertTrue(app.staticTexts["CI sample subscription"].exists)
+        open.tap()
+        XCTAssertTrue(app.buttons["Copy plan"].waitForExistence(timeout: 5))
+    }
+
 }

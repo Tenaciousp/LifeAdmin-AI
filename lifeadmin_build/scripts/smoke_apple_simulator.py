@@ -234,6 +234,11 @@ def main():
             rotation = verify_device_records(device, bundle, exports[0])
             rotation["landscape_portrait_checks_passed"] = True
             (evidence / "rotation.json").write_text(json.dumps(rotation, indent=2) + "\n")
+            run_ui_test(device, evidence, "testNativePlanClipboardPastePreservesRecords",
+                        "clipboard-ui-tests.log", str(evidence / "clipboard.xcresult"))
+            clipboard = verify_device_records(device, bundle, exports[0])
+            clipboard["native_copy_paste_checks_passed"] = True
+            (evidence / "clipboard.json").write_text(json.dumps(clipboard, indent=2) + "\n")
             print("Unsupported native storage failed closed and recovery preserved exact records.")
             print("Native rejected-write recovery and package reinstallation preserved exact records.")
             print("Apple interactive persistence and deletion test passed.")
@@ -256,7 +261,7 @@ def main():
         for filename in ("ui-tests.log", "interrupted-picker-ui-tests.log", "invalid-backup-ui-tests.log",
                          "rejected-write-ui-tests.log", "write-recovery-ui-tests.log",
                          "unsupported-storage-ui-tests.log", "storage-version-recovery-ui-tests.log",
-                         "rotation-ui-tests.log"):
+                         "rotation-ui-tests.log", "clipboard-ui-tests.log"):
             ui_log = evidence / filename
             if ui_log.exists():
                 diagnostics = ui_log.read_text(errors="replace")
@@ -312,6 +317,8 @@ def main():
              "storage-version-recovery-attachment-export.log"),
             (str(evidence / "rotation.xcresult"), "rotation-attachments",
              "rotation-attachment-export.log"),
+            (str(evidence / "clipboard.xcresult"), "clipboard-attachments",
+             "clipboard-attachment-export.log"),
         ):
             if Path(bundle).is_dir():
                 try:
