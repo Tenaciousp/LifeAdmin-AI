@@ -567,6 +567,79 @@ final class LifeAdminUITests: XCTestCase {
         XCTAssertTrue(app.buttons["Copy plan"].waitForExistence(timeout: 5))
     }
 
+    func testMessageEditingCancelSaveAndRestart() throws {
+        app.launch()
+        XCTAssertTrue(app.buttons["Search"].waitForExistence(timeout: 20))
+        let open = app.buttons["Open plan"]
+        reveal(open)
+        open.tap()
+        let edit = app.buttons["Edit message"]
+        reveal(edit)
+        edit.tap()
+        let subject = app.textFields["Message subject"]
+        let body = app.textViews["Message body"]
+        reveal(subject)
+        let originalSubject = try XCTUnwrap(subject.value as? String)
+        let originalBody = try XCTUnwrap(body.value as? String)
+        XCTAssertFalse(originalSubject.isEmpty)
+        XCTAssertFalse(originalBody.isEmpty)
+        XCTAssertFalse(app.buttons["Copy message"].isEnabled)
+        subject.tap()
+        subject.typeText(" CI cancelled")
+        closeKeyboard()
+        let cancel = app.buttons["Cancel message edit"]
+        reveal(cancel)
+        cancel.tap()
+        reveal(edit)
+        edit.tap()
+        XCTAssertEqual(subject.value as? String, originalSubject)
+        XCTAssertEqual(body.value as? String, originalBody)
+        reveal(subject)
+        subject.tap()
+        subject.typeText(" CI reviewed 7319")
+        closeKeyboard()
+        reveal(body)
+        body.tap()
+        body.typeText(" CI reviewed body 7319")
+        closeKeyboard()
+        let savedSubject = try XCTUnwrap(subject.value as? String)
+        let savedBody = try XCTUnwrap(body.value as? String)
+        XCTAssertTrue(savedSubject.contains("CI reviewed 7319"))
+        XCTAssertTrue(savedBody.contains("CI reviewed body 7319"))
+        let save = app.buttons["Save message"]
+        reveal(save)
+        save.tap()
+        XCTAssertTrue(app.staticTexts["Message saved on this device. Nothing was sent."].waitForExistence(timeout: 20))
+        app.terminate()
+        app.launch()
+        XCTAssertTrue(app.buttons["Search"].waitForExistence(timeout: 20))
+        reveal(open)
+        open.tap()
+        reveal(edit)
+        edit.tap()
+        XCTAssertEqual(subject.value as? String, savedSubject)
+        XCTAssertEqual(body.value as? String, savedBody)
+        reveal(cancel)
+        cancel.tap()
+
+        // Restore the earlier synthetic backup, then compare all original
+        // fields on the host. Unit tests separately check edit isolation.
+        selectExportedBackup()
+        confirm(timeout: 30)
+        XCTAssertTrue(app.staticTexts["Backup restored on this device."].waitForExistence(timeout: 20))
+        app.terminate()
+        app.launch()
+        XCTAssertTrue(app.buttons["Search"].waitForExistence(timeout: 20))
+        reveal(open)
+        open.tap()
+        reveal(edit)
+        edit.tap()
+        XCTAssertEqual(subject.value as? String, originalSubject)
+        XCTAssertEqual(body.value as? String, originalBody)
+        reveal(cancel)
+        cancel.tap()
+    }
+
     @MainActor
     func testAppleAccessibilityAuditOnBillsAndPlan() throws {
         guard #available(iOS 17.0, *) else {
@@ -639,5 +712,6 @@ final class LifeAdminUITests: XCTestCase {
     }
 
 }
+
 
 

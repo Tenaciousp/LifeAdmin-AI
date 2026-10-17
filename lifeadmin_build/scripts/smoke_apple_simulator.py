@@ -371,6 +371,11 @@ def main():
             clipboard = verify_device_records(device, bundle, exports[0])
             clipboard["native_copy_paste_checks_passed"] = True
             (evidence / "clipboard.json").write_text(json.dumps(clipboard, indent=2) + "\n")
+            run_ui_test(device, evidence, "testMessageEditingCancelSaveAndRestart",
+                        "message-edit-ui-tests.log", str(evidence / "message-edit.xcresult"))
+            message_edit = verify_device_records(device, bundle, exports[0])
+            message_edit["cancel_save_restart_and_restore_passed"] = True
+            (evidence / "message-edit.json").write_text(json.dumps(message_edit, indent=2) + "\n")
             print("Unsupported native storage failed closed and recovery preserved exact records.")
             print("Native rejected-write recovery and package reinstallation preserved exact records.")
             print("Apple interactive persistence and deletion test passed.")
@@ -394,7 +399,7 @@ def main():
                          "rejected-write-ui-tests.log", "write-recovery-ui-tests.log",
                          "unsupported-storage-ui-tests.log", "storage-version-recovery-ui-tests.log",
                          "rotation-ui-tests.log", "clipboard-ui-tests.log", "accessibility-ui-tests.log",
-                         "interrupted-transaction-ui-tests.log"):
+                         "interrupted-transaction-ui-tests.log", "message-edit-ui-tests.log"):
             ui_log = evidence / filename
             if ui_log.exists():
                 diagnostics = ui_log.read_text(errors="replace")
@@ -456,6 +461,8 @@ def main():
              "accessibility-attachment-export.log"),
             (str(evidence / "interrupted-transaction.xcresult"), "interrupted-transaction-attachments",
              "interrupted-transaction-attachment-export.log"),
+            (str(evidence / "message-edit.xcresult"), "message-edit-attachments",
+             "message-edit-attachment-export.log"),
         ):
             if Path(bundle).is_dir():
                 try:
@@ -472,6 +479,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 

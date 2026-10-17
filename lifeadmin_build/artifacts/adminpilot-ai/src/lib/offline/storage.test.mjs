@@ -12,6 +12,53 @@ async function fixture() {
   return { indexedDB, store: await openLocalStore({ indexedDB }) };
 }
 
+test("message edits persist through reopen and backup without changing other plan fields", async () => {
+  const { indexedDB, store } = await fixture();
+  await store.createTask(task("a"));
+  const saved = { ...plan("p", "a"), sections: { next_steps: "Original guidance" },
+    provider_email: { subject: "Original", body: "Original message", kind: "bank_query" } };
+  await store.savePlan(saved);
+  const draft = { subject: "Reviewed subject", body: "Reviewed message\nSecond line" };
+  const updated = await store.updatePlanMessage("p", draft, saved.provider_email);
+  assert.deepEqual(updated, { ...saved, provider_email: { ...saved.provider_email, ...draft } });
+  const exported = await store.exportBackup();
+  store.close();
+  const reopened = await openLocalStore({ indexedDB });
+  assert.deepEqual((await reopened.read()).plans, [updated]);
+  await reopened.clear();
+  await reopened.importBackup(exported, { replace: true });
+  assert.deepEqual((await reopened.read()).plans, [updated]);
+  reopened.close();
+});
+
+test("aborted, stale and invalid message edits leave acknowledged records unchanged", async () => {
+  const { store } = await fixture();
+  await store.createTask(task("a"));
+  const saved = { ...plan("p", "a"), provider_email: { subject: "Original", body: "Original message", kind: "provider" } };
+  await store.savePlan(saved);
+  const before = await store.read(), put = IDBObjectStore.prototype.put;
+  try {
+    IDBObjectStore.prototype.put = function (...args) {
+      const request = put.apply(this, args);
+      request.addEventListener("success", () => this.transaction.abort(), { once: true });
+      return request;
+    };
+    await assert.rejects(store.updatePlanMessage("p", { subject: "Fail", body: "Not committed" }, saved.provider_email));
+  } finally { IDBObjectStore.prototype.put = put; }
+  assert.deepEqual(await store.read(), before);
+  const updated = await store.updatePlanMessage("p", { subject: "Newer", body: "Keep newer" }, saved.provider_email);
+  await assert.rejects(store.updatePlanMessage("p", { subject: "Stale", body: "Do not overwrite" }, saved.provider_email), /Message changed/);
+  for (const draft of [null, { subject: "", body: "Body" }, { subject: "Subject", body: " " },
+    { subject: "x".repeat(201), body: "Body" }, { subject: "Subject", body: "x".repeat(20001) }]) {
+    await assert.rejects(store.updatePlanMessage("p", draft, updated.provider_email), /Enter a subject/);
+  }
+  assert.deepEqual((await store.read()).plans, [updated]);
+  await store.deletePlan("p");
+  await assert.rejects(store.updatePlanMessage("p", { subject: "Missing", body: "No resurrection" }, updated.provider_email), /Plan not found/);
+  assert.deepEqual((await store.read()).plans, []);
+  store.close();
+});
+
 test("bills and plans survive closing and reopening storage", async () => {
   const { indexedDB, store } = await fixture();
   await store.createTask(task("a"));
@@ -126,3 +173,4 @@ test("storage budget failure preserves an exportable snapshot", async () => {
   assert.deepEqual(parseBackup(await store.exportBackup()).tasks, [task("a")]);
   store.close();
 });
+

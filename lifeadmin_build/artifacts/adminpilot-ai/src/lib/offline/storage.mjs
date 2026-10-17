@@ -84,6 +84,20 @@ export function parseBackup(text) {
   return { tasks, plans };
 }
 
+export function planWithEditedMessage(plan, draft, expected) {
+  if (!plan) throw new Error("Plan not found.");
+  if (!plan.provider_email) throw new Error("This plan has no message draft.");
+  if (!expected || ["subject", "body", "kind"].some(key => expected[key] !== plan.provider_email[key])) {
+    throw new Error("Message changed. Reopen the app before editing again.");
+  }
+  if (!draft || typeof draft.subject !== "string" || typeof draft.body !== "string" ||
+      !draft.subject.trim() || !draft.body.trim() || draft.subject.length > 200 || draft.body.length > 20000) {
+    throw new Error("Enter a subject (up to 200 characters) and message (up to 20,000 characters).");
+  }
+  return record({ ...plan, provider_email: { ...plan.provider_email,
+    subject: draft.subject, body: draft.body } }, "plan");
+}
+
 export async function openLocalStore({ indexedDB = globalThis.indexedDB, name = "lifeadmin-device-v1" } = {}) {
   if (!indexedDB) throw new Error("Device storage is unavailable. No records were saved.");
   const db = await new Promise((resolve, reject) => {
@@ -170,6 +184,19 @@ export async function openLocalStore({ indexedDB = globalThis.indexedDB, name = 
         });
       });
     },
+    async updatePlanMessage(id, draft, expected) {
+      const input = structuredClone(draft), original = structuredClone(expected);
+      return transaction("readwrite", (tx, done, run) => {
+        const plans = tx.objectStore("plans");
+        const request = plans.get(id);
+        request.onsuccess = () => run(() => {
+          const value = planWithEditedMessage(request.result, input, original);
+          plans.put(value);
+          verifySize(tx, run);
+          done(value);
+        });
+      });
+    },
     async deleteTask(id) {
       return transaction("readwrite", (tx) => {
         tx.objectStore("tasks").delete(id);
@@ -209,3 +236,4 @@ export async function openLocalStore({ indexedDB = globalThis.indexedDB, name = 
     },
   };
 }
+

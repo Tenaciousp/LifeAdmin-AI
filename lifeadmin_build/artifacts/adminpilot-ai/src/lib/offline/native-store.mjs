@@ -1,4 +1,4 @@
-import { parseBackup, serialise, record, jsonValue } from "./storage.mjs";
+import { parseBackup, serialise, record, jsonValue, planWithEditedMessage } from "./storage.mjs";
 
 // Native bridge owns the database transaction. No cached snapshot becomes a save.
 export async function openNativeStore(bridge) {
@@ -60,6 +60,15 @@ export async function openNativeStore(bridge) {
         data.plans.push(value); return value;
       });
     },
+    updatePlanMessage(id, draft, expected) {
+      const input = structuredClone(draft), original = structuredClone(expected);
+      return mutate(data => {
+        const index = data.plans.findIndex(item => item.id === id);
+        const value = planWithEditedMessage(data.plans[index], input, original);
+        data.plans[index] = value;
+        return value;
+      });
+    },
     deleteTask(id) { return mutate(data => { data.tasks = data.tasks.filter(item => item.id !== id); data.plans = data.plans.filter(item => item.task_id !== id); }); },
     deletePlan(id) { return mutate(data => { data.plans = data.plans.filter(item => item.id !== id); }); },
     clear() { return mutate(data => { data.tasks = []; data.plans = []; }); },
@@ -71,3 +80,4 @@ export async function openNativeStore(bridge) {
     },
   };
 }
+

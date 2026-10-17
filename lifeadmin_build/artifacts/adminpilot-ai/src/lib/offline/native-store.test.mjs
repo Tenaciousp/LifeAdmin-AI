@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { openNativeStore } from "./native-store.mjs";
-import { generateAndSaveLocalPlan } from "./plans.mjs";
+import { generateAndSaveLocalPlan, planTextForCopy } from "./plans.mjs";
 
 globalThis.fetch = () => { throw new Error("Unexpected network request"); };
 function database() {
@@ -19,6 +19,75 @@ function database() {
   };
 }
 const bill = { id: "bill", title: "Energy renewal", category_id: "energy_water", goal_id: "prepare_renewal", details: {} };
+
+test("edited message persists, copies and round-trips without changing plan guidance", async () => {
+  const bridge = database(), store = await openNativeStore(bridge);
+  await store.createTask(bill);
+  const plan = await generateAndSaveLocalPlan(store, bill.id);
+  const draft = { subject: "My reviewed subject", body: "My reviewed message\nSecond line." };
+  const saved = await store.updatePlanMessage(plan.id, draft, plan.provider_email);
+  assert.deepEqual(saved, { ...plan, provider_email: { ...plan.provider_email, ...draft } });
+  assert.deepEqual((await store.read()).tasks, [bill]);
+  assert.match(planTextForCopy(saved), /My reviewed subject/);
+  assert.match(planTextForCopy(saved), /My reviewed message\nSecond line\./);
+  assert.match(planTextForCopy(saved), /Nothing is sent automatically/);
+  const backup = await store.exportBackup();
+  store.close();
+  const reopened = await openNativeStore(bridge);
+  assert.deepEqual((await reopened.read()).plans, [saved]);
+  await reopened.clear();
+  await reopened.importBackup(backup, { replace: true });
+  assert.deepEqual((await reopened.read()).plans, [saved]);
+});
+
+test("failed and stale message edits preserve the latest acknowledged snapshot", async () => {
+  const bridge = database(), first = await openNativeStore(bridge), second = await openNativeStore(bridge);
+  await first.createTask(bill);
+  const plan = await generateAndSaveLocalPlan(first, bill.id);
+  const before = await first.read();
+  bridge.failNext();
+  await assert.rejects(first.updatePlanMessage(plan.id, { subject: "Fail", body: "Not saved" }, plan.provider_email), /Injected/);
+  assert.deepEqual(await first.read(), before);
+  const saved = await second.updatePlanMessage(plan.id, { subject: "Newer", body: "Keep newer" }, plan.provider_email);
+  await assert.rejects(first.updatePlanMessage(plan.id, { subject: "Stale", body: "Do not overwrite" }, plan.provider_email), /Message changed/);
+  assert.deepEqual((await first.read()).plans, [saved]);
+  await first.deletePlan(plan.id);
+  await assert.rejects(first.updatePlanMessage(plan.id, { subject: "Missing", body: "No resurrection" }, plan.provider_email), /Plan not found/);
+  assert.deepEqual((await first.read()).plans, []);
+});
+
+test("invalid message edits and legacy plans do not change saved records", async () => {
+  const store = await openNativeStore(database());
+  await store.createTask(bill);
+  const plan = await generateAndSaveLocalPlan(store, bill.id), before = await store.read();
+  for (const draft of [null, { subject: "", body: "Body" }, { subject: "Subject", body: " " },
+    { subject: "x".repeat(201), body: "Body" }, { subject: "Subject", body: "x".repeat(20001) },
+    { subject: {}, body: "Body" }]) {
+    await assert.rejects(store.updatePlanMessage(plan.id, draft, plan.provider_email), /Enter a subject/);
+    assert.deepEqual(await store.read(), before);
+  }
+  await assert.rejects(store.updatePlanMessage(plan.id, { subject: "Subject", body: "Body" }, null), /Message changed/);
+  await store.savePlan({ id: "legacy", task_id: bill.id, title: "Legacy", content: "Keep legacy" });
+  const legacySnapshot = await store.read();
+  await assert.rejects(store.updatePlanMessage("legacy", { subject: "Subject", body: "Body" }, {}), /no message draft/);
+  assert.deepEqual(await store.read(), legacySnapshot);
+});
+
+test("simultaneous message editors never silently overwrite each other", async () => {
+  const bridge = database(), first = await openNativeStore(bridge), second = await openNativeStore(bridge);
+  await first.createTask(bill);
+  const plan = await generateAndSaveLocalPlan(first, bill.id);
+  const results = await Promise.allSettled([
+    first.updatePlanMessage(plan.id, { subject: "First", body: "First body" }, plan.provider_email),
+    second.updatePlanMessage(plan.id, { subject: "Second", body: "Second body" }, plan.provider_email),
+  ]);
+  const accepted = results.filter(result => result.status === "fulfilled");
+  const rejected = results.filter(result => result.status === "rejected");
+  assert.equal(accepted.length, 1);
+  assert.equal(rejected.length, 1);
+  assert.match(rejected[0].reason.message, /Message changed/);
+  assert.deepEqual((await first.read()).plans, [accepted[0].value]);
+});
 
 test("native repository reconnect and planning round trip", async () => {
   const bridge = database(), store = await openNativeStore(bridge);
@@ -196,3 +265,4 @@ test("malformed bill display and detail fields never replace acknowledged record
   assert.deepEqual((await reopened.read()).tasks, [compatible]);
   reopened.close();
 });
+
