@@ -553,4 +553,26 @@ final class LifeAdminUITests: XCTestCase {
         XCTAssertTrue(app.buttons["Copy plan"].waitForExistence(timeout: 5))
     }
 
+    @MainActor
+    func testAppleAccessibilityAuditOnBillsAndPlan() throws {
+        guard #available(iOS 17.0, *) else {
+            XCTFail("Apple accessibility auditing requires an iOS 17+ test runtime.")
+            return
+        }
+        app.launch()
+        XCTAssertTrue(app.buttons["Search"].waitForExistence(timeout: 20))
+        print("Apple accessibility audit: initial bill-entry screen")
+        try app.performAccessibilityAudit()
+
+        let open = app.buttons["Open plan"]
+        reveal(open)
+        print("Apple accessibility audit: saved bill and plan controls")
+        try app.performAccessibilityAudit()
+        open.tap()
+        let nextSteps = app.staticTexts["Next Steps"]
+        reveal(nextSteps)
+        print("Apple accessibility audit: saved-plan content")
+        try app.performAccessibilityAudit()
+    }
+
 }
