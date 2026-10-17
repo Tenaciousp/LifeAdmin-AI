@@ -179,6 +179,36 @@ class ExportedRecordTests(unittest.TestCase):
             self.assertFalse(database.exists())
 
 
+    def test_accessibility_fixture_seeds_once_and_rejects_bad_json(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            container = root / "container"
+            evidence = root / "evidence"
+            evidence.mkdir()
+            data = {"format": "lifeadmin-backup", "version": 1,
+                    "tasks": [{"id": "bill", "notes": "Note7319",
+                               "details": {"provider": "Netflix", "account_reference": "REF-7319"}}],
+                    "plans": [{"id": "plan", "task_id": "bill", "content": "Synthetic plan"}]}
+            generated = runner.subprocess.CompletedProcess([], 0, stdout=json.dumps(data))
+            with patch.object(runner, "sim", return_value=str(container)), \
+                    patch.object(runner.subprocess, "run", return_value=generated):
+                backup = runner.prepare_accessibility_fixture("device", "bundle", evidence)
+                self.assertTrue(runner.verify_device_records("device", "bundle", backup)["exact_record_match"])
+                with self.assertRaisesRegex(RuntimeError, "unused native database"):
+                    runner.prepare_accessibility_fixture("device", "bundle", evidence)
+                self.assertTrue(runner.verify_device_records("device", "bundle", backup)["exact_record_match"])
+            database = container / "Library/Application Support/LifeAdmin/records-v1.sqlite"
+            with closing(sqlite3.connect(database)) as connection:
+                self.assertEqual(connection.execute("PRAGMA user_version").fetchone()[0], 1)
+                self.assertEqual(connection.execute("SELECT revision FROM snapshot").fetchone()[0],
+                                 "ci-accessibility-fixture")
+            with patch.object(runner, "sim") as locate, \
+                    patch.object(runner.subprocess, "run", return_value=runner.subprocess.CompletedProcess([], 0, stdout="{broken")):
+                with self.assertRaises(json.JSONDecodeError):
+                    runner.prepare_accessibility_fixture("device", "bundle", evidence)
+                locate.assert_not_called()
+
+
 if __name__ == "__main__":
     unittest.main()
 

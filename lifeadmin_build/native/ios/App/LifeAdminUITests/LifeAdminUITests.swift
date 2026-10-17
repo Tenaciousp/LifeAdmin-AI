@@ -559,8 +559,9 @@ final class LifeAdminUITests: XCTestCase {
             XCTFail("Apple accessibility auditing requires an iOS 17+ test runtime.")
             return
         }
+        // This audit now owns the cold simulator launch.
         app.launch()
-        XCTAssertTrue(app.buttons["Search"].waitForExistence(timeout: 20))
+        XCTAssertTrue(app.buttons["Search"].waitForExistence(timeout: 60))
         var findings: [[String: String]] = []
         defer {
             let data = (try? JSONSerialization.data(withJSONObject: findings, options: [.prettyPrinted, .sortedKeys])) ?? Data()

@@ -127,6 +127,48 @@ def configure_storage_version(device, bundle, version):
         return previous
 
 
+def prepare_accessibility_fixture(device, bundle, evidence):
+    # Seed only the disposable, not-yet-launched simulator app. Use the real
+    # planner and backup validator so accessibility sees a representative plan.
+    script = """
+import { generateAndSaveLocalPlan } from "../artifacts/adminpilot-ai/src/lib/offline/plans.mjs";
+import { serialise, parseBackup } from "../artifacts/adminpilot-ai/src/lib/offline/storage.mjs";
+const task = {
+  id: "ci-accessibility-bill", title: "CI sample subscription",
+  category_id: "subscriptions_memberships", category: "Subscriptions and memberships",
+  goal_id: "cancel_switch", status: "Open", notes: "Note7319",
+  details: { provider: "Netflix", account_reference: "REF-7319" },
+  created_at: "2026-01-01T00:00:00.000Z", updated_at: "2026-01-01T00:00:00.000Z"
+};
+const snapshot = { tasks: [task], plans: [] };
+await generateAndSaveLocalPlan({
+  read: async () => structuredClone(snapshot),
+  savePlan: async plan => { snapshot.plans.push(plan); }
+}, task.id);
+const text = serialise(snapshot);
+parseBackup(text);
+process.stdout.write(text);
+"""
+    generated = subprocess.run(["node", "--input-type=module", "-e", script],
+                               check=True, text=True, capture_output=True, timeout=30)
+    backup = evidence / "accessibility-fixture.json"
+    # Parse before touching the native database, even if fixture generation fails.
+    snapshot = json.loads(generated.stdout)
+    if snapshot.get("format") != "lifeadmin-backup" or snapshot.get("version") != 1:
+        raise RuntimeError("Invalid generated accessibility fixture")
+    container = Path(sim("get_app_container", device, bundle, "data"))
+    database = container / "Library/Application Support/LifeAdmin/records-v1.sqlite"
+    database.parent.mkdir(parents=True, exist_ok=True)
+    with closing(sqlite3.connect(database.as_uri() + "?mode=rwc", uri=True)) as connection, connection:
+        if connection.execute("SELECT name FROM sqlite_master").fetchone() is not None:
+            raise RuntimeError("Accessibility fixture requires an unused native database")
+        connection.execute("CREATE TABLE snapshot (id INTEGER PRIMARY KEY CHECK(id=1), revision TEXT NOT NULL, data TEXT NOT NULL)")
+        connection.execute("INSERT INTO snapshot VALUES (1, ?, ?)", ("ci-accessibility-fixture", generated.stdout))
+        connection.execute("PRAGMA user_version=1")
+    backup.write_text(generated.stdout)
+    return backup
+
+
 def main():
     app = Path("build-ios-simulator/Build/Products/Debug-iphonesimulator/App.app")
     if not app.is_dir():
@@ -156,6 +198,16 @@ def main():
         # Let XCTest own the initial launch so a simctl launch timeout does not
         # prevent collection of UI-test diagnostics. Both checks must still pass.
         if "--ui-tests" in sys.argv:
+            fixture = prepare_accessibility_fixture(device, bundle, evidence)
+            run_ui_test(device, evidence, "testAppleAccessibilityAuditOnBillsAndPlan",
+                        "accessibility-ui-tests.log", str(evidence / "accessibility.xcresult"))
+            accessibility = verify_device_records(device, bundle, fixture)
+            accessibility["sampled_screen_accessibility_audits_passed"] = True
+            accessibility["scope"] = "Synthetic seeded fixture on disposable iPhone simulator; manual assistive-technology acceptance outstanding"
+            (evidence / "accessibility.json").write_text(json.dumps(accessibility, indent=2) + "\n")
+            # Reset after the audit; the backup journey must still start empty.
+            sim("uninstall", device, bundle, timeout=120)
+            sim("install", device, str(app.resolve()), timeout=120)
             print("Starting Apple interactive acceptance on a fresh installation.", flush=True)
             run_ui_test(device, evidence,
                         "testNativeBackupRoundTripAndCancellationPreserveRecords",
@@ -239,12 +291,6 @@ def main():
             clipboard = verify_device_records(device, bundle, exports[0])
             clipboard["native_copy_paste_checks_passed"] = True
             (evidence / "clipboard.json").write_text(json.dumps(clipboard, indent=2) + "\n")
-            run_ui_test(device, evidence, "testAppleAccessibilityAuditOnBillsAndPlan",
-                        "accessibility-ui-tests.log", str(evidence / "accessibility.xcresult"))
-            accessibility = verify_device_records(device, bundle, exports[0])
-            accessibility["sampled_screen_accessibility_audits_passed"] = True
-            accessibility["scope"] = "Apple automated audit of three sampled iPhone simulator views; manual assistive-technology acceptance outstanding"
-            (evidence / "accessibility.json").write_text(json.dumps(accessibility, indent=2) + "\n")
             print("Unsupported native storage failed closed and recovery preserved exact records.")
             print("Native rejected-write recovery and package reinstallation preserved exact records.")
             print("Apple interactive persistence and deletion test passed.")
