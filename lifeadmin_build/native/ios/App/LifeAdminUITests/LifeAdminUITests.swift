@@ -26,7 +26,11 @@ final class LifeAdminUITests: XCTestCase {
 
     private func reveal(_ element: XCUIElement, file: StaticString = #filePath, line: UInt = #line) {
         for _ in 0..<14 {
-            if element.exists && element.isHittable { return }
+            // WebKit sometimes calls a clipped button hittable even when its
+            // centre lies below the native safe-area viewport. A tap then does
+            // nothing. Require the whole control inside the visible web view.
+            if element.exists && element.isHittable &&
+                app.webViews.firstMatch.frame.contains(element.frame) { return }
             app.swipeUp()
         }
         print(app.debugDescription)
