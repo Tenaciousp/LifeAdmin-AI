@@ -48,6 +48,16 @@ final class LifeAdminUITests: XCTestCase {
     }
 
     private func enterText(_ value: String, into field: XCUIElement) {
+        // A cold WebKit field tap can finish before the keyboard appears.
+        // Retry the tap once, before typing, so partial input is never replayed.
+        let keyboard = app.keyboards.firstMatch
+        if !keyboard.waitForExistence(timeout: 5) {
+            field.tap()
+        }
+        guard keyboard.waitForExistence(timeout: 5) else {
+            XCTFail("Keyboard did not appear for text entry")
+            return
+        }
         // Use one native typing operation; verify the complete controlled value.
         field.typeText(value)
         let complete = XCTNSPredicateExpectation(
