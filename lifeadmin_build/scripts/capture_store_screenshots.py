@@ -68,8 +68,8 @@ def main():
     try:
         sim("boot", device)
         sim("bootstatus", device, "-b", timeout=300)
-        sim("status_bar", device, "override", "--time", "9:41",
-            "--batteryState", "charged", "--batteryLevel", "100")
+        # Capture the real status bar. Cosmetic clock overrides have stalled
+        # simctl before app launch and are not required for native previews.
         sim("install", device, str(app.resolve()), timeout=120)
         run_ui_test(device, evidence, "testStoreScreenshots",
                     "store-screenshots.log", str(result))
