@@ -70,6 +70,12 @@ const assert = require('node:assert/strict');
         await page.getByRole('heading',{name:'Review your AI prompt',exact:true}).scrollIntoViewIfNeeded();
         const layout = await page.evaluate(() => ({width:innerWidth,scrollWidth:document.documentElement.scrollWidth,fontSize:getComputedStyle(document.documentElement).fontSize,clippedControls:[...document.querySelectorAll('button,input,select,textarea,a')].filter(e => e.getBoundingClientRect().width && (e.getBoundingClientRect().left < -1 || e.getBoundingClientRect().right > innerWidth+1)).map(e=>({name:e.textContent.trim().slice(0,60),left:e.getBoundingClientRect().left,right:e.getBoundingClientRect().right}))}));
         layouts.push({...layout,scale});
+        const controls=await Promise.all(['Copy plan','Copy message','Prepare AI prompt'].map(name=>page.getByRole('button',{name,exact:true}).boundingBox()));
+        for(let i=1;i<controls.length;i++) {
+          const previous=controls[i-1],current=controls[i];
+          assert(previous&&current,'Plan actions must be visible');
+          if(Math.abs(previous.y-current.y)<2) assert(current.x-(previous.x+previous.width)>=8,`Plan action gap is below 8 px at ${width}px / ${scale*100}% text`);
+        }
         await page.screenshot({path:path.join(output,`layout-${width}-${scale}.png`)});
       }
     }
