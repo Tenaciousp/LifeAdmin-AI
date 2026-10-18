@@ -817,7 +817,23 @@ final class LifeAdminUITests: XCTestCase {
         // Separate capture job only. Never run against a customer's installation.
         XCUIDevice.shared.orientation = .portrait
         func capture(_ scene: String, showing control: XCUIElement? = nil) {
-            if let control { reveal(control) }
+            if let control {
+                reveal(control)
+                // Hittable only guarantees a usable tap centre. Frame the
+                // section near the top for a readable store screenshot.
+                let viewport = app.webViews.firstMatch.frame
+                for _ in 0..<6 {
+                    let offset = control.frame.minY - (viewport.minY + 20)
+                    if abs(offset) < 24 { break }
+                    let distance = min(max(offset, -viewport.height * 0.4), viewport.height * 0.4)
+                    let start = app.coordinate(withNormalizedOffset: .zero)
+                        .withOffset(CGVector(dx: viewport.minX + 8, dy: viewport.midY))
+                    let end = start.withOffset(CGVector(dx: 0, dy: -distance))
+                    let previous = control.frame.minY
+                    start.press(forDuration: 0.05, thenDragTo: end)
+                    if abs(control.frame.minY - previous) < 2 { break }
+                }
+            }
             let image = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
             image.name = "Store " + scene
             image.lifetime = .keepAlways
@@ -837,12 +853,19 @@ final class LifeAdminUITests: XCTestCase {
         create.tap()
         confirm()
         XCTAssertTrue(app.staticTexts["Plan saved on this device."].waitForExistence(timeout: 10))
-        capture("02 plan", showing: app.staticTexts["Next Steps"])
+        let titles = app.staticTexts.matching(NSPredicate(format: "label == %@", "Streaming subscription")).allElementsBoundByIndex
+        XCTAssertGreaterThanOrEqual(titles.count, 2)
+        for title in titles {
+            XCTAssertGreaterThanOrEqual(title.frame.width,
+                min(180, app.webViews.firstMatch.frame.width * 0.4),
+                "A saved bill or plan title is squeezed beside its actions")
+        }
+        capture("02 plan", showing: titles.last)
 
         let edit = app.buttons["Edit message"]
         reveal(edit)
         edit.tap()
-        capture("03 message", showing: app.textFields["Message subject"])
+        capture("03 message", showing: app.staticTexts["Provider-message draft"])
         let cancel = app.buttons["Cancel message edit"]
         reveal(cancel)
         cancel.tap()
@@ -858,7 +881,7 @@ final class LifeAdminUITests: XCTestCase {
         let backups = app.buttons["Manage backups"]
         reveal(backups)
         backups.tap()
-        capture("05 backups", showing: app.buttons["Export backup"])
+        capture("05 backups", showing: app.staticTexts["Your data and backups"])
     }
 
     @MainActor
