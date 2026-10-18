@@ -62,6 +62,13 @@ def create_invalid_backups(export_path):
     invalid_plan = json.loads(export_path.read_text())
     invalid_plan["plans"][0]["missing_details"] = "Invalid list"
     (folder / "ci-invalid-plan.json").write_text(json.dumps(invalid_plan))
+    for kind in ("tasks", "plans"):
+        duplicate = json.loads(export_path.read_text())
+        duplicate[kind].append(duplicate[kind][0].copy())
+        (folder / f"ci-duplicate-{kind}.json").write_text(json.dumps(duplicate))
+    orphan = json.loads(export_path.read_text())
+    orphan["plans"][0]["task_id"] = "ci-missing-bill"
+    (folder / "ci-orphan-plan.json").write_text(json.dumps(orphan))
     (folder / "ci-oversized.json").write_bytes(b"x" * (5 * 1024 * 1024 + 1))
 
 

@@ -406,6 +406,9 @@ final class LifeAdminUITests: XCTestCase {
             ("ci-malformed.json", "Backup is not valid JSON."),
             ("ci-future.json", "Unsupported LifeAdmin backup."),
             ("ci-invalid-plan.json", "Invalid saved plan missing details."),
+            ("ci-duplicate-tasks.json", "Backup contains duplicate records."),
+            ("ci-duplicate-plans.json", "Backup contains duplicate records."),
+            ("ci-orphan-plan.json", "A saved plan has no matching bill."),
             ("ci-oversized.json", "Backup exceeds 5 MB.")
         ]
         for (filename, message) in cases {

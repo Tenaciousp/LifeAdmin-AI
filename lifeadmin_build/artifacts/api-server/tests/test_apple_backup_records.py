@@ -72,6 +72,17 @@ class ExportedRecordTests(unittest.TestCase):
             self.assertEqual(json.loads((folder / "ci-future.json").read_text())["version"], 2)
             invalid = json.loads((folder / "ci-invalid-plan.json").read_text())
             self.assertIsInstance(invalid["plans"][0]["missing_details"], str)
+            for kind in ("tasks", "plans"):
+                duplicate = json.loads((folder / f"ci-duplicate-{kind}.json").read_text())
+                self.assertEqual(len(duplicate[kind]), 2)
+                self.assertEqual(duplicate[kind][0], duplicate[kind][1])
+                other = "plans" if kind == "tasks" else "tasks"
+                self.assertEqual(duplicate[other], original[other])
+            orphan = json.loads((folder / "ci-orphan-plan.json").read_text())
+            self.assertEqual(orphan["tasks"], original["tasks"])
+            self.assertNotIn(orphan["plans"][0]["task_id"],
+                             {task["id"] for task in orphan["tasks"]})
+            self.assertEqual(backup.read_bytes(), before)
             self.assertEqual((folder / "ci-oversized.json").stat().st_size, 5 * 1024 * 1024 + 1)
             with self.assertRaises(json.JSONDecodeError):
                 json.loads((folder / "ci-malformed.json").read_text())
