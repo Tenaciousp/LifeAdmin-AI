@@ -828,11 +828,18 @@ final class LifeAdminUITests: XCTestCase {
                     let distance = min(max(offset, -viewport.height * 0.4), viewport.height * 0.4)
                     let start = app.coordinate(withNormalizedOffset: .zero)
                         .withOffset(CGVector(dx: viewport.minX + 8, dy: viewport.midY))
-                    let end = start.withOffset(CGVector(dx: 0, dy: -distance))
+                    let end = app.coordinate(withNormalizedOffset: .zero)
+                        .withOffset(CGVector(dx: viewport.minX + 8, dy: viewport.midY - distance))
                     let previous = control.frame.minY
-                    start.press(forDuration: 0.05, thenDragTo: end)
+                    // Stop the drag before lifting so inertial scrolling does
+                    // not repeatedly carry the heading past the target.
+                    start.press(forDuration: 0.05, thenDragTo: end,
+                                withVelocity: .slow, thenHoldForDuration: 0.5)
                     if abs(control.frame.minY - previous) < 2 { break }
                 }
+                print("Store framing \(scene): heading=\(control.frame), viewport=\(viewport)")
+                XCTAssertTrue(viewport.contains(control.frame),
+                              "Store screenshot section heading must be fully visible")
             }
             let image = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
             image.name = "Store " + scene
