@@ -169,7 +169,8 @@ final class LifeAdminUITests: XCTestCase {
     }
 
     private func addSubscription(
-        named name: String, referenceText: String = "REF-7319", noteText: String = "Note7319"
+        named name: String, referenceText: String = "REF-7319", noteText: String = "Note7319",
+        checkCurrentLayout: Bool = true
     ) {
         let search = app.textFields.firstMatch
         search.tap()
@@ -189,14 +190,16 @@ final class LifeAdminUITests: XCTestCase {
         enterText(name, into: billName)
         XCTAssertEqual(billName.value as? String, name)
         closeKeyboard()
-        let columnWidth = app.textFields["Provider or organisation"].frame.width
-        XCTAssertGreaterThan(columnWidth, 0)
-        for label in ["Relevant date", "Next payment date (useful)", "Minimum term ends (useful)"] {
-            let date = app.otherElements[label].firstMatch
-            XCTAssertTrue(date.exists)
-            XCTAssertGreaterThan(date.frame.width, 0)
-            XCTAssertLessThanOrEqual(date.frame.width, columnWidth + 1,
-                                     "Date field extends beyond its form column: " + label)
+        if checkCurrentLayout {
+            let columnWidth = app.textFields["Provider or organisation"].frame.width
+            XCTAssertGreaterThan(columnWidth, 0)
+            for label in ["Relevant date", "Next payment date (useful)", "Minimum term ends (useful)"] {
+                let date = app.otherElements[label].firstMatch
+                XCTAssertTrue(date.exists)
+                XCTAssertGreaterThan(date.frame.width, 0)
+                XCTAssertLessThanOrEqual(date.frame.width, columnWidth + 1,
+                                         "Date field extends beyond its form column: " + label)
+            }
         }
         let reference = app.textFields["Account or customer reference"]
         reveal(reference)
@@ -254,9 +257,10 @@ final class LifeAdminUITests: XCTestCase {
 
     func testPrepareRecordsForAppUpgrade() throws {
         // Run against the pinned older app, using this test harness only.
+        // Historical layouts are not subject to current-app regression checks.
         app.launch()
         XCTAssertTrue(app.buttons["Search"].waitForExistence(timeout: 60))
-        addSubscription(named: "CI sample subscription")
+        addSubscription(named: "CI sample subscription", checkCurrentLayout: false)
         let create = app.buttons["Create plan"]
         reveal(create)
         create.tap()
