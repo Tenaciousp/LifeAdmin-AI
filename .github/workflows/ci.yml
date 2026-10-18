@@ -6,6 +6,11 @@ on:
   pull_request:
     branches: [main]
 
+# Keep only the latest candidate for this workflow and pull-request ref.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   verify:
     runs-on: ubuntu-latest
