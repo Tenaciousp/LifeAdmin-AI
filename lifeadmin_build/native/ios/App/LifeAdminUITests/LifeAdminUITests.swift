@@ -128,7 +128,8 @@ final class LifeAdminUITests: XCTestCase {
         }
         let closed = XCTNSPredicateExpectation(
             predicate: NSPredicate(format: "exists == false"), object: app.keyboards.firstMatch)
-        XCTAssertEqual(XCTWaiter.wait(for: [closed], timeout: 5), .completed)
+        // Large iPad simulator snapshots can outlast the keyboard animation.
+        XCTAssertEqual(XCTWaiter.wait(for: [closed], timeout: 15), .completed)
     }
 
     private func pickerControl(
@@ -188,6 +189,15 @@ final class LifeAdminUITests: XCTestCase {
         enterText(name, into: billName)
         XCTAssertEqual(billName.value as? String, name)
         closeKeyboard()
+        let columnWidth = app.textFields["Provider or organisation"].frame.width
+        XCTAssertGreaterThan(columnWidth, 0)
+        for label in ["Relevant date", "Next payment date (useful)", "Minimum term ends (useful)"] {
+            let date = app.otherElements[label].firstMatch
+            XCTAssertTrue(date.exists)
+            XCTAssertGreaterThan(date.frame.width, 0)
+            XCTAssertLessThanOrEqual(date.frame.width, columnWidth + 1,
+                                     "Date field extends beyond its form column: " + label)
+        }
         let reference = app.textFields["Account or customer reference"]
         reveal(reference)
         reference.tap()
