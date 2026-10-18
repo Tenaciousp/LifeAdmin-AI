@@ -29,8 +29,17 @@ final class LifeAdminUITests: XCTestCase {
             // WebKit sometimes calls a clipped button hittable even when its
             // centre lies below the native safe-area viewport. A tap then does
             // nothing. Require the whole control inside the visible web view.
-            if element.exists && element.isHittable &&
-                app.webViews.firstMatch.frame.contains(element.frame) { return }
+            let viewport = app.webViews.firstMatch.frame
+            if element.exists {
+                let frame = element.frame
+                if element.isHittable && viewport.contains(frame) { return }
+                // Opening the editor can shorten the plan and move its fields
+                // above the viewport. Scroll toward the observed target.
+                if frame.minY < viewport.minY {
+                    app.swipeDown()
+                    continue
+                }
+            }
             app.swipeUp()
         }
         print(app.debugDescription)
