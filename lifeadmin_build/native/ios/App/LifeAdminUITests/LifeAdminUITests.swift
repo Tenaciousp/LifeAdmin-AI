@@ -867,7 +867,12 @@ final class LifeAdminUITests: XCTestCase {
                 min(180, app.webViews.firstMatch.frame.width * 0.4),
                 "A saved bill or plan title is squeezed beside its actions")
         }
-        capture("02 plan", showing: titles.last)
+        // The bill, saved-plan row and open plan share a title. WebKit's
+        // level-2 heading identifies the open plan; query order is not stable.
+        let planHeading = app.otherElements.matching(
+            NSPredicate(format: "label == %@ AND value == %@", "Streaming subscription", "2")).firstMatch
+        XCTAssertTrue(planHeading.waitForExistence(timeout: 5))
+        capture("02 plan", showing: planHeading)
 
         let edit = app.buttons["Edit message"]
         reveal(edit)
