@@ -56,17 +56,35 @@ final class LifeAdminUITests: XCTestCase {
         XCTFail("Control is not reachable: \(element)", file: file, line: line)
     }
 
-    private func enterText(_ value: String, into field: XCUIElement) {
-        // A cold WebKit field tap can finish before the keyboard appears.
-        // Retry the tap once, before typing, so partial input is never replayed.
+    private func prepareKeyboard(for field: XCUIElement) {
         let keyboard = app.keyboards.firstMatch
         if !keyboard.waitForExistence(timeout: 5) {
-            field.tap()
+            // iPad can focus a field with only its compact input toolbar shown.
+            // Use the observed system control to reveal the software keyboard.
+            let switcher = app.buttons["Keyboard"]
+            if UIDevice.current.userInterfaceIdiom == .pad && switcher.exists {
+                XCTAssertTrue(switcher.isHittable)
+                switcher.tap()
+                let show = app.buttons["Show Keyboard"]
+                guard show.waitForExistence(timeout: 5) else {
+                    XCTFail("Show Keyboard was not available in the system menu")
+                    return
+                }
+                show.tap()
+            } else {
+                // Retry the tap before typing, never replay partially entered text.
+                field.tap()
+            }
         }
         guard keyboard.waitForExistence(timeout: 5) else {
             XCTFail("Keyboard did not appear for text entry")
             return
         }
+        dismissKeyboardTutorial()
+    }
+
+    private func enterText(_ value: String, into field: XCUIElement) {
+        prepareKeyboard(for: field)
         // Use one native typing operation; verify the complete controlled value.
         field.typeText(value)
         let complete = XCTNSPredicateExpectation(
@@ -679,6 +697,7 @@ final class LifeAdminUITests: XCTestCase {
         XCTAssertFalse(originalBody.isEmpty)
         XCTAssertFalse(app.buttons["Copy message"].isEnabled)
         subject.tap()
+        prepareKeyboard(for: subject)
         subject.typeText(" CI cancelled")
         closeKeyboard()
         let cancel = app.buttons["Cancel message edit"]
@@ -690,10 +709,12 @@ final class LifeAdminUITests: XCTestCase {
         XCTAssertEqual(body.value as? String, originalBody)
         reveal(subject)
         subject.tap()
+        prepareKeyboard(for: subject)
         subject.typeText(" CI reviewed 7319")
         closeKeyboard()
         reveal(body)
         body.tap()
+        prepareKeyboard(for: body)
         body.typeText(" CI reviewed body 7319")
         closeKeyboard()
         let savedSubject = try XCTUnwrap(subject.value as? String)
@@ -748,6 +769,7 @@ final class LifeAdminUITests: XCTestCase {
         reveal(prompt)
         XCTAssertTrue((prompt.value as? String ?? "").contains("REF-7319"))
         prompt.tap()
+        prepareKeyboard(for: prompt)
         prompt.typeText(" CI reviewed prompt 7319")
         closeKeyboard()
         let reviewed = try XCTUnwrap(prompt.value as? String)
