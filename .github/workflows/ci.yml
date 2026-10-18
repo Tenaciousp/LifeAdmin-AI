@@ -194,6 +194,103 @@ jobs:
           if-no-files-found: warn
           retention-days: 14
 
+  verify-apple-upgrade:
+    name: Apple upgrade (${{ matrix.device-family }})
+    # Standard hosted runners are free for public repositories; skip if that changes.
+    if: ${{ github.event.repository.private == false }}
+    runs-on: macos-26
+    # Keep the two-build acceptance separate from the full simulator journey.
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        device-family: [iphone, ipad]
+    permissions:
+      contents: read
+    defaults:
+      run:
+        working-directory: lifeadmin_build
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Check out known-good older application
+        uses: actions/checkout@v4
+        with:
+          ref: 3149925df7f9ed74da651214fd43e695b3a08238
+          path: upgrade-baseline
+          persist-credentials: false
+
+      - name: Set up native Node toolchain
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Check Apple toolchain
+        run: |
+          xcodebuild -version
+          python -c 'import subprocess; v=subprocess.check_output(["xcodebuild","-version"],text=True); assert int(v.splitlines()[0].split()[1].split(".")[0]) >= 26, "Xcode 26 or later required"'
+
+      - name: Build and verify offline customer assets
+        run: |
+          npm ci
+          npm run build:local
+          node scripts/verify_local_bundle.mjs
+          node native/scripts/verify-config.mjs
+
+      - name: Synchronize Apple development assets
+        working-directory: lifeadmin_build/native
+        run: |
+          npm ci
+          npm exec cap sync ios
+
+      - name: Compile unsigned Apple simulator package
+        working-directory: lifeadmin_build/native
+        run: |
+          xcodebuild -project ios/App/App.xcodeproj -scheme App \
+            -configuration Debug -sdk iphonesimulator \
+            -destination 'generic/platform=iOS Simulator' \
+            -derivedDataPath build-ios-simulator \
+            -resultBundlePath build-ios-simulator.xcresult \
+            CODE_SIGNING_ALLOWED=NO build 2>&1 | tee apple-build.log
+
+      - name: Build older offline customer assets
+        working-directory: upgrade-baseline/lifeadmin_build
+        run: |
+          npm ci
+          npm run build:local
+          node scripts/verify_local_bundle.mjs
+          cd native
+          npm ci
+          npm exec cap sync ios
+          # Only the test harness is current; baseline customer sources stay pinned.
+          cp "$GITHUB_WORKSPACE/lifeadmin_build/native/ios/App/LifeAdminUITests/LifeAdminUITests.swift" ios/App/LifeAdminUITests/LifeAdminUITests.swift
+
+      - name: Check acknowledged records through an app upgrade
+        working-directory: lifeadmin_build/native
+        run: |
+          python ../scripts/smoke_apple_upgrade.py \
+            --baseline-native ../../upgrade-baseline/lifeadmin_build/native \
+            --device-family ${{ matrix.device-family }}
+
+      - name: Save Apple upgrade evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lifeadmin-apple-upgrade-${{ matrix.device-family }}-${{ github.sha }}
+          path: |
+            lifeadmin_build/native/apple-launch-evidence/
+            lifeadmin_build/native/apple-build.log
+            lifeadmin_build/native/build-ios-simulator.xcresult/
+          if-no-files-found: warn
+          retention-days: 14
+
+
   verify-apple-device:
     name: Compile unsigned Apple device archive
     if: ${{ github.event.repository.private == false }}
@@ -278,6 +375,7 @@ jobs:
             lifeadmin_build/native/unsigned-device-archive.json
           if-no-files-found: warn
           retention-days: 14
+
 
 
 

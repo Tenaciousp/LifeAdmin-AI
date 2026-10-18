@@ -189,6 +189,45 @@ final class LifeAdminUITests: XCTestCase {
         icon.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
     }
 
+    func testPrepareRecordsForAppUpgrade() throws {
+        // Run against the pinned older app, using this test harness only.
+        app.launch()
+        XCTAssertTrue(app.buttons["Search"].waitForExistence(timeout: 60))
+        addSubscription(named: "CI sample subscription")
+        let create = app.buttons["Create plan"]
+        reveal(create)
+        create.tap()
+        confirm()
+        XCTAssertTrue(app.staticTexts["Plan saved on this device."].waitForExistence(timeout: 10))
+        app.terminate()
+        app.launch()
+        XCTAssertTrue(app.buttons["Search"].waitForExistence(timeout: 20))
+        let open = app.buttons["Open plan"]
+        reveal(open)
+        XCTAssertTrue(app.otherElements["Your bills (1)"].exists)
+        XCTAssertTrue(app.otherElements["Saved plans (1)"].exists)
+        open.tap()
+        XCTAssertTrue(app.buttons["Copy plan"].waitForExistence(timeout: 5))
+        let backups = app.buttons["Manage backups"]
+        reveal(backups)
+        backups.tap()
+        let export = app.buttons["Export backup"]
+        reveal(export)
+        export.tap()
+        confirm()
+        pickerControl("Save").tap()
+        XCTAssertTrue(app.staticTexts[
+            "Backup export completed. Check the chosen file before relying on this copy."
+        ].waitForExistence(timeout: 15))
+    }
+
+    func testUpgradedAppReopensAndSavesOriginalRecords() throws {
+        try verifyNativeSavesAndOriginalPlan()
+        let prepare = app.buttons["Prepare AI prompt"]
+        reveal(prepare)
+        XCTAssertTrue(prepare.isHittable, "The newer app's AI review feature must be present")
+    }
+
     func testNativeBackupRoundTripAndCancellationPreserveRecords() throws {
         // Cold simulator startup may wait on OS navigation services before
         // loading the bundled page. Keep later process-restart checks at 20s.
@@ -810,6 +849,7 @@ final class LifeAdminUITests: XCTestCase {
     }
 
 }
+
 
 
 

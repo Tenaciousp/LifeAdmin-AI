@@ -139,6 +139,30 @@ acceptance. A signed device build and store submission are separate later steps.
 Apple toolchain reference:
 https://capacitorjs.com/docs/updating/8-0
 
+## Different-build upgrade acceptance
+
+The Apple upgrade CI jobs build the older customer application at
+`3149925df7f9ed74da651214fd43e695b3a08238` and the candidate separately.
+Only the UI test harness is copied into the older checkout. Customer source
+and bundled assets remain pinned. Both application code/asset fingerprints
+must differ and each installed package must match its intended build.
+
+On each disposable iPhone/iPad simulator, the older app creates a synthetic
+bill and plan, acknowledges saves, reopens them and exports through Apple's
+native picker. The candidate installs over those records without uninstalling,
+host seeding or replacing the database. Exact record comparison runs before
+and after replacement. The newer app must acknowledge subsequent saves across
+restarts, expose its newer AI-review control and restore the older exported
+backup after message edits. The host then compares every original bill/plan
+field and confirms the older export was not overwritten.
+
+An `upgrade.json` report is written only after all checks pass. The separate
+upgrade artifacts include source commits, package fingerprints, native UI logs,
+results and screenshots. Adding these checks does not itself establish a pass.
+This covers schema-1 development builds on iOS 26.2. Both builds currently use
+bundle version 1, so signed store delivery, store version rules, future schema
+migrations and supported OS/device transfer remain separate acceptance gates.
+
 ## Later acceptance gates
 
 - Upgrade an installed build with acknowledged records still present; confirm
@@ -161,5 +185,6 @@ https://capacitorjs.com/docs/updating/8-0
 
 There is no Tenaciouspl recovery copy and no guaranteed OS restore route. Test
 results must distinguish configured support from observed successful recovery.
+
 
 
