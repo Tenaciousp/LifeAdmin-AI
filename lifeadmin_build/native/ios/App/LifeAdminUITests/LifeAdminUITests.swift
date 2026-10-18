@@ -167,7 +167,9 @@ final class LifeAdminUITests: XCTestCase {
         ].waitForExistence(timeout: 30))
     }
 
-    private func addSubscription(named name: String) {
+    private func addSubscription(
+        named name: String, referenceText: String = "REF-7319", noteText: String = "Note7319"
+    ) {
         let search = app.textFields.firstMatch
         search.tap()
         dismissKeyboardTutorial()
@@ -189,12 +191,12 @@ final class LifeAdminUITests: XCTestCase {
         let reference = app.textFields["Account or customer reference"]
         reveal(reference)
         reference.tap()
-        enterText("REF-7319", into: reference)
+        enterText(referenceText, into: reference)
         closeKeyboard()
         let notes = app.textViews["Additional notes"]
         reveal(notes)
         notes.tap()
-        enterText("Note7319", into: notes)
+        enterText(noteText, into: notes)
         closeKeyboard()
         let save = app.buttons["Save bill"]
         reveal(save)
@@ -809,6 +811,54 @@ final class LifeAdminUITests: XCTestCase {
         open.tap()
         reveal(prepare)
         XCTAssertFalse(app.textViews["AI prompt"].exists)
+    }
+
+    func testStoreScreenshots() throws {
+        // Separate capture job only. Never run against a customer's installation.
+        XCUIDevice.shared.orientation = .portrait
+        func capture(_ scene: String, showing control: XCUIElement? = nil) {
+            if let control { reveal(control) }
+            let image = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
+            image.name = "Store " + scene
+            image.lifetime = .keepAlways
+            add(image)
+        }
+        app.launch()
+        assertWorkspaceReady()
+        addSubscription(named: "Streaming subscription", referenceText: "DEMO-2401",
+                        noteText: "Review before the next monthly payment.")
+        app.terminate()
+        app.launch()
+        assertWorkspaceReady()
+        capture("01 home")
+
+        let create = app.buttons["Create plan"]
+        reveal(create)
+        create.tap()
+        confirm()
+        XCTAssertTrue(app.staticTexts["Plan saved on this device."].waitForExistence(timeout: 10))
+        capture("02 plan", showing: app.staticTexts["Next Steps"])
+
+        let edit = app.buttons["Edit message"]
+        reveal(edit)
+        edit.tap()
+        capture("03 message", showing: app.textFields["Message subject"])
+        let cancel = app.buttons["Cancel message edit"]
+        reveal(cancel)
+        cancel.tap()
+
+        let prepare = app.buttons["Prepare AI prompt"]
+        reveal(prepare)
+        prepare.tap()
+        capture("04 ai-review", showing: app.staticTexts["Review your AI prompt"])
+        let close = app.buttons["Close AI prompt"]
+        reveal(close)
+        close.tap()
+
+        let backups = app.buttons["Manage backups"]
+        reveal(backups)
+        backups.tap()
+        capture("05 backups", showing: app.buttons["Export backup"])
     }
 
     @MainActor
