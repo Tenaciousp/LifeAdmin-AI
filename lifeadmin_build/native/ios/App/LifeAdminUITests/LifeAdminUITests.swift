@@ -24,6 +24,15 @@ final class LifeAdminUITests: XCTestCase {
         app.terminate()
     }
 
+    private func assertWorkspaceReady(file: StaticString = #filePath, line: UInt = #line) {
+        // Simulator WebKit processes took 21.6s to launch after a restart in
+        // CI #390. Use the same bounded startup allowance as first launch.
+        let started = Date()
+        let ready = app.buttons["Search"].waitForExistence(timeout: 60)
+        print("Workspace ready: \(ready); elapsed after launch: \(Date().timeIntervalSince(started))s")
+        XCTAssertTrue(ready, "Workspace did not open within 60 seconds", file: file, line: line)
+    }
+
     private func reveal(_ element: XCUIElement, file: StaticString = #filePath, line: UInt = #line) {
         for _ in 0..<14 {
             // WebKit can call a clipped button hittable when its tap centre is
@@ -225,7 +234,7 @@ final class LifeAdminUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["Plan saved on this device."].waitForExistence(timeout: 10))
         app.terminate()
         app.launch()
-        XCTAssertTrue(app.buttons["Search"].waitForExistence(timeout: 20))
+        assertWorkspaceReady()
         let open = app.buttons["Open plan"]
         reveal(open)
         XCTAssertTrue(app.otherElements["Your bills (1)"].exists)
@@ -254,7 +263,7 @@ final class LifeAdminUITests: XCTestCase {
 
     func testNativeBackupRoundTripAndCancellationPreserveRecords() throws {
         // Cold simulator startup may wait on OS navigation services before
-        // loading the bundled page. Keep later process-restart checks at 20s.
+        // loading the bundled page. Log the initial customer-visible wait.
         let initialLaunchStarted = Date()
         app.launch()
         let initialUIReady = app.buttons["Search"].waitForExistence(timeout: 60)
@@ -270,7 +279,7 @@ final class LifeAdminUITests: XCTestCase {
         XCTAssertTrue(app.buttons["Open plan"].exists)
         app.terminate()
         app.launch()
-        XCTAssertTrue(app.buttons["Search"].waitForExistence(timeout: 20))
+        assertWorkspaceReady()
         let open = app.buttons["Open plan"]
         reveal(open)
         XCTAssertTrue(app.staticTexts["CI sample subscription"].exists)
@@ -294,7 +303,7 @@ final class LifeAdminUITests: XCTestCase {
         // Cancellation must preserve both records through a process restart.
         app.terminate()
         app.launch()
-        XCTAssertTrue(app.buttons["Search"].waitForExistence(timeout: 20))
+        assertWorkspaceReady()
         reveal(open)
         XCTAssertTrue(app.staticTexts["CI sample subscription"].exists)
         XCTAssertTrue(app.otherElements["Your bills (1)"].exists)
@@ -316,7 +325,7 @@ final class LifeAdminUITests: XCTestCase {
         // Restart at the top, then delete the bill and its associated plan.
         app.terminate()
         app.launch()
-        XCTAssertTrue(app.buttons["Search"].waitForExistence(timeout: 20))
+        assertWorkspaceReady()
         let delete = app.buttons["Delete bill"]
         reveal(delete)
         delete.tap()
@@ -324,7 +333,7 @@ final class LifeAdminUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["Bill and associated plans deleted."].waitForExistence(timeout: 10))
         app.terminate()
         app.launch()
-        XCTAssertTrue(app.buttons["Search"].waitForExistence(timeout: 20))
+        assertWorkspaceReady()
         let empty = app.otherElements["Your bills (0)"]
         reveal(empty)
         XCTAssertTrue(app.otherElements["Saved plans (0)"].exists)
@@ -336,7 +345,7 @@ final class LifeAdminUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["Backup restored on this device."].waitForExistence(timeout: 10))
         app.terminate()
         app.launch()
-        XCTAssertTrue(app.buttons["Search"].waitForExistence(timeout: 20))
+        assertWorkspaceReady()
         reveal(open)
         XCTAssertTrue(app.staticTexts["CI sample subscription"].exists)
         XCTAssertTrue(app.otherElements["Your bills (1)"].exists)
@@ -347,11 +356,11 @@ final class LifeAdminUITests: XCTestCase {
         // Records created after export must survive a declined replacement.
         app.terminate()
         app.launch()
-        XCTAssertTrue(app.buttons["Search"].waitForExistence(timeout: 20))
+        assertWorkspaceReady()
         addSubscription(named: "After backup")
         app.terminate()
         app.launch()
-        XCTAssertTrue(app.buttons["Search"].waitForExistence(timeout: 20))
+        assertWorkspaceReady()
         selectExportedBackup()
         let replacement = app.alerts.firstMatch
         XCTAssertTrue(replacement.waitForExistence(timeout: 30))
@@ -365,7 +374,7 @@ final class LifeAdminUITests: XCTestCase {
         XCTAssertEqual(XCTWaiter.wait(for: [ready], timeout: 10), .completed)
         app.terminate()
         app.launch()
-        XCTAssertTrue(app.buttons["Search"].waitForExistence(timeout: 20))
+        assertWorkspaceReady()
         reveal(open)
         XCTAssertTrue(app.otherElements["Your bills (2)"].exists)
         XCTAssertTrue(app.otherElements["Saved plans (1)"].exists)
@@ -378,7 +387,7 @@ final class LifeAdminUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["Backup restored on this device."].waitForExistence(timeout: 10))
         app.terminate()
         app.launch()
-        XCTAssertTrue(app.buttons["Search"].waitForExistence(timeout: 20))
+        assertWorkspaceReady()
         reveal(open)
         XCTAssertTrue(app.otherElements["Your bills (1)"].exists)
         XCTAssertTrue(app.otherElements["Saved plans (1)"].exists)
@@ -402,13 +411,13 @@ final class LifeAdminUITests: XCTestCase {
         for (filename, message) in cases {
             app.terminate()
             app.launch()
-            XCTAssertTrue(app.buttons["Search"].waitForExistence(timeout: 20))
+            assertWorkspaceReady()
             selectExportedBackup(named: filename)
             XCTAssertTrue(app.staticTexts[message].waitForExistence(timeout: 30), filename)
             XCTAssertFalse(app.alerts.firstMatch.exists, filename)
             app.terminate()
             app.launch()
-            XCTAssertTrue(app.buttons["Search"].waitForExistence(timeout: 20))
+            assertWorkspaceReady()
             let open = app.buttons["Open plan"]
             reveal(open)
             XCTAssertTrue(app.otherElements["Your bills (1)"].exists, filename)
@@ -421,7 +430,7 @@ final class LifeAdminUITests: XCTestCase {
         // Run after the round-trip test has created acknowledged synthetic data.
         for exporting in [false, true] {
             app.launch()
-            XCTAssertTrue(app.buttons["Search"].waitForExistence(timeout: 20))
+            assertWorkspaceReady()
             let backups = app.buttons["Manage backups"]
             reveal(backups)
             backups.tap()
@@ -433,7 +442,7 @@ final class LifeAdminUITests: XCTestCase {
             // Simulate process termination while the native picker is open.
             app.terminate()
             app.launch()
-            XCTAssertTrue(app.buttons["Search"].waitForExistence(timeout: 20))
+            assertWorkspaceReady()
             let open = app.buttons["Open plan"]
             reveal(open)
             XCTAssertTrue(app.otherElements["Your bills (1)"].exists)
@@ -446,7 +455,7 @@ final class LifeAdminUITests: XCTestCase {
 
         // A fresh request must work after termination clears the pending picker.
         app.launch()
-        XCTAssertTrue(app.buttons["Search"].waitForExistence(timeout: 20))
+        assertWorkspaceReady()
         let backups = app.buttons["Manage backups"]
         reveal(backups)
         backups.tap()
@@ -459,7 +468,7 @@ final class LifeAdminUITests: XCTestCase {
     func testRejectedNativeWritePreservesRecords() throws {
         // The host installs a test-only SQLite trigger while the app is stopped.
         app.launch()
-        XCTAssertTrue(app.buttons["Search"].waitForExistence(timeout: 20))
+        assertWorkspaceReady()
         let markDone = app.buttons["Mark done"]
         reveal(markDone)
         markDone.tap()
@@ -469,7 +478,7 @@ final class LifeAdminUITests: XCTestCase {
         XCTAssertFalse(app.staticTexts["Bill status saved."].exists)
         app.terminate()
         app.launch()
-        XCTAssertTrue(app.buttons["Search"].waitForExistence(timeout: 20))
+        assertWorkspaceReady()
         reveal(markDone)
         XCTAssertTrue(app.otherElements["Your bills (1)"].exists)
         XCTAssertTrue(app.otherElements["Saved plans (1)"].exists)
@@ -494,7 +503,7 @@ final class LifeAdminUITests: XCTestCase {
 
     private func verifyNativeSavesAndOriginalPlan() throws {
         app.launch()
-        XCTAssertTrue(app.buttons["Search"].waitForExistence(timeout: 20))
+        assertWorkspaceReady()
         let markDone = app.buttons["Mark done"]
         reveal(markDone)
         XCTAssertTrue(app.otherElements["Your bills (1)"].exists)
@@ -505,14 +514,14 @@ final class LifeAdminUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["Bill status saved."].waitForExistence(timeout: 20))
         app.terminate()
         app.launch()
-        XCTAssertTrue(app.buttons["Search"].waitForExistence(timeout: 20))
+        assertWorkspaceReady()
         let reopen = app.buttons["Reopen"]
         reveal(reopen)
         reopen.tap()
         XCTAssertTrue(app.staticTexts["Bill status saved."].waitForExistence(timeout: 20))
         app.terminate()
         app.launch()
-        XCTAssertTrue(app.buttons["Search"].waitForExistence(timeout: 20))
+        assertWorkspaceReady()
         reveal(markDone)
         XCTAssertTrue(app.otherElements["Your bills (1)"].exists)
         XCTAssertTrue(app.otherElements["Saved plans (1)"].exists)
@@ -542,7 +551,7 @@ final class LifeAdminUITests: XCTestCase {
     func testNativeStorageVersionRecoveryPreservesRecords() throws {
         // The host restores the supported version without touching record data.
         app.launch()
-        XCTAssertTrue(app.buttons["Search"].waitForExistence(timeout: 20))
+        assertWorkspaceReady()
         XCTAssertFalse(app.buttons["Retry storage"].exists)
         let open = app.buttons["Open plan"]
         reveal(open)
@@ -556,7 +565,7 @@ final class LifeAdminUITests: XCTestCase {
     func testRotationPreservesSavedRecordsAndPlan() throws {
         defer { XCUIDevice.shared.orientation = .portrait }
         app.launch()
-        XCTAssertTrue(app.buttons["Search"].waitForExistence(timeout: 20))
+        assertWorkspaceReady()
         let open = app.buttons["Open plan"]
         reveal(open)
         open.tap()
@@ -594,7 +603,7 @@ final class LifeAdminUITests: XCTestCase {
         XCTAssertTrue(app.buttons["Copy plan"].exists)
         app.terminate()
         app.launch()
-        XCTAssertTrue(app.buttons["Search"].waitForExistence(timeout: 20))
+        assertWorkspaceReady()
         reveal(open)
         XCTAssertTrue(app.otherElements["Your bills (1)"].exists)
         XCTAssertTrue(app.otherElements["Saved plans (1)"].exists)
@@ -605,7 +614,7 @@ final class LifeAdminUITests: XCTestCase {
 
     func testNativePlanClipboardPastePreservesRecords() throws {
         app.launch()
-        XCTAssertTrue(app.buttons["Search"].waitForExistence(timeout: 20))
+        assertWorkspaceReady()
         let open = app.buttons["Open plan"]
         reveal(open)
         open.tap()
@@ -620,7 +629,7 @@ final class LifeAdminUITests: XCTestCase {
         // Paste action rather than reading the clipboard from the test runner.
         app.terminate()
         app.launch()
-        XCTAssertTrue(app.buttons["Search"].waitForExistence(timeout: 20))
+        assertWorkspaceReady()
         let field = app.textFields["Bill or provider"]
         XCTAssertTrue(field.exists)
         field.tap()
@@ -640,7 +649,7 @@ final class LifeAdminUITests: XCTestCase {
         // Do not submit the pasted text or save a new bill.
         app.terminate()
         app.launch()
-        XCTAssertTrue(app.buttons["Search"].waitForExistence(timeout: 20))
+        assertWorkspaceReady()
         reveal(open)
         XCTAssertTrue(app.otherElements["Your bills (1)"].exists)
         XCTAssertTrue(app.otherElements["Saved plans (1)"].exists)
@@ -651,7 +660,7 @@ final class LifeAdminUITests: XCTestCase {
 
     func testMessageEditingCancelSaveAndRestart() throws {
         app.launch()
-        XCTAssertTrue(app.buttons["Search"].waitForExistence(timeout: 20))
+        assertWorkspaceReady()
         let open = app.buttons["Open plan"]
         reveal(open)
         open.tap()
@@ -694,7 +703,7 @@ final class LifeAdminUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["Message saved on this device. Nothing was sent."].waitForExistence(timeout: 20))
         app.terminate()
         app.launch()
-        XCTAssertTrue(app.buttons["Search"].waitForExistence(timeout: 20))
+        assertWorkspaceReady()
         reveal(open)
         open.tap()
         reveal(edit)
@@ -711,7 +720,7 @@ final class LifeAdminUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["Backup restored on this device."].waitForExistence(timeout: 20))
         app.terminate()
         app.launch()
-        XCTAssertTrue(app.buttons["Search"].waitForExistence(timeout: 20))
+        assertWorkspaceReady()
         reveal(open)
         open.tap()
         reveal(edit)
@@ -724,7 +733,7 @@ final class LifeAdminUITests: XCTestCase {
 
     func testManualAiPromptReviewAndCopyPreserveRecords() throws {
         app.launch()
-        XCTAssertTrue(app.buttons["Search"].waitForExistence(timeout: 20))
+        assertWorkspaceReady()
         let open = app.buttons["Open plan"]
         reveal(open)
         open.tap()
@@ -754,7 +763,7 @@ final class LifeAdminUITests: XCTestCase {
         // Paste into an unsaved local note, never into an external service.
         app.terminate()
         app.launch()
-        XCTAssertTrue(app.buttons["Search"].waitForExistence(timeout: 20))
+        assertWorkspaceReady()
         let note = app.textViews["Additional notes"]
         reveal(note)
         note.tap()
@@ -768,7 +777,7 @@ final class LifeAdminUITests: XCTestCase {
         XCTAssertEqual(XCTWaiter.wait(for: [pasted], timeout: 10), .completed)
         app.terminate()
         app.launch()
-        XCTAssertTrue(app.buttons["Search"].waitForExistence(timeout: 20))
+        assertWorkspaceReady()
         reveal(open)
         XCTAssertTrue(app.otherElements["Your bills (1)"].exists)
         XCTAssertTrue(app.otherElements["Saved plans (1)"].exists)
