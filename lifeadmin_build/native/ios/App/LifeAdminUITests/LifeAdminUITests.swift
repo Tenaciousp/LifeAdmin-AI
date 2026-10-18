@@ -26,13 +26,14 @@ final class LifeAdminUITests: XCTestCase {
 
     private func reveal(_ element: XCUIElement, file: StaticString = #filePath, line: UInt = #line) {
         for _ in 0..<14 {
-            // WebKit sometimes calls a clipped button hittable even when its
-            // centre lies below the native safe-area viewport. A tap then does
-            // nothing. Require the whole control inside the visible web view.
+            // WebKit can call a clipped button hittable when its tap centre is
+            // outside the safe-area viewport. Larger text views can be partly
+            // visible and usable, so check the tap centre rather than all edges.
             let viewport = app.webViews.firstMatch.frame
             if element.exists {
                 let frame = element.frame
-                if element.isHittable && viewport.contains(frame) { return }
+                let centre = CGPoint(x: frame.midX, y: frame.midY)
+                if element.isHittable && viewport.contains(centre) { return }
                 // Opening the editor can shorten the plan and move its fields
                 // above the viewport. Scroll toward the observed target.
                 if frame.minY < viewport.minY {
