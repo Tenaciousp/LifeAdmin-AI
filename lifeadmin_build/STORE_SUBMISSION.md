@@ -62,9 +62,9 @@ general guidance and do not guarantee savings.
 | App identifier | uk.co.tenaciouspl.lifeadmin |
 | Initial version | 1.0, build 1 |
 | Seller address | Owner deferred review on 18 October 2026; keep address unresolved and do not publish the home address |
-| Store accounts / signing | Paid Apple enrolment deferred until unpaid preparation is complete; signing, TestFlight and signed-device checks follow enrolment |
+| Store accounts / signing | Apple enrolment submitted; verify active membership before signing, TestFlight and signed-device checks |
 | Ratings | Complete store questionnaires from the final app |
-| Refunds | Applicable rights and store processes; no voluntary 14-day promise approved |
+| Refunds | Owner-approved 14-day full-refund policy; verify store-compatible process and wording before publishing purchase terms |
 
 Verify store field limits, price availability and seller requirements in the
 relevant console before submission. The trading name does not replace verified
@@ -97,15 +97,19 @@ required-reason declarations and questionnaire review.
 
 ## Evidence and remaining gates
 
-Tested application/test source: `96952ca0c1841c4604b27efce7cc0a137d4d3103`.
-All six CI #396 jobs passed:
-https://github.com/Tenaciousp/LifeAdmin-AI/actions/runs/39135286984
+Reviewed application/test source: `5319b671e69c73e9cd6bda3de8a0219dfc36f1c0`.
+All six core CI #401 jobs passed: verification, unsigned archive, both full
+simulator suites and both different-build upgrade suites. Seven of eight jobs
+passed overall; iPad store capture timed out in simulator clock setup before
+LifeAdmin launched:
+https://github.com/Tenaciousp/LifeAdmin-AI/actions/runs/39156217928
 
 Downloaded current-run reports and screenshots were reviewed on 18 October.
 Both iPhone 11 and iPad (10th generation), iOS 26.2, passed full simulator
 acceptance and different-build upgrade checks. Reports confirm original records,
 native saves after upgrade and restoration of the older backup. Each full suite
-has 30 passing boolean report checks and six empty accessibility-finding reports.
+has 31 true boolean report fields including launch acceptance, plus six empty
+accessibility-finding reports.
 Native invalid-backup cases include duplicate bill IDs, duplicate plan IDs and
 orphan plans. The iPad logs show the system Show Keyboard action used successfully.
 
@@ -115,17 +119,21 @@ backup/device transfer or every cloud file provider. Upgrade builds use schema 1
 and bundle version 1. Interrupted-write coverage is a host-injected hot rollback
 journal, not native-process interruption, storage pressure or power loss.
 
-### Preparation before paid Apple enrolment
+### Signing and release preparation
 
-The owner deferred paid Apple enrolment on 18 October until unpaid preparation
-is complete. Keep membership purchase, signing, TestFlight and final signed-device
-testing at the end. Do not purchase membership or an address service automatically.
+Apple enrolment has been submitted. Confirm membership is active before
+configuring signing and TestFlight. Signed delivery and physical-device tests
+have not been completed. Do not purchase additional services automatically.
 
 - Listing and reviewer copy: prepared; validate final console limits and fields.
-- Screenshot plan: prepared below; required-size native captures still outstanding.
+- Screenshot tooling: CI #402 captures on the required-size targets. iPhone
+  capture passed; visual review requires a final open-plan-heading selector fix.
+  iPad capture and approval of the complete set remain outstanding.
 - Privacy declaration: draft only; finish native live-network/SDK review and
   repeat against the eventual signed package before submitting answers.
-- Support/privacy URLs: final public availability and content review outstanding.
+- Support/privacy URLs: HTTPS availability and content checked on 18 October.
+  Website version 7 is live with TenaciousPL branding and explicit manual-AI
+  sharing guidance. This does not establish final signed-package privacy answers.
 - Manual accessibility, supported minimum OS, cloud file-provider behaviour,
   device transfer and native interruption/storage-pressure checks remain open.
 - Seller name: owner approved Paul Lonergan. Address review remains deferred;
@@ -170,6 +178,16 @@ manifest is present. These observations do not establish a final App Store
 privacy classification or prove absence of every required-reason API.
 Capacitor retains networking capability; static review is not live traffic
 measurement. Native live-network and final signed-package checks remain open.
+
+## Language roadmap
+
+The initial release is English-only. Keep multilingual support separate from
+country expansion. Before adding a language, extract interface and generated
+plan/message/prompt wording into bundled translations, retain offline operation,
+obtain fluent review and check expanded text, accessibility, dates and numbers.
+Localize store and support material where needed. Select the first additional
+language using customer evidence. A translated interface does not establish
+appropriate guidance for another country's providers or consumer rules.
 
 ## Reviewer notes
 
