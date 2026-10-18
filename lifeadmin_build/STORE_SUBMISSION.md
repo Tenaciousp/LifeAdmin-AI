@@ -56,12 +56,13 @@ general guidance and do not guarantee savings.
 | --- | --- |
 | Brand | Tenaciouspl |
 | Publisher | Paul Lonergan trading as Tenaciouspl |
+| Apple public seller name | Paul Lonergan; owner approved use of legal name on 18 October 2026 |
 | Support contact | tenaciouspl@icloud.com |
 | Support / marketing URL | https://tenaciouspl.co.uk |
 | App privacy policy | https://tenaciouspl.co.uk/app-privacy.html |
 | App identifier | uk.co.tenaciouspl.lifeadmin |
 | Initial version | 1.0, build 1 |
-| Seller address | Privacy-preserving arrangement outstanding; never insert the home address |
+| Seller address | Owner deferred review on 18 October 2026; keep address unresolved and do not publish the home address |
 | Store accounts / signing | Outstanding |
 | Ratings | Complete store questionnaires from the final app |
 | Refunds | Applicable rights and store processes; no voluntary 14-day promise approved |
