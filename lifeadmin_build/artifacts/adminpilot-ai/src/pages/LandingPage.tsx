@@ -9,8 +9,8 @@ import { AnalyticsConsent, resetAnalyticsConsent } from "@/components/AnalyticsC
 import { CheckCircle2, ChevronDown, ShieldCheck, Sparkles, Search, FileCheck2, MailCheck, MousePointerClick } from "lucide-react";
 import * as Accordion from "@radix-ui/react-accordion";
 
-const publisherName = "Tenaciouspl";
-const legalPublisherName = "Paul Lonergan trading as Tenaciouspl";
+const publisherName = "TenaciousPL";
+const legalPublisherName = "Paul Lonergan trading as TenaciousPL";
 const supportEmail = "tenaciouspl@icloud.com";
 
 const examples = [
@@ -189,7 +189,7 @@ export function LandingPage() {
               ["Privacy-light by design", "No bank connection or mailbox access is required for the core workflow."],
               ["Approval before action", "The app prepares drafts and checklists. It does not send, cancel or purchase for you."],
               ["Household-bill specific", "Twelve categories and seven goals guide the questions and output."],
-              ["Help when you need support", "Visit the Tenaciouspl website for examples, product information and support."],
+              ["Help when you need support", "Visit the TenaciousPL website for examples, product information and support."],
             ].map(([title, text]) => (
               <div key={title} className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm">
                 <ShieldCheck className="w-8 h-8 text-primary mb-5" />

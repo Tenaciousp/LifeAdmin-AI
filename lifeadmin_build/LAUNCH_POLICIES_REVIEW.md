@@ -25,15 +25,15 @@ Implementation must move planning and persistent household data to the device, r
 
 The owner confirmed the paid Apple App Store and Google Play route on 12 October. Native purchase, re-download and store refund arrangements replace the hosted-account purchase flow for this target release. No Stripe account, existing purchase or production access setting is changed by this decision. Store prices, product availability and release approval still require verification.
 
-Saved bills and plans must survive normal app closure, restart and app updates. Their primary storage is on the customer's device. Tenaciouspl will not retain a server copy of household planning data.
+Saved bills and plans must survive normal app closure, restart and app updates. Their primary storage is on the customer's device. TenaciousPL will not retain a server copy of household planning data.
 
 Operating-system backups are conditional, not a guaranteed recovery service. Apple's iCloud Backup includes eligible app data when the customer enables backup and includes the app. Android Auto Backup depends on device settings, eligible storage, app configuration, backup conditions and its 25 MB per-app quota. A completed, usable backup must exist for restoration. Re-downloading a purchased app does not itself prove restoration of household information.
 
-Customer-controlled operating-system cloud backup is consistent with no Tenaciouspl household-data service, but is not consistent with a blanket promise that information never leaves the device. Privacy wording must explain optional Apple/Google backup separately. User-directed export or sharing also leaves the device only through the customer's chosen action.
+Customer-controlled operating-system cloud backup is consistent with no TenaciousPL household-data service, but is not consistent with a blanket promise that information never leaves the device. Privacy wording must explain optional Apple/Google backup separately. User-directed export or sharing also leaves the device only through the customer's chosen action.
 
 Implement a customer-controlled backup export/import function as an additional recovery option. Keep exports private by default, warn about sensitive contents before sharing, validate imports before replacing saved work, and preserve current data if an import fails. No automatic upload, support attachment or household-data telemetry.
 
-Tenaciouspl support will help with app faults and backup instructions. Without a retained server copy, support cannot reconstruct missing household records for an individual purchaser. Do not use this limitation to exclude statutory consumer rights or responsibility for defective software.
+TenaciousPL support will help with app faults and backup instructions. Without a retained server copy, support cannot reconstruct missing household records for an individual purchaser. Do not use this limitation to exclude statutory consumer rights or responsibility for defective software.
 
 Before claiming backup support, test:
 - Offline planning, editing, saving, reopening and restart.
@@ -42,7 +42,7 @@ Before claiming backup support, test:
 - Apple backup/restore and Android backup/restore with representative synthetic records.
 - Backup-disabled and no-backup scenarios with accurate customer guidance.
 - Explicit deletion, clean installation and supported device transfer behaviour.
-- Network inspection proving no automatic household-data transmission to Tenaciouspl, AI services, analytics or support.
+- Network inspection proving no automatic household-data transmission to TenaciousPL, AI services, analytics or support.
 
 Official backup references checked on 12 October 2026:
 - https://support.apple.com/en-gb/108770
@@ -78,7 +78,7 @@ This file contains proposed customer wording and decisions required before publi
 
 | Decision | Proposed starting point | Still required |
 |---|---|---|
-| Trader | Paul Lonergan trading as Tenaciouspl; tenaciouspl@icloud.com | Business geographical address authorised for customer disclosure |
+| Trader | Paul Lonergan trading as TenaciousPL; tenaciouspl@icloud.com | Business geographical address authorised for customer disclosure |
 | Offer | One £1.99 GBP payment, all current planning functions, no subscription or separate upgrade | Confirm total tax-inclusive checkout price and VAT status |
 | Duration | Continued access without a recurring charge | Agree a sustainable minimum service commitment and closure/refund arrangements; do not promise lifetime hosting |
 | Cancellation | Voluntary full refund on a request made within 14 days of purchase; no cancellation-right waiver | Owner approval, final contract classification and tested refund/access handling |
@@ -91,11 +91,11 @@ The 14-day refund proposal is a commercial choice for review, not a declaration 
 
 ## Proposed purchase terms
 
-**LifeAdmin AI from Tenaciouspl**
+**LifeAdmin AI from TenaciousPL**
 
 LifeAdmin helps organise household bill tasks and prepare saved plans, provider messages, checks and next steps. You review the information and decide which actions to take. You send provider messages yourself.
 
-The seller is Paul Lonergan trading as Tenaciouspl. Contact tenaciouspl@icloud.com. Our business address is [OWNER-APPROVED BUSINESS ADDRESS].
+The seller is Paul Lonergan trading as TenaciousPL. Contact tenaciouspl@icloud.com. Our business address is [OWNER-APPROVED BUSINESS ADDRESS].
 
 One payment of £1.99 GBP includes all current planning functions. There is no subscription or separate upgrade charge. [CONFIRM FINAL TOTAL, TAX TREATMENT AND CHECKOUT DISPLAY BEFORE PUBLICATION.]
 
@@ -129,7 +129,7 @@ Problems involving faulty or misdescribed content or services remain subject to 
 
 ### Cancellation request template
 
-To: Paul Lonergan trading as Tenaciouspl  
+To: Paul Lonergan trading as TenaciousPL  
 Business address: [OWNER-APPROVED BUSINESS ADDRESS]  
 Email: tenaciouspl@icloud.com
 
@@ -147,7 +147,7 @@ An ordinary email stating the cancellation request is also accepted under the pr
 
 **Who is responsible**
 
-Paul Lonergan trading as Tenaciouspl is responsible for the LifeAdmin account and planning service described here. Contact tenaciouspl@icloud.com or [OWNER-APPROVED BUSINESS ADDRESS] about privacy.
+Paul Lonergan trading as TenaciousPL is responsible for the LifeAdmin account and planning service described here. Contact tenaciouspl@icloud.com or [OWNER-APPROVED BUSINESS ADDRESS] about privacy.
 
 **Information used**
 

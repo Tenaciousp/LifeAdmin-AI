@@ -45,7 +45,7 @@ Export a readable JSON backup to a private location of your choice. Restore
 replaces existing records after confirmation. Device and cloud backups depend
 on your settings; downloading the app again does not guarantee recovery of bills.
 
-Visit the Tenaciouspl website for examples and support. Review draft messages,
+Visit the TenaciousPL website for examples and support. Review draft messages,
 current provider terms and official information before acting. Plans provide
 general guidance and do not guarantee savings.
 
@@ -53,8 +53,8 @@ general guidance and do not guarantee savings.
 
 | Field | Value / status |
 | --- | --- |
-| Brand | Tenaciouspl |
-| Publisher | Paul Lonergan trading as Tenaciouspl |
+| Brand | TenaciousPL |
+| Publisher | Paul Lonergan trading as TenaciousPL |
 | Apple public seller name | Paul Lonergan; owner approved use of legal name on 18 October 2026 |
 | Support contact | tenaciouspl@icloud.com |
 | Support / marketing URL | https://tenaciouspl.co.uk |

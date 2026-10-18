@@ -36,10 +36,10 @@ See [native setup](lifeadmin_build/native/README.md), [device acceptance](lifead
 
 No bank or mailbox connection is required. The app does not automatically contact providers or another AI assistant. Customers choose copying, external links and backup destinations.
 
-Backup files contain readable personal information. Restore replaces existing bills and plans after confirmation and validation. Tenaciouspl holds no household-data recovery copy. OS cloud backup and device transfer depend on settings and observed platform support; purchase re-download alone does not restore household records.
+Backup files contain readable personal information. Restore replaces existing bills and plans after confirmation and validation. TenaciousPL holds no household-data recovery copy. OS cloud backup and device transfer depend on settings and observed platform support; purchase re-download alone does not restore household records.
 
 ## Historical web application
 
 The repository retains the earlier Vite/Python account-based web application and its test evidence. Its accounts, hosted administration, Stripe and server-backup requirements do not govern the native release. Earlier web QA is not native acceptance evidence. Historical development commands and evidence remain in [lifeadmin_build](lifeadmin_build/README.md) and [FINAL_QA.md](lifeadmin_build/FINAL_QA.md).
 
-Publisher: Paul Lonergan trading as Tenaciouspl. Support: tenaciouspl@icloud.com. Website: https://tenaciouspl.co.uk.
+Publisher: Paul Lonergan trading as TenaciousPL. Support: tenaciouspl@icloud.com. Website: https://tenaciouspl.co.uk.

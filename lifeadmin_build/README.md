@@ -1,6 +1,6 @@
 # LifeAdmin AI
 
-> Release target changed on 12 October 2026. The approved direction is a paid Apple App Store and Google Play download, £1.99 GBP or local store equivalent, without a trial, subscription or LifeAdmin account. Household planning and saved data must run locally, without automatic transmission to Tenaciouspl or AI providers. The website serves examples, support and future product promotion/sales.
+> Release target changed on 12 October 2026. The approved direction is a paid Apple App Store and Google Play download, £1.99 GBP or local store equivalent, without a trial, subscription or LifeAdmin account. Household planning and saved data must run locally, without automatic transmission to TenaciousPL or AI providers. The website serves examples, support and future product promotion/sales.
 >
 > The code described below is still the hosted web implementation. Its server storage, account flow and Stripe checkout do not satisfy the new release target. Do not publish the hosted privacy or access descriptions as native-app promises. Read [LAUNCH_POLICIES_REVIEW.md](LAUNCH_POLICIES_REVIEW.md) for the current requirements and backup acceptance checks.
 

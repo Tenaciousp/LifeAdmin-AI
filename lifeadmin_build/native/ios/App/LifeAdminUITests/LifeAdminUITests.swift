@@ -966,7 +966,7 @@ final class LifeAdminUITests: XCTestCase {
 
         // Reveal the entire footer rather than relying on off-screen tree
         // presence. Do not activate email or open external pages during QA.
-        let email = app.links["Email Tenaciouspl support"]
+        let email = app.links["Email TenaciousPL support"]
         let privacy = app.links["App privacy policy"]
         reveal(privacy)
         for link in [email, privacy] {

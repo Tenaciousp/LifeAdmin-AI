@@ -2,7 +2,7 @@
 
 Status, 11 October 2026: release preparation only. Draft PR #2 is unmerged, the existing Render service retains maintenance mode and disabled automatic deployment, and live sales are not approved. Use [issue #3](https://github.com/Tenaciousp/LifeAdmin-AI/issues/3) for the current release gates. The promotional website is separate from the app and does not establish app readiness.
 
-Publisher: Paul Lonergan trading as Tenaciouspl. Support: tenaciouspl@icloud.com. The purchased promotional domain is tenaciouspl.co.uk; do not use its origin as APP_BASE_URL unless the app is deliberately hosted there and its HTTPS origin has been verified.
+Publisher: Paul Lonergan trading as TenaciousPL. Support: tenaciouspl@icloud.com. The purchased promotional domain is tenaciouspl.co.uk; do not use its origin as APP_BASE_URL unless the app is deliberately hosted there and its HTTPS origin has been verified.
 
 ## Recommended path
 
