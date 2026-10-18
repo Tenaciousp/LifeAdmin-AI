@@ -1,6 +1,6 @@
 # LifeAdmin store submission pack
 
-Updated 14 October 2026. This pack supersedes earlier account-based web release plans.
+Updated 18 October 2026. This pack supersedes earlier account-based web release plans.
 
 ## Agreed offer
 
@@ -35,6 +35,13 @@ bank connection or mailbox access is required. Planning uses bundled guidance
 and works offline. LifeAdmin does not automatically contact providers, send
 household details to an AI service or act on your behalf.
 
+For optional help from an external AI service, prepare an editable prompt from
+your saved plan and message. Review and remove private details before copying.
+Open your preferred service and paste the prompt yourself. Pasting shares the
+text with the chosen service. Review its reply before updating your bill or
+message in LifeAdmin. Prompt edits are temporary until copied; they do not
+change saved bills, plans or messages.
+
 Export a readable JSON backup to a private location of your choice. Restore
 replaces existing records after confirmation. Device and cloud backups depend
 on your settings; downloading the app again does not guarantee recovery of bills.
@@ -67,8 +74,10 @@ legal identity. Draft copy is not evidence of store approval.
 
 Use final native screens and invented records: home/search, bill and goal,
 saved bill, readable plan/message, saved plans and backup controls. Exclude
-account, trial, pricing-tier, checkout and external-AI handoff screens from the
-older hosted product. Startup captures are not a complete store screenshot set.
+account, trial, pricing-tier, checkout and automatic external-AI screens from the
+older hosted product. The current native prompt-review screen is optional and
+must show invented details with its review and sharing guidance visible.
+Startup captures are not a complete store screenshot set.
 
 ## Privacy review
 
@@ -111,3 +120,11 @@ No LifeAdmin account or reviewer login is required. Use invented bill details.
 LifeAdmin prepares plans and draft messages without accessing bank/provider
 accounts or automatically sending messages. Payment is the store's upfront
 app purchase; no in-app purchase products form part of this offer.
+
+The optional **Prepare AI prompt** action opens an editable local preview.
+Review private details, then use **Copy AI prompt**. External-service links open
+without the prompt or household records in the URL. The customer chooses
+whether to paste the copied text into a separate service. No external-service
+account is required for LifeAdmin's bundled planning, message editing or backups.
+Any account or payment requirements of the chosen external service are separate.
+Replies are not imported automatically.
