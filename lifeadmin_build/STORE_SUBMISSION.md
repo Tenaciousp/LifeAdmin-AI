@@ -39,8 +39,7 @@ For optional help from an external AI service, prepare an editable prompt from
 your saved plan and message. Review and remove private details before copying.
 Open your preferred service and paste the prompt yourself. Pasting shares the
 text with the chosen service. Review its reply before updating your bill or
-message in LifeAdmin. Prompt edits are temporary until copied; they do not
-change saved bills, plans or messages.
+message in LifeAdmin. Prompt edits are temporary and do not change saved bills, plans or messages.
 
 Export a readable JSON backup to a private location of your choice. Restore
 replaces existing records after confirmation. Device and cloud backups depend
@@ -63,7 +62,7 @@ general guidance and do not guarantee savings.
 | App identifier | uk.co.tenaciouspl.lifeadmin |
 | Initial version | 1.0, build 1 |
 | Seller address | Owner deferred review on 18 October 2026; keep address unresolved and do not publish the home address |
-| Store accounts / signing | Outstanding |
+| Store accounts / signing | Paid Apple enrolment deferred until unpaid preparation is complete; signing, TestFlight and signed-device checks follow enrolment |
 | Ratings | Complete store questionnaires from the final app |
 | Refunds | Applicable rights and store processes; no voluntary 14-day promise approved |
 
@@ -98,22 +97,79 @@ required-reason declarations and questionnaire review.
 
 ## Evidence and remaining gates
 
-CI #322 passed at source 0a2e22e14019cd55cff56b6336854fcbf20ab715:
-automated tests, backup checks, type checks, Android compilation/storage/package
-checks and Apple compilation/install/launch/relaunch. iPhone 11 / iOS 26.5
-startup screenshots were reviewed.
-https://github.com/Tenaciousp/LifeAdmin-AI/actions/runs/38557220882
+Tested application/test source: `96952ca0c1841c4604b27efce7cc0a137d4d3103`.
+All six CI #396 jobs passed:
+https://github.com/Tenaciousp/LifeAdmin-AI/actions/runs/39135286984
 
-CI #323 passed Android checks and Apple compilation, but the first simulator
-launch timed out before the interactive UI test began. The next run includes
-a bounded first-launch wait adjustment and failure diagnostics.
-https://github.com/Tenaciousp/LifeAdmin-AI/actions/runs/38559775890
+Downloaded current-run reports and screenshots were reviewed on 18 October.
+Both iPhone 11 and iPad (10th generation), iOS 26.2, passed full simulator
+acceptance and different-build upgrade checks. Reports confirm original records,
+native saves after upgrade and restoration of the older backup. Each full suite
+has 30 passing boolean report checks and six empty accessibility-finding reports.
+Native invalid-backup cases include duplicate bill IDs, duplicate plan IDs and
+orphan plans. The iPad logs show the system Show Keyboard action used successfully.
 
-Outstanding: interactive persistence/deletion; native JSON export/restore,
-cancel and invalid files; upgrade and OS recovery; accessibility and device
-coverage; final seller/privacy details, signing, store pricing/screenshots/review.
-The owner has no Android device. Physical iPad QA follows the other checks.
-Keep PR #2 draft pending explicit final release approval.
+Limits: simulator evidence does not establish physical-device performance,
+manual assistive-technology acceptance, signed store delivery, supported OS
+backup/device transfer or every cloud file provider. Upgrade builds use schema 1
+and bundle version 1. Interrupted-write coverage is a host-injected hot rollback
+journal, not native-process interruption, storage pressure or power loss.
+
+### Preparation before paid Apple enrolment
+
+The owner deferred paid Apple enrolment on 18 October until unpaid preparation
+is complete. Keep membership purchase, signing, TestFlight and final signed-device
+testing at the end. Do not purchase membership or an address service automatically.
+
+- Listing and reviewer copy: prepared; validate final console limits and fields.
+- Screenshot plan: prepared below; required-size native captures still outstanding.
+- Privacy declaration: draft only; finish native live-network/SDK review and
+  repeat against the eventual signed package before submitting answers.
+- Support/privacy URLs: final public availability and content review outstanding.
+- Manual accessibility, supported minimum OS, cloud file-provider behaviour,
+  device transfer and native interruption/storage-pressure checks remain open.
+- Seller name: owner approved Paul Lonergan. Address review remains deferred;
+  do not publish the home address.
+- The owner has no Android test device. Physical iPad QA follows earlier checks.
+- Keep PR #2 draft pending explicit merge/submission/release approval.
+
+### Store screenshot production plan
+
+Use invented records and actual application screens. Existing acceptance captures
+are QA evidence, not a finished listing set.
+
+| Order | Screen | Suggested caption | Required visible detail |
+| --- | --- | --- | --- |
+| 1 | Home and saved bills | List your household bills | Clear bill names and saved state |
+| 2 | Saved plan | Build a practical plan | Readable next steps and guidance notice |
+| 3 | Message editor | Review every message | Subject/body, Save/Cancel and nothing-sent notice |
+| 4 | AI prompt preview | Choose what you share | Editable preview and sharing guidance |
+| 5 | Backup controls | Keep a private backup | Export/restore controls and readable-file warning |
+
+Capture targets: iPhone with Dynamic Island, medium display, 1206 × 2622 portrait;
+iPad 13-inch, 2048 × 2732 portrait. Verify current accepted dimensions before
+upload. Capture the real layout at each target; do not stretch an older tablet
+capture to a different aspect ratio. Review labels, clipping, keyboard visibility
+and synthetic details in every final image.
+
+Apple screenshot requirements checked 18 October 2026:
+https://developer.apple.com/help/app-store-connect/reference/app-information/screenshot-specifications/
+
+### Current unsigned-package privacy review
+
+CI #396 Release archive identity, ARM64 architecture, iOS 16.4 minimum and bundled
+local asset configuration were inspected. No remote Capacitor server override,
+broad ATS exception, enabled background mode or app file-sharing setting appears
+in the packaged configuration. Release file-stage debug strings were absent.
+Native clipboard writes are local-only and expire after five minutes; exported
+JSON files are readable and remain under the customer's control.
+
+Capacitor and Cordova each include a privacy manifest declaring tracking false
+with empty collected-data, tracking-domain and accessed-API arrays. No app-level
+manifest is present. These observations do not establish a final App Store
+privacy classification or prove absence of every required-reason API.
+Capacitor retains networking capability; static review is not live traffic
+measurement. Native live-network and final signed-package checks remain open.
 
 ## Reviewer notes
 
