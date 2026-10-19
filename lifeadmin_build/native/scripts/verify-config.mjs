@@ -40,3 +40,9 @@ const android = await nativeFile("android/app/src/main/AndroidManifest.xml");
 for (const permission of ["READ_CALENDAR", "WRITE_CALENDAR"]) assert.ok(android.includes(permission));
 assert.match(await nativeFile("ios/App/App/PrivacyInfo.xcprivacy"), /CA92\.1/);
 console.log("Optional calendar adapters and permission descriptions are registered. Runtime delivery remains a separate acceptance check.");
+
+const teams = [...project.matchAll(/DEVELOPMENT_TEAM = ([A-Z0-9]+);/g)];
+assert.equal(teams.length, 4, "App and UI-test Debug/Release settings must each declare a team.");
+for (const [, team] of teams) assert.equal(team, "C8T85FCR6R", "Unexpected Apple signing team.");
+console.log("Apple app and UI-test signing use the approved developer team.");
+
