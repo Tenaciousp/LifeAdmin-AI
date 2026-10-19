@@ -28,3 +28,15 @@ assert.match(await nativeFile("android/app/src/main/java/uk/co/tenaciouspl/lifea
 assert.match(await nativeFile("ios/App/App/LifeAdminViewController.swift"), /registerPluginInstance\(LifeAdminFilesPlugin\(\)\)/);
 assert.match(project, /LifeAdminFilesPlugin\.swift in Sources/);
 console.log("Native backup file handling is registered on both platforms.");
+
+
+assert.match(await nativeFile("android/app/src/main/java/uk/co/tenaciouspl/lifeadmin/MainActivity.java"), /registerPlugin\(LifeAdminCalendarPlugin\.class\)/);
+assert.match(await nativeFile("ios/App/App/LifeAdminViewController.swift"), /registerPluginInstance\(LifeAdminCalendarPlugin\(\)\)/);
+assert.match(project, /LifeAdminCalendarPlugin\.swift in Sources/);
+assert.match(project, /PrivacyInfo\.xcprivacy in Resources/);
+const info = await nativeFile("ios/App/App/Info.plist");
+for (const key of ["NSCalendarsUsageDescription", "NSCalendarsFullAccessUsageDescription"]) assert.ok(info.includes(key));
+const android = await nativeFile("android/app/src/main/AndroidManifest.xml");
+for (const permission of ["READ_CALENDAR", "WRITE_CALENDAR"]) assert.ok(android.includes(permission));
+assert.match(await nativeFile("ios/App/App/PrivacyInfo.xcprivacy"), /CA92\.1/);
+console.log("Optional calendar adapters and permission descriptions are registered. Runtime delivery remains a separate acceptance check.");

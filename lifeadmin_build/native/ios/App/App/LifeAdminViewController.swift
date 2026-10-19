@@ -3,7 +3,7 @@ import WebKit
 import Capacitor
 
 class LifeAdminViewController: CAPBridgeViewController {
-    override func capacitorDidLoad() { bridge?.registerPluginInstance(LifeAdminStoragePlugin()); bridge?.registerPluginInstance(LifeAdminFilesPlugin()) }
+    override func capacitorDidLoad() { bridge?.registerPluginInstance(LifeAdminStoragePlugin()); bridge?.registerPluginInstance(LifeAdminFilesPlugin()); bridge?.registerPluginInstance(LifeAdminCalendarPlugin()) }
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -23,3 +23,4 @@ class LifeAdminViewController: CAPBridgeViewController {
         ])
     }
 }
+

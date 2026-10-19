@@ -37,7 +37,12 @@
         </provider>
     </application>
 
+    <!-- Calendar permission is requested only when the customer connects a diary. -->
+    <uses-permission android:name="android.permission.READ_CALENDAR" />
+    <uses-permission android:name="android.permission.WRITE_CALENDAR" />
+
     <!-- Permissions -->
 
     <uses-permission android:name="android.permission.INTERNET" />
 </manifest>
+

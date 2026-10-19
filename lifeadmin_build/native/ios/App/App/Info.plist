@@ -22,7 +22,11 @@
 	<string>$(MARKETING_VERSION)</string>
 	<key>CFBundleVersion</key>
 	<string>$(CURRENT_PROJECT_VERSION)</string>
-	<key>LSRequiresIPhoneOS</key>
+	<key>NSCalendarsUsageDescription</key>
+<string>LifeAdmin uses calendar access to create and maintain the contract dates you enable. Your calendar provider might sync these entries.</string>
+<key>NSCalendarsFullAccessUsageDescription</key>
+<string>LifeAdmin needs calendar access to find, update and remove its own contract diary entries. It does not upload your calendar events.</string>
+<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
@@ -68,3 +72,4 @@
 	<true/>
 </dict>
 </plist>
+

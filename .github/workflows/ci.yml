@@ -38,6 +38,9 @@ jobs:
       - name: Install Python dependencies
         run: pip install -r requirements.txt
 
+      - name: Test offline AI questions, diary dates and device repositories
+        run: node --test artifacts/adminpilot-ai/src/lib/offline/*.test.mjs
+
       - name: Run automated tests
         run: npm test
 
@@ -450,3 +453,4 @@ jobs:
             lifeadmin_build/native/apple-launch-evidence/
           if-no-files-found: error
           retention-days: 14
+

@@ -28,6 +28,8 @@ AF220000000000000000000C = {isa = PBXTargetDependency; target = 504EC3031FED7965
 		AF1100000000000000000012 /* LifeAdminViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF1100000000000000000011 /* LifeAdminViewController.swift */; };
 		AF1100000000000000000022 /* LifeAdminFilesPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF1100000000000000000021 /* LifeAdminFilesPlugin.swift */; };
 AF2200000000000000000001 = {isa = PBXBuildFile; fileRef = AF2200000000000000000002; };
+		AF3300000000000000000002 /* LifeAdminCalendarPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF3300000000000000000001 /* LifeAdminCalendarPlugin.swift */; };
+		AF3300000000000000000004 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = AF3300000000000000000003 /* PrivacyInfo.xcprivacy */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -47,6 +49,8 @@ AF2200000000000000000001 = {isa = PBXBuildFile; fileRef = AF22000000000000000000
 		AF1100000000000000000021 /* LifeAdminFilesPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LifeAdminFilesPlugin.swift; sourceTree = "<group>"; };
 AF2200000000000000000002 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LifeAdminUITests/LifeAdminUITests.swift; sourceTree = "<group>"; };
 AF2200000000000000000003 = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = LifeAdminUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		AF3300000000000000000001 /* LifeAdminCalendarPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LifeAdminCalendarPlugin.swift; sourceTree = "<group>"; };
+		AF3300000000000000000003 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -86,6 +90,8 @@ AF2200000000000000000004 = {isa = PBXFrameworksBuildPhase; buildActionMask = 214
 			children = (
 				9582B6822FE993A50072D4E8 /* SceneDelegate.swift */,
 				AF1100000000000000000021 /* LifeAdminFilesPlugin.swift */,
+				AF3300000000000000000001 /* LifeAdminCalendarPlugin.swift */,
+				AF3300000000000000000003 /* PrivacyInfo.xcprivacy */,
 				AF1100000000000000000011 /* LifeAdminViewController.swift */,
 				AF1100000000000000000001 /* LifeAdminStoragePlugin.swift */,
 				50379B222058CBB4000EE86E /* capacitor.config.json */,
@@ -178,6 +184,7 @@ productType = "com.apple.product-type.bundle.ui-testing";
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				AF3300000000000000000004 /* PrivacyInfo.xcprivacy in Resources */,
 				504EC3121FED79650016851F /* LaunchScreen.storyboard in Resources */,
 				50B271D11FEDC1A000F3C39B /* public in Resources */,
 				504EC30F1FED79650016851F /* Assets.xcassets in Resources */,
@@ -198,6 +205,7 @@ AF2200000000000000000006 = {isa = PBXResourcesBuildPhase; buildActionMask = 2147
 				504EC3081FED79650016851F /* AppDelegate.swift in Sources */,
 				9582B6832FE993A70072D4E8 /* SceneDelegate.swift in Sources */,
 				AF1100000000000000000022 /* LifeAdminFilesPlugin.swift in Sources */,
+				AF3300000000000000000002 /* LifeAdminCalendarPlugin.swift in Sources */,
 				AF1100000000000000000012 /* LifeAdminViewController.swift in Sources */,
 				AF1100000000000000000002 /* LifeAdminStoragePlugin.swift in Sources */,
 			);
@@ -428,3 +436,4 @@ AF2200000000000000000008 = {isa = XCConfigurationList; buildConfigurations = (AF
 	};
 	rootObject = 504EC2FC1FED79650016851F /* Project object */;
 }
+

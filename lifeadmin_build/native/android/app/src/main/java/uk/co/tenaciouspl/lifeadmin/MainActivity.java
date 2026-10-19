@@ -7,6 +7,8 @@ public class MainActivity extends BridgeActivity {
     @Override public void onCreate(Bundle savedInstanceState) {
         registerPlugin(LifeAdminStoragePlugin.class);
         registerPlugin(LifeAdminFilesPlugin.class);
+        registerPlugin(LifeAdminCalendarPlugin.class);
         super.onCreate(savedInstanceState);
     }
 }
+

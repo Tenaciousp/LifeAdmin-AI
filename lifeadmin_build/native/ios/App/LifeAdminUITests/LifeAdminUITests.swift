@@ -783,7 +783,8 @@ final class LifeAdminUITests: XCTestCase {
         let prompt = app.textViews["AI prompt"]
         XCTAssertTrue(prompt.waitForExistence(timeout: 10))
         reveal(prompt)
-        XCTAssertTrue((prompt.value as? String ?? "").contains("REF-7319"))
+        XCTAssertFalse((prompt.value as? String ?? "").contains("REF-7319"))
+        XCTAssertTrue((prompt.value as? String ?? "").contains("Selected bill details"))
         prompt.tap()
         prepareKeyboard(for: prompt)
         prompt.typeText(" CI reviewed prompt 7319")
@@ -792,9 +793,8 @@ final class LifeAdminUITests: XCTestCase {
         XCTAssertTrue(reviewed.contains("CI reviewed prompt 7319"))
         let copy = app.buttons["Copy AI prompt"]
         reveal(copy)
-        for name in ["Open ChatGPT", "Open Gemini", "Open Copilot", "Open Claude", "Open Perplexity"] {
-            XCTAssertTrue(app.links[name].exists)
-        }
+        XCTAssertTrue(app.links["Open ChatGPT"].exists)
+        XCTAssertFalse(app.links["Open Claude"].exists)
         copy.tap()
         XCTAssertTrue(app.staticTexts[
             "AI prompt copied. Paste into your chosen service after reviewing the details."
@@ -1009,6 +1009,7 @@ final class LifeAdminUITests: XCTestCase {
     }
 
 }
+
 
 
 
