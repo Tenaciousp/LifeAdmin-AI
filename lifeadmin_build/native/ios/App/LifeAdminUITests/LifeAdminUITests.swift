@@ -56,7 +56,8 @@ final class LifeAdminUITests: XCTestCase {
                     let distance = min(viewport.height * 0.6,
                                        max(60, viewport.minY - frame.minY + 24))
                     let start = app.coordinate(withNormalizedOffset: .zero)
-                        .withOffset(CGVector(dx: viewport.midX, dy: viewport.midY))
+                        .withOffset(CGVector(dx: viewport.midX,
+                                             dy: viewport.minY + viewport.height * 0.2))
                     start.press(forDuration: 0.01,
                                 thenDragTo: start.withOffset(CGVector(dx: 0, dy: distance)))
                     continue
