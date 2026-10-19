@@ -3,11 +3,14 @@ import WebKit
 import Capacitor
 
 class LifeAdminViewController: CAPBridgeViewController {
-    override func capacitorDidLoad() { bridge?.registerPluginInstance(LifeAdminStoragePlugin()); bridge?.registerPluginInstance(LifeAdminFilesPlugin()); bridge?.registerPluginInstance(LifeAdminCalendarPlugin()) }
-
-    override func viewDidLoad() {
-        super.viewDidLoad()
+    override func capacitorDidLoad() {
+        bridge?.registerPluginInstance(LifeAdminStoragePlugin())
+        bridge?.registerPluginInstance(LifeAdminFilesPlugin())
+        bridge?.registerPluginInstance(LifeAdminCalendarPlugin())
         guard let webView else { return }
+        // CAPBridgeViewController.viewDidLoad starts the first navigation.
+        // This hook runs earlier, during loadView. Establish the final root
+        // here instead of replacing it while navigation is in progress.
         // Keep scrolling content outside the status bar and home indicator.
         let container = UIView()
         container.backgroundColor = .systemBackground

@@ -924,6 +924,8 @@ final class LifeAdminUITests: XCTestCase {
         // This audit now owns the cold simulator launch.
         app.launch()
         XCTAssertTrue(app.buttons["Search"].waitForExistence(timeout: 60))
+        XCTAssertTrue(app.images["HomeAdmin logo"].exists,
+                      "The logo contains text and needs an accessible name")
         var findings: [[String: String]] = []
         func recordFindings(_ stage: String) {
             let data = (try? JSONSerialization.data(withJSONObject: findings, options: [.prettyPrinted, .sortedKeys])) ?? Data()
