@@ -7,6 +7,19 @@ accessibility, startup/relaunch, exact backup restoration, message editing,
 manual AI handoff, clipboard, rotation and storage recovery. Both upgrade jobs
 and both screenshot jobs also passed. This does not clear network privacy.
 
+The iPhone full suite passed its initial accessibility and backup/persistence
+stages, then failed in the rotation helper. It asked XCTest for the hittability
+of Next Steps while that heading was above the landscape viewport (y = -9).
+XCTest raised an invalid activation-point error before the helper could scroll
+down. Geometry was checked second in the short-circuit condition. The follow-up
+checks nonempty frame and viewport containment first, then invokes the same
+native hit test. Small static-text labels must be fully inside the viewport;
+their centre alone can fall inside while the glyph remains clipped. A downward
+correction uses a bounded native drag proportional to the distance above the
+viewport instead of a full swipe that overshoots. The 14-scroll limit, rotation
+checks, screenshots and record assertions remain unchanged. The new run must
+verify the full rotation journey.
+
 The overall iPad job failed correctly: capture reported 11,131 kernel drops,
 1,072,095 packets received by the filter, 1,060,962 metadata-filter drops and
 only the two synthetic control packets retained. Dropped packets are unknown;
