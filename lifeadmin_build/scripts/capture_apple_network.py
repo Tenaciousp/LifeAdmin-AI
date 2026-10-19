@@ -28,18 +28,30 @@ def main():
     report = {
         "scope": "Packet metadata attributed to App plus the synthetic control process; not signed-device or payload inspection",
         "manual_process_attribution_required": True,
-        "attribution_limit": "WebKit traffic without App effective-process attribution is outside this capture",
+        "attribution_limit": "Loopback traffic except the control, and WebKit traffic without App effective-process attribution, are outside this capture",
         "started_at_unix": time.time(),
     }
-    with packets.open("w") as output, diagnostic.open("w") as errors:
+    # Reserve the control port before compiling the capture filter. Exclude
+    # unrelated loopback/debug traffic in BPF, before packets reach the buffer.
+    receiver = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    receiver.bind(("127.0.0.1", 0))
+    receiver.settimeout(2)
+    port = receiver.getsockname()[1]
+    report["control_port"] = port
+    packet_filter = (
+        "((tcp or udp) and not (net 127.0.0.0/8 or host ::1)) or "
+        f"(udp and host 127.0.0.1 and port {port})"
+    )
+    report["packet_filter"] = packet_filter
+    with receiver, packets.open("w") as output, diagnostic.open("w") as errors:
         # The PID belongs to tcpdump after exec, rather than sudo's monitor.
         trace = subprocess.Popen([
             "sudo", "-n", "/bin/sh", "-c",
             'echo $$ > "$1"; shift; exec "$@"', "capture", str(pidfile),
             "/usr/sbin/tcpdump", "-i", "pktap,all", "-k", "NPD",
-            "-nn", "-q", "-l", "-tttt", "-B", "4096",
+            "-nn", "-q", "-l", "-tttt", "-s", "512", "-B", "16384",
             "-Q", f"proc =App or eproc =App or pid ={os.getpid()}",
-            "tcp or udp",
+            packet_filter,
         ], stdout=output, stderr=errors)
         try:
             deadline = time.monotonic() + 10
@@ -49,14 +61,9 @@ def main():
                 time.sleep(0.1)
 
             # Controlled loopback traffic contains no household or account data.
-            with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as receiver:
-                receiver.bind(("127.0.0.1", 0))
-                receiver.settimeout(2)
-                port = receiver.getsockname()[1]
-                with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sender:
-                    sender.sendto(b"lifeadmin-network-control", ("127.0.0.1", port))
-                receiver.recvfrom(128)
-            report["control_port"] = port
+            with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sender:
+                sender.sendto(b"lifeadmin-network-control", ("127.0.0.1", port))
+            receiver.recvfrom(128)
             deadline = time.monotonic() + 5
             while True:
                 text = packets.read_text()

@@ -111,6 +111,18 @@ def main():
         (evidence / "upgrade.json").write_text(json.dumps(report, indent=2) + "\n")
         print(json.dumps(report, indent=2), flush=True)
     finally:
+        if not (evidence / "upgrade.json").exists():
+            # Preserve app/WebKit startup evidence before deleting the disposable
+            # simulator. Do not retry a failed launch or change its time limit.
+            try:
+                with (evidence / "upgrade-startup-system.log").open("w") as log:
+                    subprocess.run([
+                        "xcrun", "simctl", "spawn", device, "log", "show",
+                        "--last", "5m", "--style", "compact", "--predicate",
+                        'process == "App" OR process CONTAINS "WebKit"',
+                    ], stdout=log, stderr=subprocess.STDOUT, check=False, timeout=30)
+            except (OSError, subprocess.TimeoutExpired) as error:
+                print("Upgrade startup log collection failed: " + str(error), flush=True)
         for _, label, _ in cases:
             log = evidence / (label + ".log")
             if log.exists():
