@@ -1,6 +1,6 @@
 # LifeAdmin store submission pack
 
-Updated 18 October 2026. This pack supersedes earlier account-based web release plans.
+Updated 19 October 2026. This pack supersedes earlier account-based web release plans.
 
 ## Agreed offer
 
@@ -97,21 +97,28 @@ required-reason declarations and questionnaire review.
 
 ## Evidence and remaining gates
 
-Reviewed application/test source: `5319b671e69c73e9cd6bda3de8a0219dfc36f1c0`.
-All six core CI #401 jobs passed: verification, unsigned archive, both full
-simulator suites and both different-build upgrade suites. Seven of eight jobs
-passed overall; iPad store capture timed out in simulator clock setup before
-LifeAdmin launched:
-https://github.com/Tenaciousp/LifeAdmin-AI/actions/runs/39156217928
+Reviewed application/test source: `4a16999f2017ef77bb6b063651556a2e58e27259`.
+Tested merge: `00a4da507192b3d29d30f591e0a5d391a5963bc3`.
+All eight CI #405 jobs passed: verification, unsigned archive, both full
+simulator suites, both different-build upgrade suites and both store-capture jobs:
+https://github.com/Tenaciousp/LifeAdmin-AI/actions/runs/39218439724
 
-Downloaded current-run reports and screenshots were reviewed on 18 October.
-Both iPhone 11 and iPad (10th generation), iOS 26.2, passed full simulator
-acceptance and different-build upgrade checks. Reports confirm original records,
-native saves after upgrade and restoration of the older backup. Each full suite
-has 31 true boolean report fields including launch acceptance, plus six empty
-accessibility-finding reports.
-Native invalid-backup cases include duplicate bill IDs, duplicate plan IDs and
-orphan plans. The iPad logs show the system Show Keyboard action used successfully.
+Reports and screenshots were downloaded and reviewed on 19 October. Each full
+suite has 31 true boolean report fields and six empty sampled accessibility
+reports. Both upgrades preserve one exact synthetic bill and plan, accept new
+saves and restore the older backup. Candidate package fingerprint:
+`d9de83ad26afb42b500e3fbf1b3bf4d358580402619e64ab991f341301cf9a9c`.
+
+Full acceptance used iPhone 11 and iPad (10th generation), iOS 26.2.
+Required-size captures used iPhone 16 Pro and iPad Pro (12.9-inch, 6th generation):
+five original images per device. PNG dimensions and hashes match the manifests.
+Date controls fit their columns; open-plan heading selection and single-line
+title checks passed. Tablet message/AI/backup captures include preceding content
+at the page scroll limit. Final listing selection and presentation remain open.
+
+The earlier #404 iPad suite timed out during repeated XCTest animation-idle waits.
+#405 passed within the same limits without an app-code workaround or automatic
+retry. This does not establish the cause of the earlier runner variability.
 
 Limits: simulator evidence does not establish physical-device performance,
 manual assistive-technology acceptance, signed store delivery, supported OS
@@ -126,9 +133,8 @@ configuring signing and TestFlight. Signed delivery and physical-device tests
 have not been completed. Do not purchase additional services automatically.
 
 - Listing and reviewer copy: prepared; validate final console limits and fields.
-- Screenshot tooling: CI #402 captures on the required-size targets. iPhone
-  capture passed; visual review requires a final open-plan-heading selector fix.
-  iPad capture and approval of the complete set remain outstanding.
+- Screenshot tooling: both #405 capture jobs passed and all ten original images
+  were reviewed. Final listing image selection and presentation remain open.
 - Privacy declaration: draft only; finish native live-network/SDK review and
   repeat against the eventual signed package before submitting answers.
 - Support/privacy URLs: HTTPS availability and content checked on 18 October.
@@ -178,6 +184,40 @@ manifest is present. These observations do not establish a final App Store
 privacy classification or prove absence of every required-reason API.
 Capacitor retains networking capability; static review is not live traffic
 measurement. Native live-network and final signed-package checks remain open.
+
+### Native network measurement
+
+The #405 Release archive was inspected on 19 October. No remote CSS/font URLs,
+hosted customer API endpoints, broad ATS exception or remote Capacitor server
+override were found. External content URLs in the local app are support/privacy
+and the five explicit AI-service links. React error URLs and XML/SVG namespace
+strings also occur in bundled framework code; these are not evidence of requests.
+
+Bundled fetch implementations include Capacitor HTTP support and module preloading.
+Capacitor 8.5.3's native HTTP handler creates URLSession tasks in response to
+plugin calls. Capability presence does not establish use or absence of traffic.
+Its empty privacy manifest was compared with the pinned SDK source. No additional
+required-reason codes were inferred from generic plugin recommendations.
+
+The full simulator suites now run inside a macOS packet-metadata capture wrapper.
+It listens across interfaces but applies a packet-metadata filter before output:
+only process App, effective process App, or the synthetic control process PID.
+Unrelated runner/OS packet metadata is excluded. It saves process names/PIDs and
+direction, no packet payload file, and uses a synthetic loopback UDP control
+packet to verify capture.
+Missing control traffic, early capture termination or dropped packets fail the
+capture check. Existing native assertions and time limits are unchanged.
+
+Artifacts: network-packets.txt, network-capture.log and network-capture.json
+inside the usual Apple launch evidence. CI execution and manual attribution of
+App/WebKit traffic are pending. WebKit traffic without App effective-process attribution is outside this capture;
+review attribution and use broader targeted Instruments checks before final sign-off. Successful capture is not a zero-network result, a signed
+binary review or a final privacy declaration.
+
+References:
+- https://developer.apple.com/documentation/network/recording-a-packet-trace
+- https://github.com/apple-oss-distributions/tcpdump/blob/main/tcpdump/tcpdump.1
+- https://github.com/ionic-team/capacitor/blob/8.5.3/ios/Capacitor/Capacitor/Plugins/HttpRequestHandler.swift
 
 ## Language roadmap
 

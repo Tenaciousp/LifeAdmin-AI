@@ -184,7 +184,7 @@ jobs:
 
       - name: Check Apple startup and interactive persistence
         working-directory: lifeadmin_build/native
-        run: python ../scripts/smoke_apple_simulator.py --ui-tests --device-family ${{ matrix.device-family }}
+        run: python ../scripts/capture_apple_network.py -- python ../scripts/smoke_apple_simulator.py --ui-tests --device-family ${{ matrix.device-family }}
 
       - name: Save Apple compilation evidence
         if: always()
