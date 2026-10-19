@@ -874,18 +874,21 @@ final class LifeAdminUITests: XCTestCase {
         create.tap()
         confirm()
         XCTAssertTrue(app.staticTexts["Plan saved on this device."].waitForExistence(timeout: 10))
-        let titles = app.staticTexts.matching(NSPredicate(format: "label == %@", "Streaming subscription")).allElementsBoundByIndex
-        XCTAssertGreaterThanOrEqual(titles.count, 2)
-        for title in titles {
-            XCTAssertGreaterThanOrEqual(title.frame.width,
-                min(180, app.webViews.firstMatch.frame.width * 0.4),
-                "A saved bill or plan title is squeezed beside its actions")
-        }
         // The bill, saved-plan row and open plan share a title. WebKit's
         // level-2 heading identifies the open plan; query order is not stable.
         let planHeading = app.otherElements.matching(
             NSPredicate(format: "label == %@ AND value == %@", "Streaming subscription", "2")).firstMatch
         XCTAssertTrue(planHeading.waitForExistence(timeout: 5))
+        let titles = app.staticTexts.matching(NSPredicate(format: "label == %@", "Streaming subscription")).allElementsBoundByIndex
+        XCTAssertGreaterThanOrEqual(titles.count, 2)
+        for title in titles {
+            XCTAssertGreaterThan(title.frame.width, 0)
+            // Font weight changes the natural text width (177pt versus 182pt
+            // on iPad). Detect wrapping against the larger one-line heading,
+            // rather than rejecting valid single-line text below 180pt.
+            XCTAssertLessThanOrEqual(title.frame.height, planHeading.frame.height + 1,
+                "A saved bill or plan title wraps beside its actions")
+        }
         capture("02 plan", showing: planHeading)
 
         let edit = app.buttons["Edit message"]
