@@ -64,7 +64,10 @@ def inspect_manifest(apk, tool):
     require(sdk_version(("sdkVersion", "minSdkVersion")) == 24, "Unexpected minimum Android version")
     require(sdk_version(("targetSdkVersion",)) == 36, "Unexpected target Android version")
     permissions = set(re.findall(r"uses-permission(?:-[^: ]+)?:\s*(?:name=)?'([^']+)'", dump("permissions")))
-    allowed = {"android.permission.INTERNET", "android.permission.READ_CALENDAR",\n               "android.permission.WRITE_CALENDAR", APP_ID + ".DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION"}\n    require({"android.permission.READ_CALENDAR", "android.permission.WRITE_CALENDAR"} <= permissions,\n            "Optional diary calendar permissions missing")
+    allowed = {"android.permission.INTERNET", "android.permission.READ_CALENDAR",
+               "android.permission.WRITE_CALENDAR", APP_ID + ".DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION"}
+    require({"android.permission.READ_CALENDAR", "android.permission.WRITE_CALENDAR"} <= permissions,
+            "Optional diary calendar permissions missing")
     require("android.permission.INTERNET" in permissions, "Unable to verify APK permissions")
     require(permissions <= allowed, "Unexpected APK permissions: " + ", ".join(sorted(permissions - allowed)))
     manifest = dump("xmltree", "--file", "AndroidManifest.xml")

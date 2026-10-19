@@ -18,7 +18,7 @@ export default function DiaryPanel({ tasks }: { tasks: Record<string, any>[] }) 
   useEffect(() => {
     let active = true;
     if (!calendarId) return;
-    if (invalid) { setError(invalid); return; }
+    if (invalid) { setError(invalid); setStatus("Diary update paused. Correct the saved dates or disconnect the diary."); setBusy(false); return; }
     setStatus('Updating diary entries…'); setError(''); setBusy(true);
     void syncDiary(calendarId, JSON.parse(events)).then(result => {
       if (active) setStatus(`Diary updated: ${result.count} entries. ${result.skippedPast} past dates skipped. Check calendar alerts on your device.`);
