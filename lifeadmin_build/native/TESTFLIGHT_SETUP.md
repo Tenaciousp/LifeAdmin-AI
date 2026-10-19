@@ -5,6 +5,7 @@ Apple membership and App Store Connect access were confirmed by the Account Hold
 | Setting | Value |
 | --- | --- |
 | Apple developer Team ID | C8T85FCR6R |
+| App Store working title | LifeAdmin by TenaciousPL |
 | App display name | LifeAdmin |
 | Bundle ID | uk.co.tenaciouspl.lifeadmin |
 | Platform | iOS, including supported iPad devices |
@@ -14,12 +15,14 @@ Apple membership and App Store Connect access were confirmed by the Account Hold
 | Seller | Paul Lonergan |
 | Brand | TenaciousPL |
 
-The team is configured for both app and UI-test Debug/Release targets. Team ID is a public signing identifier, not a certificate or upload credential. Existing CI builds intentionally disable signing. This change does not create a certificate, provisioning profile, Apple app record or TestFlight upload.
+The Account Holder reports creating the App Store Connect record under **LifeAdmin by TenaciousPL** after the plain LifeAdmin name was rejected as already used. Keep **LifeAdmin** for the app tile and **TenaciousPL** for the publisher brand. Final name clearance remains outstanding before public launch. The numeric Apple app ID has not yet been recorded here.
+
+The team is configured for both app and UI-test Debug/Release targets. Team ID is a public signing identifier, not a certificate or upload credential. Existing CI builds intentionally disable signing. This change does not create a certificate, provisioning profile or TestFlight upload.
 
 ## Account Holder steps
 
 1. In Apple Developer, open Certificates, Identifiers & Profiles, then Identifiers. Reuse the existing explicit App ID if present; otherwise register `uk.co.tenaciouspl.lifeadmin`, with description LifeAdmin. Do not register a wildcard or an alternative bundle ID. No additional service capabilities are needed for this first build; calendar access uses operating-system permission descriptions.
-2. In App Store Connect, check Apps for an existing LifeAdmin record. Reuse it only if the Bundle ID matches. If absent, choose Apps > + > New App, select iOS and enter the values above. Apple checks name availability. Do not silently change the name or identifier if rejected; report the specific error.
+2. In App Store Connect, open the existing **LifeAdmin by TenaciousPL** record and verify its Bundle ID matches the value above. Do not create a duplicate record or change the identifier.
 3. Retain the numeric Apple ID from the app record's App Information page. This differs from the Team ID and from an Apple Account email address.
 
 ## Signing and upload

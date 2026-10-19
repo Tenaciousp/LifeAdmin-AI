@@ -451,9 +451,9 @@ def main():
         # Preserve synthetic simulator evidence before removing the disposable device.
         diagnostics = [
             ("failure-screen.log", ["io", device, "screenshot", str(evidence / "failure.png")]),
-            ("failure-system.log", ["spawn", device, "log", "show", "--last", "2m",
-             "--style", "compact", "--predicate",
-             'process == "App" OR process == "SpringBoard" OR process == "runningboardd" OR process == "launchd"']),
+            ("failure-system.log", ["spawn", device, "log", "show", "--last", "5m",
+             "--style", "compact", "--info", "--debug", "--predicate",
+             'process == "App" OR process CONTAINS "WebKit" OR process == "SpringBoard" OR process == "runningboardd" OR process == "launchd"']),
         ]
         for filename, arguments in diagnostics:
             try:
@@ -464,7 +464,7 @@ def main():
                 pass
         raise
     finally:
-        # The broad two-minute failure log can start after file selection.
+        # The broad failure log can start after file selection.
         # Preserve fixed-message native stages across the complete UI journey.
         trace_path = evidence / "native-file-events.log"
         try:
@@ -522,6 +522,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 

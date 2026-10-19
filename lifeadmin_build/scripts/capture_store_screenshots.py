@@ -73,6 +73,19 @@ def main():
         sim("install", device, str(app.resolve()), timeout=120)
         run_ui_test(device, evidence, "testStoreScreenshots",
                     "store-screenshots.log", str(result))
+    except Exception:
+        # A blank WKWebView has no useful accessibility tree. Preserve its
+        # app/WebKit startup logs before deleting the synthetic simulator.
+        try:
+            with (evidence / "store-startup-system.log").open("w") as log:
+                subprocess.run([
+                    "xcrun", "simctl", "spawn", device, "log", "show",
+                    "--last", "5m", "--style", "compact", "--info", "--debug",
+                    "--predicate", 'process == "App" OR process CONTAINS "WebKit"',
+                ], stdout=log, stderr=subprocess.STDOUT, check=False, timeout=30)
+        except (OSError, subprocess.TimeoutExpired) as error:
+            print("Store startup log collection failed: " + str(error), flush=True)
+        raise
     finally:
         if result.is_dir():
             try:
@@ -97,3 +110,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
