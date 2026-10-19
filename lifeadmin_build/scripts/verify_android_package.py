@@ -24,7 +24,7 @@ def inspect_assets(apk):
         require("assets/public/index.html" in names, "Offline entry page missing")
         config = json.loads(package.read("assets/capacitor.config.json"))
         require(config.get("appId") == APP_ID, "Unexpected application ID")
-        require(config.get("appName") == "LifeAdmin", "Unexpected app name")
+        require(config.get("appName") == "HomeAdmin", "Unexpected app name")
         require(not config.get("server"), "Remote server configuration in APK")
         for resource in ("backup_rules.xml", "data_extraction_rules.xml"):
             require("res/xml/" + resource in names, "Backup resource missing: " + resource)
@@ -56,7 +56,7 @@ def inspect_manifest(apk, tool):
                               capture_output=True, text=True).stdout
     badge = dump("badging")
     require("package: name='" + APP_ID + "'" in badge, "Incorrect packaged identity")
-    require("application-label:'LifeAdmin'" in badge, "Incorrect packaged display name")
+    require("application-label:'HomeAdmin'" in badge, "Incorrect packaged display name")
     def sdk_version(names):
         match = re.search(r"(?:" + "|".join(names) + r"):\s*'([0-9]+)'", badge)
         require(match is not None, "Unable to parse Android version from badging: " + badge)

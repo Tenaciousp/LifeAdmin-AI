@@ -1,4 +1,4 @@
-"""Portable account and persistence layer for LifeAdmin AI.
+"""Portable account and persistence layer for HomeAdmin.
 
 PostgreSQL is used when DATABASE_URL is configured. For zero-config local and
 small-host deployments, the app falls back to SQLite in the API data folder.

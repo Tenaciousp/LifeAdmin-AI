@@ -25,11 +25,11 @@ const examples = [
 ];
 
 const faqs = [
-  ["Does LifeAdmin contact providers for me?", "No. It prepares plans, provider messages and checklists. You review and send anything yourself."],
+  ["Does HomeAdmin contact providers for me?", "No. It prepares plans, provider messages and checklists. You review and send anything yourself."],
   ["Does it connect to my bank or email?", "No bank connection or mailbox access is required for the core workflow. You enter only the details you choose to use."],
-  ["What happens if I do not know all the details?", "Leave them blank. LifeAdmin highlights useful missing information before it generates a plan, without blocking you."],
+  ["What happens if I do not know all the details?", "Leave them blank. HomeAdmin highlights useful missing information before it generates a plan, without blocking you."],
   ["How do I access my plans?", "Sign in with your purchasing account. Your purchase gives access to the planning tools and saved work."],
-  ["Is this legal or financial advice?", "No. LifeAdmin provides general admin guidance and draft wording. For regulated or high-stakes issues, check official information or seek qualified advice."],
+  ["Is this legal or financial advice?", "No. HomeAdmin provides general admin guidance and draft wording. For regulated or high-stakes issues, check official information or seek qualified advice."],
 ];
 
 export function LandingPage() {
@@ -72,8 +72,8 @@ export function LandingPage() {
       <nav className="fixed top-0 inset-x-0 z-50 bg-[#0f172a]/90 backdrop-blur-xl border-b border-white/10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
           <a href="#top" className="flex items-center gap-2 text-white font-extrabold text-lg sm:text-xl tracking-tight focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300 rounded-lg">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-cyan-400 to-blue-600 flex items-center justify-center text-sm shadow-lg shadow-blue-500/20">LA</div>
-            LifeAdmin AI
+            <img src="/homeadmin-logo.png" width="32" height="32" alt="" className="h-8 w-8 rounded-lg" />
+            HomeAdmin
           </a>
           <div className="hidden md:flex items-center gap-6 text-sm font-semibold text-blue-100/80">
             <a href="#examples" className="hover:text-white transition-colors">Examples</a>
@@ -94,7 +94,7 @@ export function LandingPage() {
           <div className="text-center max-w-3xl mx-auto mb-10">
             <p className="text-sm font-bold text-primary tracking-wider uppercase mb-2">Start with the problem you have</p>
             <h2 className="text-3xl md:text-4xl font-extrabold text-slate-900 mb-4">Built around the household admin people actually put off.</h2>
-            <p className="text-lg text-slate-600">Search for the provider, bill or payment. LifeAdmin suggests the bill type and the most useful goal, then you stay in control.</p>
+            <p className="text-lg text-slate-600">Search for the provider, bill or payment. HomeAdmin suggests the bill type and the most useful goal, then you stay in control.</p>
           </div>
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
             {examples.map((example) => (
@@ -182,7 +182,7 @@ export function LandingPage() {
           <div className="max-w-2xl mb-10">
             <p className="text-sm font-bold text-primary tracking-wider uppercase mb-2">You stay in control</p>
             <h2 className="text-3xl md:text-4xl font-extrabold text-slate-900 mb-4">Useful enough to act on. Cautious enough to review first.</h2>
-            <p className="text-lg text-slate-600">LifeAdmin is designed for everyday household administration without asking for broad access to your financial or communication accounts.</p>
+            <p className="text-lg text-slate-600">HomeAdmin is designed for everyday household administration without asking for broad access to your financial or communication accounts.</p>
           </div>
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-5">
             {[
@@ -210,7 +210,7 @@ export function LandingPage() {
           <div id="terms" className="bg-white rounded-2xl p-7 md:p-8 border border-slate-200 shadow-sm">
             <p className="text-sm font-bold text-primary tracking-wider uppercase mb-2">Privacy</p>
             <h2 className="text-2xl font-extrabold text-slate-900 mb-4">Only add what the task needs.</h2>
-            <p className="text-slate-600 mb-6 leading-relaxed">LifeAdmin does not require bank, email or calendar access. Signed-in tasks and plans are stored against your account. Passwords are salted and hashed and sessions use protected cookies.</p>
+            <p className="text-slate-600 mb-6 leading-relaxed">HomeAdmin does not require bank, email or calendar access. Signed-in tasks and plans are stored against your account. Passwords are salted and hashed and sessions use protected cookies.</p>
             <ul className="space-y-3">
               <TrustItem text="Sign in with your purchasing account to access saved plans." />
               <TrustItem text="Do not enter passwords, full card numbers or security codes." />
@@ -226,7 +226,7 @@ export function LandingPage() {
           <div className="bg-white rounded-2xl p-7 md:p-8 border border-slate-200 shadow-sm">
             <p className="text-sm font-bold text-primary tracking-wider uppercase mb-2">Guidance only</p>
             <h2 className="text-2xl font-extrabold text-slate-900 mb-4">Check provider terms and official information before acting.</h2>
-            <p className="text-slate-600 mb-6 leading-relaxed">LifeAdmin creates drafts, checklists and general information. It does not provide legal, financial, medical, tax or insurance advice.</p>
+            <p className="text-slate-600 mb-6 leading-relaxed">HomeAdmin creates drafts, checklists and general information. It does not provide legal, financial, medical, tax or insurance advice.</p>
             <ul className="space-y-3">
               <TrustItem text="You decide whether to send, cancel, switch, dispute or purchase." />
               <TrustItem text="High-stakes issues should be checked with the relevant provider or qualified support." />
@@ -272,7 +272,7 @@ export function LandingPage() {
               {supportEmail}
             </a>
           </p>
-          <p className="mb-4">LifeAdmin AI prepares plans and drafts only. You approve all messages, purchases, cancellations and official decisions.</p>
+          <p className="mb-4">HomeAdmin prepares plans and drafts only. You approve all messages, purchases, cancellations and official decisions.</p>
           <p className="flex flex-wrap justify-center gap-4 font-semibold text-slate-300">
             <a href="#privacy" className="hover:text-white transition-colors">Privacy</a>
             <a href="#terms" className="hover:text-white transition-colors">Terms</a>

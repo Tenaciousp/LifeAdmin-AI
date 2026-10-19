@@ -18,7 +18,7 @@ const queryClient = new QueryClient({
 createRoot(document.getElementById('root')!).render(
   <ErrorBoundary>
     <QueryClientProvider client={queryClient}>
-      <Suspense fallback={<p role="status" className="p-6">Opening LifeAdmin…</p>}><App /></Suspense>
+      <Suspense fallback={<p role="status" className="p-6">Opening HomeAdmin…</p>}><App /></Suspense>
     </QueryClientProvider>
   </ErrorBoundary>,
 );

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-LifeAdmin AI by AdminPilot - sellable MVP
+HomeAdmin by TenaciousPL - retained hosted development application
 A privacy-light personal admin agent for household admin, renewals, bills and everyday document tasks.
 Run: python app.py
 Optional: export OPENAI_API_KEY="..." for AI-generated outputs.
@@ -62,7 +62,7 @@ def _load_session_secret():
 
 _SESSION_SECRET = _load_session_secret()
 
-SYSTEM_PROMPT = """You are LifeAdmin AI, a practical personal admin assistant for household admin, renewals, bills, documents, travel preparation and small business admin.
+SYSTEM_PROMPT = """You are HomeAdmin, a practical personal admin assistant for household admin, renewals, bills, documents, travel preparation and small business admin.
 Write concise, safe, actionable outputs. Do not claim to take real-world actions. Do not send messages, make purchases, cancel accounts, access external services, or imply professional legal, medical, tax, insurance or financial advice.
 Always keep a human approval checkpoint before any real-world action. Focus on checklists, draft wording, reminders, comparison criteria, risk flags and next steps.
 Return exactly these four Markdown H2 sections in this order: Next steps, Provider message, Things to check, Approval checklist. Put genuine provider-ready draft wording only under Provider message. If no provider message is useful, leave that section empty. Do not invent additional H2 headings.
@@ -82,7 +82,7 @@ CATEGORY_PROMPTS = {
 
 CORE_PRODUCT = {
     "id": "core_app",
-    "name": "LifeAdmin AI Complete",
+    "name": "HomeAdmin Complete",
     "price": "£1.99",
     "amount_pence": 199,
     "billing": "one-time",
@@ -101,7 +101,7 @@ ALL_ACCESS_PRODUCT = {
     "price_env": "STRIPE_PRICE_ALL_ACCESS",
     "apple_product_id": os.environ.get("APPLE_PRODUCT_ALL_ACCESS", "com.adminpilot.lifeadmin.allaccess"),
     "google_product_id": os.environ.get("GOOGLE_PRODUCT_ALL_ACCESS", "lifeadmin_all_access"),
-    "description": "Unlock advanced plans, specialist outputs and every additional LifeAdmin planning mode in this release.",
+    "description": "Unlock advanced plans, specialist outputs and every additional HomeAdmin planning mode in this release.",
 }
 ADD_ONS = [ALL_ACCESS_PRODUCT]
 ADVANCED_MODES = {"more_options", "renewal_pro", "refund_pro", "document_pro", "travel_pro", "family_board", "small_landlord"}
@@ -160,7 +160,7 @@ def ensure_data():
         write_json(NOTES_FILE, [])
     if not os.path.exists(SETTINGS_FILE):
         write_json(SETTINGS_FILE, {
-            "brand_name": "LifeAdmin AI",
+            "brand_name": "HomeAdmin",
             "plan": "Core",
             "currency": "GBP",
             "entry_price": "0.99 GBP",
@@ -674,7 +674,7 @@ def create_checkout_session(handler, body):
     if not product:
         return json_response(handler, {"error": "Unknown product"}, 400)
     if product_id != "core_app":
-        return json_response(handler, {"error": "Only the LifeAdmin AI Complete product is available for new purchases."}, 400)
+        return json_response(handler, {"error": "Only the HomeAdmin Complete product is available for new purchases."}, 400)
     currency = str(body.get("currency") or "").upper()
     if currency not in REGIONAL_PRICES:
         return json_response(handler, {"error": "Choose a supported checkout currency."}, 400)
@@ -1264,7 +1264,7 @@ def playbook_sections(playbook, task=None):
                 "- For UK TV/broadband packages, useful comparison targets often include Virgin Media, BT/EE, NOW and standalone fibre providers plus separate streaming services, subject to availability at your address.",
                 "- Record: monthly price, introductory period, price after discounts, contract length, setup fee, broadband speed, included TV/sports/cinema, equipment charge and total minimum-term cost.",
                 "- Treat advertised deals as leads only. Confirm current availability and terms on the provider's official site before acting.",
-                "- Use the AI comparison button in LifeAdmin AI to take this plan into ChatGPT or another web-enabled assistant and ask it to find current alternatives with source links."
+                "- Use the AI comparison button in HomeAdmin to take this plan into ChatGPT or another web-enabled assistant and ask it to find current alternatives with source links."
             ]),
             ("Contract and cancellation check", [
                 "- Confirm minimum term, contract-end date, notice period, exit fee, equipment return and whether changing one service affects a bundle discount.",
@@ -2250,7 +2250,7 @@ def main():
             print("Account storage unavailable during startup. Check storage configuration.")
     port = int(os.environ.get("PORT", "8000"))
     server = ThreadingHTTPServer(("0.0.0.0", port), AdminPilotHandler)
-    print(f"LifeAdmin AI running at http://localhost:{port}")
+    print(f"HomeAdmin running at http://localhost:{port}")
     if stripe_configured():
         print("Stripe Checkout enabled. Make sure product Price IDs and webhook secret are set.")
     else:

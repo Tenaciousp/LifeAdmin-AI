@@ -1,3 +1,5 @@
+> Branding note, 19 October 2026: the current product is **HomeAdmin**, published by **TenaciousPL**. This document retains historical LifeAdmin names, commands and QA evidence. Use `STORE_SUBMISSION.md` and `BRANDING.md` for current release material.
+
 # Paid web release preparation
 
 Status: prepared for review, not submitted or published. Native app-store work is deferred.

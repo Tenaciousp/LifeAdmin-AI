@@ -1,11 +1,11 @@
-# LifeAdmin device testing
+# HomeAdmin device testing
 
 This is a development test guide. Passing compilation does not establish device
 acceptance or store approval. Use invented household records for these checks.
 
 ## Android installation
 
-1. Open the latest successful LifeAdmin CI run from the draft PR:
+1. Open the latest successful HomeAdmin CI run from the draft PR:
    https://github.com/Tenaciousp/LifeAdmin-AI/pull/2.
 2. Under **Artifacts**, download the `lifeadmin-android-debug-…` ZIP and extract
    `app-debug.apk`. Record the run link so the tested build is identifiable.
@@ -13,7 +13,7 @@ acceptance or store approval. Use invented household records for these checks.
    for installation permission, follow the device's settings for that specific
    file-opening app. Keep Play Protect enabled. Installation settings vary by
    device; do not change unrelated security settings.
-4. Open **LifeAdmin**. There should be no LifeAdmin account, sign-in, trial,
+4. Open **HomeAdmin**. There should be no HomeAdmin account, sign-in, trial,
    checkout or pricing screen. The debug APK does not test a paid store download.
 
 Android installation reference:
@@ -30,7 +30,7 @@ message. Keep screenshots of invented records only.
 | 2 | Give the bill the name `Test subscription`, add invented details and choose **Save bill**. | Exactly one saved bill appears. |
 | 3 | Choose **Create plan**. If missing details are highlighted, review and confirm the offered continuation. | A readable plan is saved without contacting a provider. |
 | 4 | Choose **Copy plan**, then paste into a local test note. Repeat with **Copy message** when a message is present. | The intended text is copied once, with no duplicate provider draft. Nothing is sent automatically. |
-| 5 | Force-stop LifeAdmin through Android app settings, then reopen it while offline. | The acknowledged bill and plan reopen unchanged. |
+| 5 | Force-stop HomeAdmin through Android app settings, then reopen it while offline. | The acknowledged bill and plan reopen unchanged. |
 | 6 | Choose **Manage backups**, then **Export backup** and select an on-device destination. | A readable JSON backup is saved at the chosen location. |
 | 7 | Add a second invented bill named `After backup`. Choose **Restore backup** and cancel file selection. | Both existing bills and the saved plan remain unchanged. |
 | 8 | Select the exported backup but decline replacement confirmation. | Existing records remain unchanged. |
@@ -38,7 +38,7 @@ message. Keep screenshots of invented records only.
 | 10 | Create a small file named `invalid-backup.json` containing `{}`. Try restoring it. | A validation error appears and the previous records remain unchanged. |
 | 11 | Delete the restored bill and confirm. Reopen the app. | Both the bill and its associated plan remain deleted. |
 | 12 | Restore the valid exported backup once more. | The bill and plan return. |
-| 13 | Reconnect, select **Examples & support**, return to LifeAdmin and reopen the saved plan. | The Tenaciouspl website opens and app records remain available. |
+| 13 | Reconnect, select **Examples & support**, return to HomeAdmin and reopen the saved plan. | The Tenaciouspl website opens and app records remain available. |
 | 14 | Increase text size, rotate the phone and use TalkBack through the main flow. | Labels, focus, reading order and controls remain usable without hidden actions. |
 
 Send the device/build details, failed step and exact error text through the

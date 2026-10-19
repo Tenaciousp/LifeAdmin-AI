@@ -217,15 +217,17 @@ final class LifeAdminUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["Bill saved on this device."].waitForExistence(timeout: 10))
     }
 
-    private func selectExportedBackup(named prefix: String = "lifeadmin-backup") {
+    private func selectExportedBackup(named prefix: String = "homeadmin-backup") {
         let backups = app.buttons["Manage backups"]
         reveal(backups)
         backups.tap()
         let restore = app.buttons["Restore backup"]
         reveal(restore)
         restore.tap()
+        // Older builds exported the LifeAdmin filename; both names import unchanged.
+        let legacyPrefix = prefix == "homeadmin-backup" ? "lifeadmin-backup" : prefix
         let document = app.cells.matching(
-            NSPredicate(format: "label BEGINSWITH[c] %@", prefix)).firstMatch
+            NSPredicate(format: "label BEGINSWITH[c] %@ OR label BEGINSWITH[c] %@", prefix, legacyPrefix)).firstMatch
         // Export saves to the local location, which need not appear in Recents.
         // iPad already displays Browse as a sidebar; iPhone uses a Browse tab.
         if UIDevice.current.userInterfaceIdiom != .pad {
@@ -241,7 +243,7 @@ final class LifeAdminUITests: XCTestCase {
         }
         guard document.waitForExistence(timeout: 45) else {
             print("Restore document controls:\n" + app.debugDescription)
-            XCTFail("Exported LifeAdmin document was not available for restore")
+            XCTFail("Exported HomeAdmin document was not available for restore")
             return
         }
         XCTAssertTrue(document.frame.intersects(app.frame))
@@ -438,7 +440,7 @@ final class LifeAdminUITests: XCTestCase {
         // Invalid files must show an error without a destructive confirmation.
         let cases: [(String, String)] = [
             ("ci-malformed.json", "Backup is not valid JSON."),
-            ("ci-future.json", "Unsupported LifeAdmin backup."),
+            ("ci-future.json", "Unsupported HomeAdmin backup."),
             ("ci-invalid-plan.json", "Invalid saved plan missing details."),
             ("ci-duplicate-tasks.json", "Backup contains duplicate records."),
             ("ci-duplicate-plans.json", "Backup contains duplicate records."),

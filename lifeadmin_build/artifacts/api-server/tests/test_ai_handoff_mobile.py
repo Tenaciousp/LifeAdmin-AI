@@ -26,7 +26,7 @@ class AiHandoffMobileRegressionTests(unittest.TestCase):
 
     def test_popup_failure_keeps_clear_recovery_message(self):
         self.assertIn('window.open("", "_blank")', SOURCE)
-        self.assertIn("Allow pop-ups for LifeAdmin and try again.", SOURCE)
+        self.assertIn("Allow pop-ups for HomeAdmin and try again.", SOURCE)
 
     def test_opened_assistant_is_detached_from_lifeadmin_window(self):
         self.assertIn("assistantWindow.opener = null", SOURCE)
@@ -64,7 +64,7 @@ class AiHandoffMobileRegressionTests(unittest.TestCase):
         end = SOURCE.index("\n\n  const tabRefs", start)
         block = SOURCE[start:end]
         self.assertIn("const promptSelected = selectAiPromptForManualCopy();", block)
-        self.assertIn("Prompt selected in LifeAdmin. Copy it when you return", block)
+        self.assertIn("Prompt selected in HomeAdmin. Copy it when you return", block)
         self.assertIn("if (!navigator.clipboard?.writeText)", block)
         self.assertIn(".catch(() => {", block)
         self.assertGreaterEqual(block.count("selectAiPromptForManualCopy()"), 2)

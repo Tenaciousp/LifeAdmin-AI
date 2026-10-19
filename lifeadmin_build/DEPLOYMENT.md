@@ -1,3 +1,5 @@
+> Branding note, 19 October 2026: the current product is **HomeAdmin**, published by **TenaciousPL**. This document retains historical LifeAdmin names, commands and QA evidence. Use `STORE_SUBMISSION.md` and `BRANDING.md` for current release material.
+
 # LifeAdmin AI deployment guide
 
 Status, 11 October 2026: release preparation only. Draft PR #2 is unmerged, the existing Render service retains maintenance mode and disabled automatic deployment, and live sales are not approved. Use [issue #3](https://github.com/Tenaciousp/LifeAdmin-AI/issues/3) for the current release gates. The promotional website is separate from the app and does not establish app readiness.

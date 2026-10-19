@@ -38,7 +38,7 @@ public class LifeAdminFilesPlugin extends Plugin {
         Intent intent = new Intent(Intent.ACTION_CREATE_DOCUMENT);
         intent.addCategory(Intent.CATEGORY_OPENABLE);
         intent.setType("application/json");
-        intent.putExtra(Intent.EXTRA_TITLE, "lifeadmin-backup.json");
+        intent.putExtra(Intent.EXTRA_TITLE, "homeadmin-backup.json");
         try { startActivityForResult(call, intent, "exportResult"); }
         catch (Exception error) { choosing = false; call.reject("File selection is unavailable.", "file_open"); }
     }
@@ -57,7 +57,7 @@ public class LifeAdminFilesPlugin extends Plugin {
         try {
             ClipboardManager manager = (ClipboardManager) getContext().getSystemService(Context.CLIPBOARD_SERVICE);
             if (manager == null) throw new IllegalStateException();
-            ClipData clip = ClipData.newPlainText("LifeAdmin plan", text);
+            ClipData clip = ClipData.newPlainText("HomeAdmin plan", text);
             if (Build.VERSION.SDK_INT >= 33) {
                 PersistableBundle extras = new PersistableBundle();
                 extras.putBoolean(ClipDescription.EXTRA_IS_SENSITIVE, true);

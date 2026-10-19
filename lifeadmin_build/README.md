@@ -1,6 +1,6 @@
-# LifeAdmin AI
+# HomeAdmin
 
-> Release target changed on 12 October 2026. The approved direction is a paid Apple App Store and Google Play download, £1.99 GBP or local store equivalent, without a trial, subscription or LifeAdmin account. Household planning and saved data must run locally, without automatic transmission to TenaciousPL or AI providers. The website serves examples, support and future product promotion/sales.
+> Release target changed on 12 October 2026. The approved direction is a paid Apple App Store and Google Play download, £1.99 GBP or local store equivalent, without a trial, subscription or HomeAdmin account. Household planning and saved data must run locally, without automatic transmission to TenaciousPL or AI providers. The website serves examples, support and future product promotion/sales.
 >
 > The code described below is still the hosted web implementation. Its server storage, account flow and Stripe checkout do not satisfy the new release target. Do not publish the hosted privacy or access descriptions as native-app promises. Read [LAUNCH_POLICIES_REVIEW.md](LAUNCH_POLICIES_REVIEW.md) for the current requirements and backup acceptance checks.
 
@@ -19,7 +19,7 @@ This is a migration plan, not an implemented native release. Existing hosted tes
 
 ## Existing hosted implementation
 
-LifeAdmin AI is a privacy-light household-admin assistant for bills, renewals, subscriptions and recurring payments.
+HomeAdmin is a privacy-light household-admin assistant for bills, renewals, subscriptions and recurring payments.
 
 **Promise:** Sort bills, renewals and subscriptions without the admin headache.
 
@@ -45,7 +45,7 @@ The product includes 12 household categories, seven action-based goals, savings-
 
 ## Pricing
 
-- **LifeAdmin AI Complete:** £1.99 UK / $1.99 US one time, all planning modes included
+- **HomeAdmin Complete:** £1.99 UK / $1.99 US one time, all planning modes included
 - No subscription
 
 Equivalent local store tiers can be considered later only as part of a separately approved native release.
@@ -74,7 +74,7 @@ The Python service then serves the built React application and API from one proc
 
 ## Storage
 
-Development needs no external database. LifeAdmin AI uses SQLite by default. Set `DATABASE_URL` to a PostgreSQL URL for a managed production database. PostgreSQL support is optional and requires the package listed in `requirements.txt`.
+Development needs no external database. HomeAdmin uses SQLite by default. Set `DATABASE_URL` to a PostgreSQL URL for a managed production database. PostgreSQL support is optional and requires the package listed in `requirements.txt`.
 
 ## Production configuration
 

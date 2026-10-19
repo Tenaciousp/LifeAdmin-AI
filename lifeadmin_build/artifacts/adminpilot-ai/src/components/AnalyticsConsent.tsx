@@ -32,7 +32,7 @@ export function AnalyticsConsent() {
     >
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <p id="analytics-consent-heading" className="font-extrabold text-slate-900">Help improve LifeAdmin AI?</p>
+          <p id="analytics-consent-heading" className="font-extrabold text-slate-900">Help improve HomeAdmin?</p>
           <p id="analytics-consent-description" className="mt-1 text-sm leading-relaxed text-slate-600">
             Optional analytics can measure feature usage and conversions. Bill text, provider messages, addresses and account details are not included in analytics events.
           </p>

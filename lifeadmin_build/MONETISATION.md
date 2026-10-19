@@ -1,4 +1,4 @@
-# LifeAdmin purchase model
+# HomeAdmin purchase model
 
 Updated 14 October 2026. Supersedes the earlier hosted web pricing plan.
 
@@ -6,7 +6,7 @@ Updated 14 October 2026. Supersedes the earlier hosted web pricing plan.
 
 £1.99 upfront UK download, with store-managed local equivalents. All planning
 features shipped in this release are included. No free trial, subscription,
-LifeAdmin account, sign-in, in-app pricing, checkout or separate upgrade.
+HomeAdmin account, sign-in, in-app pricing, checkout or separate upgrade.
 Separate future apps and products are outside this purchase promise.
 
 Apple/Google handle the store purchase. The native customer app does not require

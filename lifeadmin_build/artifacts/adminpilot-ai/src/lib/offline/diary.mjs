@@ -22,7 +22,7 @@ export function diaryEvents(tasks) {
       const date = task.details[field.id];
       if (!date) continue;
       if (!validDiaryDate(date)) throw new Error('Check the ' + field.label.toLowerCase() + ' date. Diary entries were not updated.');
-      events.push({ key: task.id + '/' + field.id, title: 'LifeAdmin: ' + field.label, date, leadDays });
+      events.push({ key: task.id + '/' + field.id, title: 'HomeAdmin: ' + field.label, date, leadDays });
     }
   }
   if (events.length > 1000) throw new Error('Diary integration supports up to 1,000 dated entries. Disable diary entries for older bills before retrying.');

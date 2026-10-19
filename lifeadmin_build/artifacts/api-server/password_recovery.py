@@ -73,13 +73,13 @@ def process_job(kind, email):
             recipient, token = issued
             # Fragment is not sent to web servers or included in referrer headers.
             link = os.environ["APP_BASE_URL"].rstrip("/") + "/#reset=" + token
-            send_mail(recipient, "Reset your LifeAdmin password",
+            send_mail(recipient, "Reset your HomeAdmin password",
                       "Use this link within 30 minutes to reset your password:\n\n" + link +
                       "\n\nYour plans and paid access stay with your existing account. "
                       "If you did not request this email, ignore the link. "
                       "Never send your password to support.")
     elif kind == "changed":
-        send_mail(email, "Your LifeAdmin password changed",
+        send_mail(email, "Your HomeAdmin password changed",
                   "Your password has changed and previous sessions have been signed out. "
                   "Your plans and paid access are unchanged. If you did not make this change, "
                   "contact tenaciouspl@icloud.com. Never send your password.")
@@ -92,7 +92,7 @@ def _run():
             process_job(*job)
         except Exception:
             # Fixed text only: provider exceptions often contain account details.
-            _logger.warning("LifeAdmin password recovery delivery failed; sensitive details withheld.")
+            _logger.warning("HomeAdmin password recovery delivery failed; sensitive details withheld.")
         finally:
             _jobs.task_done()
 
@@ -107,5 +107,5 @@ def enqueue(kind, email):
         _jobs.put_nowait((kind, email))
         return True
     except queue.Full:
-        _logger.warning("LifeAdmin password recovery queue is full; sensitive details withheld.")
+        _logger.warning("HomeAdmin password recovery queue is full; sensitive details withheld.")
         return False

@@ -33,7 +33,7 @@ public class LifeAdminCalendarPlugin: CAPPlugin, CAPBridgedPlugin {
         defaults.set(value, forKey: ownerKey)
         return value
     }
-    private func marker(_ key: String) -> String { "LifeAdmin diary entry.\nManaged by " + owner() + "/" + key }
+    private func marker(_ key: String) -> String { "HomeAdmin diary entry.\nManaged by " + owner() + "/" + key }
     private func rows(_ key: String) -> [String: [String: String]] {
         defaults.dictionary(forKey: key) as? [String: [String: String]] ?? [:]
     }
@@ -88,15 +88,17 @@ public class LifeAdminCalendarPlugin: CAPPlugin, CAPBridgedPlugin {
                   let kind = key.split(separator: "/").last, let label = titles[String(kind)] else {
                 throw DiaryError(message: "Check the diary dates and reminder settings. No calendar changes were committed.")
             }
-            return Entry(key: key, title: "LifeAdmin: " + label, date: date, day: day, lead: lead)
+            return Entry(key: key, title: "HomeAdmin: " + label, date: date, day: day, lead: lead)
         }
     }
     // Event identifiers sometimes change after provider synchronization. Recover
     // only exact installation markers, inside the expected calendar/date window.
     private func find(_ key: String, candidates: [[String: String]]) -> EKEvent? {
         let note = marker(key)
+        // Recognise the old visible prefix so a rename never duplicates an event.
+        let legacyNote = "LifeAdmin diary entry.\nManaged by " + owner() + "/" + key
         for row in candidates {
-            if let id = row["id"], let event = store.event(withIdentifier: id), event.notes == note { return event }
+            if let id = row["id"], let event = store.event(withIdentifier: id), event.notes == note || event.notes == legacyNote { return event }
         }
         let calendarMath = Calendar.current
         let format = formatter()
@@ -106,7 +108,7 @@ public class LifeAdminCalendarPlugin: CAPPlugin, CAPBridgedPlugin {
                   let start = calendarMath.date(byAdding: .day, value: -1, to: date),
                   let end = calendarMath.date(byAdding: .day, value: 2, to: date) else { continue }
             let predicate = store.predicateForEvents(withStart: start, end: end, calendars: [calendar])
-            if let event = store.events(matching: predicate).first(where: { $0.notes == note }) { return event }
+            if let event = store.events(matching: predicate).first(where: { $0.notes == note || $0.notes == legacyNote }) { return event }
         }
         return nil
     }
@@ -139,7 +141,7 @@ public class LifeAdminCalendarPlugin: CAPPlugin, CAPBridgedPlugin {
                       let alert = math.date(bySettingHour: 9, minute: 0, second: 0, of: reminderDay) else { throw DiaryError(message: "Diary date could not be scheduled.") }
                 let alarms = alert > Date() ? [EKAlarm(absoluteDate: alert)] : []
                 let alarmDates = event.alarms?.compactMap { $0.absoluteDate } ?? []
-                if existing == nil || event.calendar.calendarIdentifier != id || event.title != entry.title || !event.isAllDay || event.startDate != entry.date || event.endDate != end || alarmDates != alarms.compactMap({ $0.absoluteDate }) {
+                if existing == nil || event.calendar.calendarIdentifier != id || event.title != entry.title || event.notes != self.marker(entry.key) || !event.isAllDay || event.startDate != entry.date || event.endDate != end || alarmDates != alarms.compactMap({ $0.absoluteDate }) {
                     event.calendar = calendar; event.title = entry.title; event.notes = self.marker(entry.key)
                     event.isAllDay = true; event.startDate = entry.date; event.endDate = end; event.timeZone = .current
                     event.alarms = alarms

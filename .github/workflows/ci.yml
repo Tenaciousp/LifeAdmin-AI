@@ -1,4 +1,4 @@
-name: LifeAdmin AI CI
+name: HomeAdmin CI
 
 on:
   push:
@@ -81,7 +81,9 @@ jobs:
           node scripts/verify_local_bundle.mjs
 
       - name: Check native scaffold configuration
-        run: node native/scripts/verify-config.mjs
+        run: |
+          node native/scripts/verify-config.mjs
+          python scripts/verify_branding.py
 
       - name: Set up native Node toolchain
         uses: actions/setup-node@v4

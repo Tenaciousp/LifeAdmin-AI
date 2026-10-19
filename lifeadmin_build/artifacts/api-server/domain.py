@@ -1,4 +1,4 @@
-"""Canonical, server-owned LifeAdmin product domain.
+"""Canonical, server-owned HomeAdmin product domain.
 
 The frontend renders this catalogue, but routing, field recommendations and task
 normalisation stay server-owned so web and future native clients behave the same.

@@ -33,7 +33,7 @@ export default function DiaryPanel({ tasks }: { tasks: Record<string, any>[] }) 
   }
   function connect() {
     if (!choice || !calendars.some(x => x.id === choice)) return;
-    if (!window.confirm('Enable automatic entries in this calendar? Calendar providers might sync entries. Saving or deleting bills, marking them done, restoring backups and changing dates will update or remove linked LifeAdmin entries. Calendar alerts depend on your settings.')) return;
+    if (!window.confirm('Enable automatic entries in this calendar? Calendar providers might sync entries. Saving or deleting bills, marking them done, restoring backups and changing dates will update or remove linked HomeAdmin entries. Calendar alerts depend on your settings.')) return;
     try { localStorage.setItem(key, choice); if (localStorage.getItem(key) !== choice) throw new Error(); setCalendarId(choice); setCalendars([]); setRetry(x => x + 1); }
     catch { setError('Calendar setup could not be saved. No diary entries were requested.'); }
   }
@@ -52,13 +52,13 @@ export default function DiaryPanel({ tasks }: { tasks: Record<string, any>[] }) 
   return <section className="rounded-2xl border border-violet-100 bg-white p-5 shadow-sm" aria-labelledby="diary-heading">
     <h2 id="diary-heading" className="text-xl font-bold">Contract diary</h2>
     <p className="mt-3">Add expiry, renewal, cancellation and follow-up dates when editing a bill. Enable diary entries for each bill, then connect a calendar here. Ordinary payment dates are separate.</p>
-    <p className="mt-3">Entries use neutral titles without provider names or account references. Your selected calendar might sync or be shared through its provider. Permission supports maintaining LifeAdmin entries; unrelated events are not uploaded. Setup is device-specific, so connecting two devices to one calendar risks duplicate entries.</p>
-    <p className="mt-3">Updates run while LifeAdmin is open and on reopening. Calendar alerts then follow your calendar settings. Existing entries are not guaranteed to be removed when uninstalling the app. Past dates are not added as new events.</p>
+    <p className="mt-3">Entries use neutral titles without provider names or account references. Your selected calendar might sync or be shared through its provider. Permission supports maintaining HomeAdmin entries; unrelated events are not uploaded. Setup is device-specific, so connecting two devices to one calendar risks duplicate entries.</p>
+    <p className="mt-3">Updates run while HomeAdmin is open and on reopening. Calendar alerts then follow your calendar settings. Existing entries are not guaranteed to be removed when uninstalling the app. Past dates are not added as new events.</p>
     {status && <p role="status" className="mt-3">{status}</p>}{error && <p role="alert" className="mt-3 text-red-900">{error}</p>}
     {calendarAvailable() ? <div className="mt-4 space-y-3"><button disabled={busy} className={button} onClick={() => void choose()}>{calendarId ? 'Change calendar' : 'Connect calendar'}</button>
       {!!calendars.length && <div><label>Calendar<select className="mt-1 block min-h-[44px] w-full rounded-xl border p-2" value={choice} onChange={event => setChoice(event.target.value)}>{calendars.map(x => <option key={x.id} value={x.id}>{x.title}</option>)}</select></label><button disabled={busy} className={button + ' mt-3'} onClick={connect}>Enable diary updates</button></div>}
       {!!calendarId && <div className="flex flex-wrap gap-3"><button disabled={busy} className={button} onClick={() => setRetry(x => x + 1)}>Retry diary update</button><button disabled={busy} className={button} onClick={() => void disconnect(false)}>Disconnect and keep entries</button></div>}
-      <button disabled={busy} className={button} onClick={() => void disconnect(true)}>Remove LifeAdmin diary entries</button>
+      <button disabled={busy} className={button} onClick={() => void disconnect(true)}>Remove HomeAdmin diary entries</button>
     </div> : <p className="mt-3">Automatic diary entries require the installed app with calendar support. Your saved dates remain available here.</p>}
   </section>;
 }

@@ -75,7 +75,7 @@ docker build --file Dockerfile --tag "$image" .
 echo "Starting production container with private synthetic storage..."
 start_container
 
-curl --fail --silent --show-error "$base_url/" | python -c 'import sys; assert "LifeAdmin" in sys.stdin.read()'
+curl --fail --silent --show-error "$base_url/" | python -c 'import sys; assert "HomeAdmin" in sys.stdin.read()'
 LIFEADMIN_SMOKE_BASE_URL="$base_url" python scripts/smoke_api.py
 
 curl --fail --silent --show-error \

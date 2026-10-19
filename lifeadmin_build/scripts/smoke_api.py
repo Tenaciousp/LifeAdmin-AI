@@ -54,7 +54,7 @@ def main():
     assert "amount_pence" not in products["core"]
     assert set(products["regional_checkout_ready"]) == {"GBP"}
     assert products["addons"] == []
-    assert products["core"]["name"] == "LifeAdmin AI Complete"
+    assert products["core"]["name"] == "HomeAdmin Complete"
     assert products["payments_live"] is False
     assert products["payment_provider"] == "preview"
 

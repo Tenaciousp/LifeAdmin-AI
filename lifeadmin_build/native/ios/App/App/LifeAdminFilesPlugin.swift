@@ -55,7 +55,7 @@ public class LifeAdminFilesPlugin: CAPPlugin, CAPBridgedPlugin, UIDocumentPicker
             do {
                 let folder = FileManager.default.temporaryDirectory.appendingPathComponent("lifeadmin-export-" + UUID().uuidString, isDirectory: true)
                 try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true, attributes: [.protectionKey: FileProtectionType.completeUntilFirstUserAuthentication])
-                let file = folder.appendingPathComponent("lifeadmin-backup.json")
+                let file = folder.appendingPathComponent("homeadmin-backup.json")
                 self.temporary = file
                 try bytes.write(to: file, options: .atomic)
                 self.pending = call; self.exporting = true

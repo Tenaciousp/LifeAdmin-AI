@@ -75,7 +75,7 @@ export function parseBackup(text) {
   try { backup = JSON.parse(text); } catch { throw new Error("Backup is not valid JSON."); }
   jsonValue(backup);
   if (backup?.format !== FORMAT || backup?.version !== VERSION ||
-      !Array.isArray(backup.tasks) || !Array.isArray(backup.plans)) throw new Error("Unsupported LifeAdmin backup.");
+      !Array.isArray(backup.tasks) || !Array.isArray(backup.plans)) throw new Error("Unsupported HomeAdmin backup.");
   const tasks = backup.tasks.map(x => record(x, "task"));
   const plans = backup.plans.map(x => record(x, "plan"));
   const taskIds = new Set(tasks.map(x => x.id));
@@ -112,7 +112,7 @@ export async function openLocalStore({ indexedDB = globalThis.indexedDB, name = 
     request.onerror = () => reject(new Error("Device storage did not open."));
     request.onblocked = () => {
       abandoned = true;
-      reject(new Error("Close other LifeAdmin windows and reopen the app to update storage."));
+      reject(new Error("Close other HomeAdmin windows and reopen the app to update storage."));
     };
     request.onsuccess = () => {
       if (abandoned) { request.result.close(); return; }

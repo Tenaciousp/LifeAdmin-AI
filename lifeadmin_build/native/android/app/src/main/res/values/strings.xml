@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">LifeAdmin</string>
-    <string name="title_activity_main">LifeAdmin</string>
+    <string name="app_name">HomeAdmin</string>
+    <string name="title_activity_main">HomeAdmin</string>
     <string name="package_name">uk.co.tenaciouspl.lifeadmin</string>
     <string name="custom_url_scheme">uk.co.tenaciouspl.lifeadmin</string>
 </resources>

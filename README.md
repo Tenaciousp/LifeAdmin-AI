@@ -1,10 +1,14 @@
-# LifeAdmin
+# HomeAdmin
 
-LifeAdmin helps people organise household bills, renewals, subscriptions and recurring payments into next steps, message drafts and review checklists.
+Previously developed as LifeAdmin. The public name and approved logo are now
+HomeAdmin by TenaciousPL. Technical identifiers and old QA evidence are retained
+for compatibility and provenance; see [branding](lifeadmin_build/BRANDING.md).
+
+HomeAdmin helps people organise household bills, renewals, subscriptions and recurring payments into next steps, message drafts and review checklists.
 
 ## Current release
 
-The agreed product is a **£1.99 upfront Apple/Google store download**, with local store equivalents. No LifeAdmin account, sign-in, trial, subscription or in-app checkout. Household bills and plans use device-local storage. The website provides examples, promotion and support.
+The agreed product is a **£1.99 upfront Apple/Google store download**, with local store equivalents. No HomeAdmin account, sign-in, trial, subscription or in-app checkout. Household bills and plans use device-local storage. The website provides examples, promotion and support.
 
 Draft [PR #2](https://github.com/Tenaciousp/LifeAdmin-AI/pull/2) is unmerged. Development packages are not signed store releases. [Issue #3](https://github.com/Tenaciousp/LifeAdmin-AI/issues/3) is the current completion register. No release or live sales approval is recorded.
 

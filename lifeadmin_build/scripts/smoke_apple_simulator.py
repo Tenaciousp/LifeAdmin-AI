@@ -318,7 +318,7 @@ def main():
                         "ui-tests.log", "apple-ui-tests.xcresult")
             container = Path(sim("get_app_container", device, bundle, "data"))
             device_data = next(parent for parent in container.parents if parent.name == "data")
-            exports = [path for path in device_data.rglob("lifeadmin-backup.json")
+            exports = [path for path in device_data.rglob("homeadmin-backup.json")
                        if path.is_file() and "lifeadmin-export-" not in str(path)]
             if len(exports) != 1:
                 raise RuntimeError(f"Expected one exported JSON document, found {len(exports)}")
@@ -522,7 +522,6 @@ def main():
 
 if __name__ == "__main__":
     main()
-
 
 
 

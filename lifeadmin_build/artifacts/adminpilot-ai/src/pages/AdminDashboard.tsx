@@ -134,13 +134,13 @@ export function AdminDashboard() {
       <header className="bg-white/95 backdrop-blur border-b border-slate-200 px-4 sm:px-6 py-4 sticky top-0 z-10">
         <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <Link href="/" aria-label="Back to LifeAdmin AI" className="min-h-[44px] min-w-[44px] grid place-items-center text-slate-500 hover:text-slate-900 rounded-xl hover:bg-slate-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary">
+            <Link href="/" aria-label="Back to HomeAdmin" className="min-h-[44px] min-w-[44px] grid place-items-center text-slate-500 hover:text-slate-900 rounded-xl hover:bg-slate-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary">
               <ArrowLeft className="w-5 h-5" aria-hidden="true" />
             </Link>
             <div>
               <div className="font-extrabold text-lg sm:text-xl tracking-tight flex items-center gap-2">
                 <span className="w-8 h-8 rounded-lg bg-primary text-white grid place-items-center text-xs" aria-hidden="true">LA</span>
-                LifeAdmin AI
+                HomeAdmin
               </div>
               <p className="text-xs text-slate-500 mt-0.5">Operations dashboard</p>
             </div>

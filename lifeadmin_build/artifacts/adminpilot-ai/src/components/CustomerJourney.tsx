@@ -525,7 +525,7 @@ ${formatDetailList(lastKnownDetails)}
 Missing details:
 ${lastMissingDetails.length > 0 ? lastMissingDetails.join('\n') : "None"}
 
-LifeAdmin plan:
+HomeAdmin plan:
 ${planResult.next_steps || "None"}
 
 Please use current web information where available. I want a practical comparison I can use to negotiate or switch.
@@ -594,7 +594,7 @@ ${buildComparisonRequirements(task)}`;
   const openAiAssistant = (url: string, name: string) => {
     const assistantWindow = window.open("", "_blank");
     if (!assistantWindow) {
-      toast.error(`Could not open ${name}. Allow pop-ups for LifeAdmin and try again.`);
+      toast.error(`Could not open ${name}. Allow pop-ups for HomeAdmin and try again.`);
       return;
     }
     assistantWindow.opener = null;
@@ -602,7 +602,7 @@ ${buildComparisonRequirements(task)}`;
     if (!navigator.clipboard?.writeText) {
       const promptSelected = selectAiPromptForManualCopy();
       toast.info(promptSelected
-        ? `Prompt selected in LifeAdmin. Copy it when you return, then paste it into ${name}.`
+        ? `Prompt selected in HomeAdmin. Copy it when you return, then paste it into ${name}.`
         : `Open ${name}, then copy the prompt from this window.`);
       return;
     }
@@ -614,7 +614,7 @@ ${buildComparisonRequirements(task)}`;
       .catch(() => {
         const promptSelected = selectAiPromptForManualCopy();
         toast.info(promptSelected
-          ? `Prompt selected in LifeAdmin. Copy it when you return, then paste it into ${name}.`
+          ? `Prompt selected in HomeAdmin. Copy it when you return, then paste it into ${name}.`
           : `Open ${name}, then copy the prompt from this window.`);
       });
   };

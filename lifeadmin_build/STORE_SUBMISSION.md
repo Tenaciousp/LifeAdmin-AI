@@ -1,45 +1,47 @@
-# LifeAdmin store submission pack
+# HomeAdmin store submission pack
 
 Updated 19 October 2026. This pack supersedes earlier account-based web release plans.
 
+Current branding: **HomeAdmin**, by **TenaciousPL**. The Account Holder confirmed the name saved successfully in the existing Apple record on 19 October. The approved logo master is `branding/homeadmin-logo.png`; see `BRANDING.md`. New app screenshots must be captured from the renamed build. Earlier screenshots and reports retain their original names as historical evidence and are not the final listing artwork.
+
 ## Agreed offer
 
-LifeAdmin is a paid download: £1.99 in the UK, with store-managed local equivalents.
+HomeAdmin is a paid download: £1.99 in the UK, with store-managed local equivalents.
 All planning features shipped in this release are included. No trial, subscription,
-LifeAdmin account, sign-in, in-app checkout or separate upgrade. Prices belong in
+HomeAdmin account, sign-in, in-app checkout or separate upgrade. Prices belong in
 the store and promotional website, not inside the app. Separate future products
 are outside this purchase promise. Store price configuration still needs verification.
 
 ## Listing copy
 
-App name: **LifeAdmin**
-Apple subtitle: **Household bills, made simpler**
+App name: **HomeAdmin**
+Apple subtitle currently saved: **By TenaciousPL**
 Google short description: **Manage household bills in one place. List, plan and save.**
 Strapline: **List, plan and save.**
 Keywords: bills,household,renewals,subscriptions,planner,budget,energy,insurance,cancellation
 
 ### Full description
 
-Keep household bills and practical next steps together with LifeAdmin.
+Keep household bills and practical next steps together with HomeAdmin.
 
 Search for a bill or provider, choose your goal and add the details you know.
 Build a clear plan for reviewing a bill, preparing for renewal, considering a
 switch, cancelling a service, querying a charge or contacting a provider.
 
-LifeAdmin includes 12 household categories and seven goals, with planning styles
+HomeAdmin includes 12 household categories and seven goals, with planning styles
 for different situations. Save bills and plans, update bill status, reopen saved
 plans and copy draft messages when you are ready to act.
 
-Household records stay in the app's storage on your device. No LifeAdmin account,
+Household records stay in the app's storage on your device. No HomeAdmin account,
 bank connection or mailbox access is required. Planning uses bundled guidance
-and works offline. LifeAdmin does not automatically contact providers, send
+and works offline. HomeAdmin does not automatically contact providers, send
 household details to an AI service or act on your behalf.
 
 For optional help from an external AI service, prepare an editable prompt from
 your saved plan and message. Review and remove private details before copying.
 Open your preferred service and paste the prompt yourself. Pasting shares the
 text with the chosen service. Review its reply before updating your bill or
-message in LifeAdmin. Prompt edits are temporary and do not change saved bills, plans or messages.
+message in HomeAdmin. Prompt edits are temporary and do not change saved bills, plans or messages.
 
 Export a readable JSON backup to a private location of your choice. Restore
 replaces existing records after confirmation. Device and cloud backups depend
@@ -62,7 +64,7 @@ general guidance and do not guarantee savings.
 | App identifier | uk.co.tenaciouspl.lifeadmin |
 | Initial version | 1.0, build 1 |
 | Seller address | Owner deferred review on 18 October 2026; keep address unresolved and do not publish the home address |
-| Store accounts / signing | Apple enrolment submitted; verify active membership before signing, TestFlight and signed-device checks |
+| Store accounts / signing | Apple membership active, Team ID C8T85FCR6R; signing credentials and TestFlight delivery still outstanding |
 | Ratings | Complete store questionnaires from the final app |
 | Refunds | Owner-approved 14-day full-refund policy; verify store-compatible process and wording before publishing purchase terms |
 
@@ -83,7 +85,7 @@ Startup captures are not a complete store screenshot set.
 
 Review final signed binaries, dependencies and both store questionnaires:
 - Bills/plans use app-private device storage.
-- No LifeAdmin sign-in, advertising analytics or automatic external AI upload
+- No HomeAdmin sign-in, advertising analytics or automatic external AI upload
   in the native customer build.
 - Export and clipboard actions are user initiated; external copies stay under
   the user's control.
@@ -128,8 +130,8 @@ journal, not native-process interruption, storage pressure or power loss.
 
 ### Signing and release preparation
 
-Apple enrolment has been submitted. Confirm membership is active before
-configuring signing and TestFlight. Signed delivery and physical-device tests
+Apple membership is active and the existing app record is named HomeAdmin.
+Configure the approved signing route before TestFlight. Signed delivery and physical-device tests
 have not been completed. Do not purchase additional services automatically.
 
 - Listing and reviewer copy: prepared; validate final console limits and fields.
@@ -138,7 +140,7 @@ have not been completed. Do not purchase additional services automatically.
 - Privacy declaration: draft only; finish native live-network/SDK review and
   repeat against the eventual signed package before submitting answers.
 - Support/privacy URLs: HTTPS availability and content checked on 18 October.
-  Website version 7 is live with TenaciousPL branding and explicit manual-AI
+  Website version 13 is live with HomeAdmin/TenaciousPL branding and explicit manual-AI
   sharing guidance. This does not establish final signed-package privacy answers.
 - Manual accessibility, supported minimum OS, cloud file-provider behaviour,
   device transfer and native interruption/storage-pressure checks remain open.
@@ -231,8 +233,8 @@ appropriate guidance for another country's providers or consumer rules.
 
 ## Reviewer notes
 
-No LifeAdmin account or reviewer login is required. Use invented bill details.
-LifeAdmin prepares plans and draft messages without accessing bank/provider
+No HomeAdmin account or reviewer login is required. Use invented bill details.
+HomeAdmin prepares plans and draft messages without accessing bank/provider
 accounts or automatically sending messages. Payment is the store's upfront
 app purchase; no in-app purchase products form part of this offer.
 
@@ -240,6 +242,6 @@ The optional **Prepare AI prompt** action opens an editable local preview.
 Review private details, then use **Copy AI prompt**. External-service links open
 without the prompt or household records in the URL. The customer chooses
 whether to paste the copied text into a separate service. No external-service
-account is required for LifeAdmin's bundled planning, message editing or backups.
+account is required for HomeAdmin's bundled planning, message editing or backups.
 Any account or payment requirements of the chosen external service are separate.
 Replies are not imported automatically.

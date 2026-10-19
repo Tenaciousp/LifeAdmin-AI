@@ -59,7 +59,7 @@ export function LandingHero() {
             <div className="bg-white rounded-2xl p-5 sm:p-6 text-slate-900 shadow-xl">
               <div className="flex items-center justify-between gap-3 mb-5">
                 <div>
-                  <p className="text-xs font-bold text-primary uppercase tracking-wider">LifeAdmin plan</p>
+                  <p className="text-xs font-bold text-primary uppercase tracking-wider">HomeAdmin plan</p>
                   <h2 className="text-xl font-extrabold mt-1">Sky bill too high</h2>
                 </div>
                 <span className="px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 text-xs font-bold">Ready to review</span>

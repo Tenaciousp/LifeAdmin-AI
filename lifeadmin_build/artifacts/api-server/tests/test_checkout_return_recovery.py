@@ -76,7 +76,7 @@ const settle = () => new Promise(resolve => setImmediate(resolve));
     assert.equal(calls.length, 2);
     assert.equal(calls[1].url, calls[0].url, "Retry must confirm the original session, not start checkout");
   }
-  assert.equal(notices.at(-1).message, "LifeAdmin AI Complete unlocked");
+  assert.equal(notices.at(-1).message, "HomeAdmin Complete unlocked");
   assert.equal(notices.at(-1).kind, "success");
   assert.equal(invalidations.length, 1);
   const url = new URL(href);

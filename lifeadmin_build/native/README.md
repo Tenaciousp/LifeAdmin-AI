@@ -2,11 +2,11 @@
 
 This is a development scaffold, not a signed or accepted store release.
 
-App name: LifeAdmin. Bundle/application ID: uk.co.tenaciouspl.lifeadmin.
+App name: HomeAdmin. Bundle/application ID: uk.co.tenaciouspl.lifeadmin.
 Both projects use the local customer bundle in
 ../artifacts/adminpilot-ai/dist-local/public. There is no server.url override,
 live reload endpoint, account, Stripe checkout or analytics integration.
-Initial icons and splash screens use LifeAdmin branding; final store artwork
+Icons and splash screens use the approved HomeAdmin artwork; final store screenshot
 and screenshots still need review.
 
 Apple deployment requires iOS/iPadOS 16.4 or later, matching the bundled Tailwind 4 UI.

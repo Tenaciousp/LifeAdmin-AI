@@ -1,4 +1,4 @@
-"""Cross-process coordination for LifeAdmin data requests and local snapshots.
+"""Cross-process coordination for HomeAdmin data requests and local snapshots.
 
 Linux/POSIX flock; supported only when the web process and backup process
 share one filesystem. Not a distributed lock for multiple Render instances.
@@ -34,7 +34,7 @@ def data_lock(data_dir, *, exclusive=False, timeout=30.0):
                 break
             except BlockingIOError:
                 if time.monotonic() >= deadline:
-                    raise LockTimeout("LifeAdmin data lock unavailable")
+                    raise LockTimeout("HomeAdmin data lock unavailable")
                 time.sleep(min(0.05, max(0, deadline - time.monotonic())))
         yield
     finally:

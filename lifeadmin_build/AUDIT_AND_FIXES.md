@@ -1,3 +1,5 @@
+> Branding note, 19 October 2026: the current product is **HomeAdmin**, published by **TenaciousPL**. This document retains historical LifeAdmin names, commands and QA evidence. Use `STORE_SUBMISSION.md` and `BRANDING.md` for current release material.
+
 # LifeAdmin AI project audit and fixes
 
 Date: 22 September 2026

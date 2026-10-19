@@ -44,7 +44,7 @@ export function CheckoutReturnHandler() {
         if (!response.ok) throw new Error(data.error || "We could not verify this purchase yet.");
         if (cancelled) return;
         if (data.paid) {
-          toast.success("LifeAdmin AI Complete unlocked");
+          toast.success("HomeAdmin Complete unlocked");
           trackEvent("purchase_verified", { product: data.product_id || "unknown" });
           cleanUrl();
           await queryClient.invalidateQueries({ queryKey: ["/api/products"] });

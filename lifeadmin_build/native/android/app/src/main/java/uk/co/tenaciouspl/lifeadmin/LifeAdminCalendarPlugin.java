@@ -100,7 +100,7 @@ public class LifeAdminCalendarPlugin extends Plugin {
                 || !(lead == 0 || lead == 7 || lead == 14 || lead == 30)) throw new IllegalArgumentException("Check diary dates and reminder settings.");
             Date date = format.parse(day);
             if (date == null || !format.format(date).equals(day)) throw new IllegalArgumentException("Check diary dates.");
-            Entry entry = new Entry(); entry.key = key; entry.title = "LifeAdmin: " + TITLES.get(key.substring(key.indexOf('/') + 1));
+            Entry entry = new Entry(); entry.key = key; entry.title = "HomeAdmin: " + TITLES.get(key.substring(key.indexOf('/') + 1));
             // Android all-day events use UTC midnight, not local midnight.
             entry.start = date.getTime(); entry.end = entry.start + 86400000L; entry.lead = lead;
             result.add(entry);
@@ -156,7 +156,7 @@ public class LifeAdminCalendarPlugin extends Plugin {
                 if (oldId == null && utcFormat.format(new Date(entry.start)).compareTo(today) < 0) { skipped++; continue; }
                 ContentValues values = new ContentValues();
                 values.put(CalendarContract.Events.CALENDAR_ID, calendarId); values.put(CalendarContract.Events.TITLE, entry.title);
-                values.put(CalendarContract.Events.DESCRIPTION, "LifeAdmin diary entry. Open LifeAdmin to review the saved bill.");
+                values.put(CalendarContract.Events.DESCRIPTION, "HomeAdmin diary entry. Open HomeAdmin to review the saved bill.");
                 values.put(CalendarContract.Events.DTSTART, entry.start); values.put(CalendarContract.Events.DTEND, entry.end);
                 values.put(CalendarContract.Events.ALL_DAY, 1); values.put(CalendarContract.Events.EVENT_TIMEZONE, "UTC");
                 values.put(CalendarContract.Events.CUSTOM_APP_PACKAGE, getContext().getPackageName());
