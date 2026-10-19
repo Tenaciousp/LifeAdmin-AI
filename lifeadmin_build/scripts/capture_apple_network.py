@@ -30,7 +30,16 @@ def main():
         "manual_process_attribution_required": True,
         "attribution_limit": "Loopback traffic except the control, and WebKit traffic without App effective-process attribution, are outside this capture",
         "started_at_unix": time.time(),
+        "requested_capture_buffer_kib": 65536,
     }
+    # A requested tcpdump buffer may be capped by the kernel. Record its
+    # published ceiling rather than assuming the requested allocation applied.
+    ceiling = subprocess.run(["/usr/sbin/sysctl", "-n", "debug.bpf_bufsize_cap"],
+                             capture_output=True, text=True, check=False)
+    report["kernel_bpf_buffer_cap_bytes"] = (
+        int(ceiling.stdout.strip())
+        if ceiling.returncode == 0 and ceiling.stdout.strip().isdigit() else None
+    )
     # Reserve the control port before compiling the capture filter. Exclude
     # unrelated loopback/debug traffic in BPF, before packets reach the buffer.
     receiver = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -49,7 +58,7 @@ def main():
             "sudo", "-n", "/bin/sh", "-c",
             'echo $$ > "$1"; shift; exec "$@"', "capture", str(pidfile),
             "/usr/sbin/tcpdump", "-i", "pktap,all", "-k", "NPD",
-            "-nn", "-q", "-l", "-tttt", "-s", "512", "-B", "16384",
+            "-nn", "-q", "-l", "-tttt", "-s", "512", "-B", "65536",
             "-Q", f"proc =App or eproc =App or pid ={os.getpid()}",
             packet_filter,
         ], stdout=output, stderr=errors)
