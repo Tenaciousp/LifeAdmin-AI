@@ -31,3 +31,13 @@ No keyboard obscures these captures. Visible purple buttons and HomeAdmin brandi
 - PR #5's original iPad gallery failed the full-heading visibility assertion. Review the repair result before selecting iPad images.
 - Final gallery order, selection and any presentation framing remain owner-review items. Preserve genuine app content and distinguish internal text-area scrolling from missing controls.
 - No images have been uploaded to App Store Connect by this review.
+
+## Revised iPad gallery: CI #418
+
+Reviewed 20 October 2026 after the 32-point top-inset change. Run: https://github.com/Tenaciousp/LifeAdmin-AI/actions/runs/39438316829. Artifact ID 12275313498; tested merge source `865fb2893894c1acd3eaeda4f81a8839d376651d`.
+
+All seven native PNGs match the manifest dimensions (2048 by 2732) and SHA-256 hashes. Device/runtime: iPad Pro (12.9-inch, 6th generation), iOS 26.2. Both store-preview jobs passed. The iPad plan heading is now fully visible; its native full-visibility assertion passed and the complete plan image was visually inspected. This resolves the observed clipped-heading capture failure for this run.
+
+The seven-image overview shows the saved bill, message editor, detail-review and AI-question/handoff views. No keyboard obscures the captured screens. Larger tablet viewports include neighbouring sections in several images, especially backup and AI-question scenes; final selection/composition remains open. Captured question text has its own scrollable area.
+
+This result validates the screenshot repair on the tested source, not the full CI run. CI #418 has separate Android dependency-download and iPad baseline-upgrade failures. It does not clear signing, device acceptance or store upload.
