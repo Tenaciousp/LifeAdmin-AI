@@ -2,6 +2,7 @@
 import base64
 import importlib.util
 import json
+import re
 from pathlib import Path
 import sys
 import tempfile
@@ -15,6 +16,14 @@ spec.loader.exec_module(capture)
 
 
 class StoreCaptureTests(unittest.TestCase):
+    def test_native_capture_and_extractor_agree_on_bills_and_ai_preview_scenes(self):
+        swift = (scripts.parent / "native/ios/App/LifeAdminUITests/LifeAdminUITests.swift").read_text()
+        method = swift.split("func testStoreScreenshots() throws {", 1)[1].split(
+            "func testAppleAccessibilityAuditOnBillsAndPlan", 1)[0]
+        self.assertEqual(tuple(re.findall(r'capture\("([^"]+)"', method)), capture.SCENES)
+        self.assertIn("01b bills", capture.SCENES)
+        self.assertIn("04b ai-prompt", capture.SCENES)
+
     def test_complete_set_is_copied_and_incomplete_or_wrong_size_sets_are_rejected(self):
         png = base64.b64decode(
             "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRZkAAAAASUVORK5CYII=")
