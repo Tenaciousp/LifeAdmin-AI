@@ -31,6 +31,7 @@ def main():
         "attribution_limit": "Loopback traffic except the control, and WebKit traffic without App effective-process attribution, are outside this capture",
         "started_at_unix": time.time(),
         "requested_capture_buffer_kib": 65536,
+        "immediate_mode": True,
     }
     # A requested tcpdump buffer may be capped by the kernel. Record its
     # published ceiling rather than assuming the requested allocation applied.
@@ -58,6 +59,7 @@ def main():
             "sudo", "-n", "/bin/sh", "-c",
             'echo $$ > "$1"; shift; exec "$@"', "capture", str(pidfile),
             "/usr/sbin/tcpdump", "-i", "pktap,all", "-k", "NPD",
+            "--immediate-mode",
             "-nn", "-q", "-l", "-tttt", "-s", "512", "-B", "65536",
             "-Q", f"proc =App or eproc =App or pid ={os.getpid()}",
             packet_filter,
