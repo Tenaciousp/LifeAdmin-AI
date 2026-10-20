@@ -1,6 +1,6 @@
 # HomeAdmin store submission pack
 
-Updated 19 October 2026. This pack supersedes earlier account-based web release plans.
+Updated 20 October 2026. This pack supersedes earlier account-based web release plans.
 
 Current branding: **HomeAdmin**, by **TenaciousPL**. The Account Holder confirmed the name saved successfully in the existing Apple record on 19 October. The approved logo master is `branding/homeadmin-logo.png`; see `BRANDING.md`. New app screenshots must be captured from the renamed build. Earlier screenshots and reports retain their original names as historical evidence and are not the final listing artwork.
 
@@ -64,7 +64,7 @@ general guidance and do not guarantee savings.
 | App identifier | uk.co.tenaciouspl.lifeadmin |
 | Initial version | 1.0, build 1 |
 | Seller address | Owner deferred review on 18 October 2026; keep address unresolved and do not publish the home address |
-| Store accounts / signing | Apple membership active, Team ID C8T85FCR6R; signing credentials and TestFlight delivery still outstanding |
+| Store accounts / signing | Apple membership active, Team ID C8T85FCR6R; all three credentials saved in protected GitHub environment apple-signing; signed build and TestFlight delivery outstanding |
 | Ratings | Complete store questionnaires from the final app |
 | Refunds | Owner-approved 14-day full-refund policy; verify store-compatible process and wording before publishing purchase terms |
 
@@ -99,6 +99,48 @@ required-reason declarations and questionnaire review.
 
 ## Evidence and remaining gates
 
+### Current checkpoint: 20 October 2026
+
+PR #2 is merged at `ddeb463c6ba75e7158ad0e0ae20907fc3f29a286` with owner
+approval. CI #414 passed all eight jobs before merge. Downloaded full-simulator,
+different-build upgrade and store-preview artifacts were reviewed on 20 October;
+their archive hashes match GitHub metadata. Both full journeys passed with zero
+kernel capture drops. Each retained packet file contains only the synthetic
+control packets, within the limited process-attribution scope described below.
+Both upgrade reports preserve exact records, accept subsequent saves and restore
+older backups. All ten screenshot dimensions and hashes match their manifests.
+
+Fresh main CI #415 initially passed seven jobs. Its iPhone upgrade failed while
+the unchanged older baseline waited 60 seconds for Search on a blank WebView,
+before preparing records or installing the candidate. The preserved screenshot
+and startup log were inspected; the root cause is not established. One unchanged
+retry was accepted as attempt 2 and was still queued at this checkpoint. No
+timeout, historical baseline or acceptance assertion was changed. CI #416 for
+signing PR #4 is also pending. Keep signing gated on successful full CI for the
+final main commit; a successful earlier PR run does not replace that requirement.
+
+The owner approved merging signing PR #4 after checks pass and making the first
+signed build. Its IPA/evidence will be retained for seven days in this public
+repository, explicitly approved. Apple upload, TestFlight distribution and
+release are separate later actions. App Store Connect showed No Builds on
+20 October; build 1 is planned, subject to checking intervening uploads/dispatches.
+
+App Store draft fields saved: description, keywords, support/marketing website
+links and reviewer notes. The owner supplied review contact details directly.
+Reviewer sign-in is disabled and manual release selected. Primary category is
+Productivity; the saved privacy-policy URL is
+https://tenaciouspl.co.uk/app-privacy.html. No privacy questionnaire answers were
+published. Age ratings, final screenshot gallery, copyright, pricing/agreements,
+trader/address review and physical-device/signed-package acceptance remain open.
+
+Screenshot composition improvements are isolated on `qa/store-gallery-followup`
+at `27e4aa11ee158f589cf18a42be63c827a30c3f97`. They add genuine saved-bill and
+prepared-AI-question capture scenes. Focused local extractor tests pass; native
+execution and visual review of the revised captures are pending. Customer app
+code and the approved signing branch are unchanged by those capture-only edits.
+
+### Historical checkpoint: 19 October 2026
+
 Reviewed application/test source: `4a16999f2017ef77bb6b063651556a2e58e27259`.
 Tested merge: `00a4da507192b3d29d30f591e0a5d391a5963bc3`.
 All eight CI #405 jobs passed: verification, unsigned archive, both full
@@ -131,23 +173,28 @@ journal, not native-process interruption, storage pressure or power loss.
 ### Signing and release preparation
 
 Apple membership is active and the existing app record is named HomeAdmin.
-Configure the approved signing route before TestFlight. Signed delivery and physical-device tests
-have not been completed. Do not purchase additional services automatically.
+The distribution identity/profile are prepared and the three signing secrets
+are saved in the protected `apple-signing` environment. Signing PR #4 awaits
+successful checks and merge. Signed delivery and physical-device tests have not
+been completed. Do not purchase additional services automatically.
 
-- Listing and reviewer copy: prepared; validate final console limits and fields.
-- Screenshot tooling: both #405 capture jobs passed and all ten original images
-  were reviewed. Final listing image selection and presentation remain open.
-- Privacy declaration: draft only; finish native live-network/SDK review and
+- Listing and reviewer copy: saved in the Apple version-1.0 draft. Review contact
+  details were supplied by the owner; manual release and no reviewer sign-in are saved.
+- Screenshot tooling: both #414 capture jobs passed and all ten original images
+  were reviewed. Improved capture scenes await native validation; final gallery remains open.
+- Privacy declaration: not completed or published; finish native live-network/SDK review and
   repeat against the eventual signed package before submitting answers.
 - Support/privacy URLs: HTTPS availability and content checked on 18 October.
-  Website version 13 is live with HomeAdmin/TenaciousPL branding and explicit manual-AI
-  sharing guidance. This does not establish final signed-package privacy answers.
+  Website version 14 is live with HomeAdmin/TenaciousPL branding, optional-calendar
+  disclosures and manual-AI sharing guidance. Its privacy-policy URL is saved in
+  App Store Connect. This does not establish final signed-package privacy answers.
 - Manual accessibility, supported minimum OS, cloud file-provider behaviour,
   device transfer and native interruption/storage-pressure checks remain open.
 - Seller name: owner approved Paul Lonergan. Address review remains deferred;
   do not publish the home address.
 - The owner has no Android test device. Physical iPad QA follows earlier checks.
-- Keep PR #2 draft pending explicit merge/submission/release approval.
+- PR #2 is merged with owner approval. Signing PR #4 remains gated on CI.
+  App Store submission and release still require separate owner approval.
 
 ### Store screenshot production plan
 
