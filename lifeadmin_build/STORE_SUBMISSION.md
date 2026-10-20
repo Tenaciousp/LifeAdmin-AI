@@ -43,6 +43,12 @@ Open your preferred service and paste the prompt yourself. Pasting shares the
 text with the chosen service. Review its reply before updating your bill or
 message in HomeAdmin. Prompt edits are temporary and do not change saved bills, plans or messages.
 
+Optional contract diary entries need calendar permission and a writable calendar.
+Entries use neutral titles without provider names or account references. Your
+calendar provider might sync or share those dates. Alerts depend on calendar and
+device settings. Existing calendar entries are not guaranteed to disappear when
+you uninstall HomeAdmin.
+
 Export a readable JSON backup to a private location of your choice. Restore
 replaces existing records after confirmation. Device and cloud backups depend
 on your settings; downloading the app again does not guarantee recovery of bills.
