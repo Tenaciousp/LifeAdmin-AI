@@ -13,7 +13,6 @@ import subprocess
 import sys
 import time
 
-from capture_apple_network import capture_snapshot
 
 
 def sim(*args, timeout=60):
@@ -40,6 +39,8 @@ def sim(*args, timeout=60):
 
 
 def run_ui_test(device, evidence, method, log_name, result_path):
+    from capture_apple_network import capture_snapshot
+
     capture_snapshot(evidence, "before:" + method)
     try:
         with (evidence / log_name).open("w") as log:

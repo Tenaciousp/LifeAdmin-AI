@@ -46,7 +46,7 @@ class CaptureSnapshotTests(unittest.TestCase):
     def test_failed_ui_test_keeps_timeout_and_after_snapshot(self):
         with tempfile.TemporaryDirectory() as temporary:
             evidence = Path(temporary)
-            with patch("smoke_apple_simulator.capture_snapshot") as snapshot, patch(
+            with patch("capture_apple_network.capture_snapshot") as snapshot, patch(
                 "smoke_apple_simulator.subprocess.run",
                 side_effect=subprocess.CalledProcessError(65, "xcodebuild")
             ) as run:
