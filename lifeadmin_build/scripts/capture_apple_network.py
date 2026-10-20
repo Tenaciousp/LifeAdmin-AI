@@ -13,6 +13,34 @@ import sys
 import time
 
 
+def capture_snapshot(evidence, stage):
+    """Record only this recorder's BPF counters, never other process rows.
+
+    Apple's netstat Bsize is the allocated bd_bufsize; RDrop is cumulative.
+    https://github.com/apple-oss-distributions/network_cmds/blob/main/netstat.tproj/bpf.c
+    """
+    pidfile = evidence / "network-capture.pid"
+    if not pidfile.exists():
+        return  # Upgrade/screenshot harnesses also use run_ui_test without capture.
+    pid = pidfile.read_text().strip()
+    sample = {"stage": stage, "at_unix": time.time(), "capture_pid": pid}
+    try:
+        result = subprocess.run(["sudo", "-n", "/usr/sbin/netstat", "-B"],
+                                capture_output=True, text=True, timeout=10, check=False)
+        lines = result.stdout.splitlines()
+        sample["netstat_exit_code"] = result.returncode
+        sample["bpf_devices"] = [dict(zip(lines[0].split(), line.split()))
+                                 for line in lines[1:]
+                                 if line.split() and line.split()[-1] == "tcpdump." + pid]
+        # An unavailable counter is unknown, never evidence of zero drops.
+        sample["allocation_observed"] = bool(sample["bpf_devices"])
+    except (OSError, subprocess.TimeoutExpired) as error:
+        sample["counter_error"] = type(error).__name__
+        sample["allocation_observed"] = False
+    with (evidence / "network-stages.jsonl").open("a") as output:
+        output.write(json.dumps(sample) + "\n")
+
+
 def main():
     command = sys.argv[1:]
     if command[:1] == ["--"]:
@@ -30,7 +58,15 @@ def main():
         "manual_process_attribution_required": True,
         "attribution_limit": "Loopback traffic except the control, and WebKit traffic without App effective-process attribution, are outside this capture",
         "started_at_unix": time.time(),
+        "requested_capture_buffer_kib": 32768,
     }
+    ceiling = subprocess.run(["/usr/sbin/sysctl", "-n", "debug.bpf_bufsize_cap"],
+                             capture_output=True, text=True, check=False)
+    report["kernel_bpf_buffer_cap_bytes"] = (
+        int(ceiling.stdout.strip())
+        if ceiling.returncode == 0 and ceiling.stdout.strip().isdigit() else None
+    )
+    (evidence / "network-stages.jsonl").write_text("")
     # Reserve the control port before compiling the capture filter. Exclude
     # unrelated loopback/debug traffic in BPF, before packets reach the buffer.
     receiver = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -49,7 +85,7 @@ def main():
             "sudo", "-n", "/bin/sh", "-c",
             'echo $$ > "$1"; shift; exec "$@"', "capture", str(pidfile),
             "/usr/sbin/tcpdump", "-i", "pktap,all", "-k", "NPD",
-            "-nn", "-q", "-l", "-tttt", "-s", "512", "-B", "16384",
+            "-nn", "-q", "-l", "-tttt", "-s", "512", "-B", "32768",
             "-Q", f"proc =App or eproc =App or pid ={os.getpid()}",
             packet_filter,
         ], stdout=output, stderr=errors)
@@ -75,12 +111,14 @@ def main():
                 time.sleep(0.1)
             report["control_packet_seen"] = True
             report["test_started_at_unix"] = time.time()
+            capture_snapshot(evidence, "before-test-command")
             result = subprocess.run(command, check=False)
             report["test_exit_code"] = result.returncode
             if trace.poll() is not None:
                 raise RuntimeError("Packet capture ended before the test command")
         finally:
             report["test_ended_at_unix"] = time.time()
+            capture_snapshot(evidence, "after-test-command")
             if trace.poll() is None and pidfile.exists():
                 subprocess.run(["sudo", "-n", "kill", "-INT", pidfile.read_text().strip()], check=True)
             try:

@@ -13,6 +13,8 @@ import subprocess
 import sys
 import time
 
+from capture_apple_network import capture_snapshot
+
 
 def sim(*args, timeout=60):
     started = time.monotonic()
@@ -38,20 +40,24 @@ def sim(*args, timeout=60):
 
 
 def run_ui_test(device, evidence, method, log_name, result_path):
-    with (evidence / log_name).open("w") as log:
-        subprocess.run([
-            "xcodebuild", "-project", "ios/App/App.xcodeproj",
-            "-scheme", "LifeAdminAcceptance", "-configuration", "Debug",
-            "-destination", "platform=iOS Simulator,id=" + device,
-            "-derivedDataPath", "build-ios-simulator",
-            "-resultBundlePath", result_path,
-            "-parallel-testing-enabled", "NO",
-            "-test-timeouts-enabled", "YES",
-            "-default-test-execution-time-allowance", "900",
-            "-maximum-test-execution-time-allowance", "900",
-            "-only-testing:LifeAdminUITests/LifeAdminUITests/" + method,
-            "CODE_SIGNING_ALLOWED=NO", "test",
-        ], check=True, stdout=log, stderr=subprocess.STDOUT, timeout=1200)
+    capture_snapshot(evidence, "before:" + method)
+    try:
+        with (evidence / log_name).open("w") as log:
+            subprocess.run([
+                "xcodebuild", "-project", "ios/App/App.xcodeproj",
+                "-scheme", "LifeAdminAcceptance", "-configuration", "Debug",
+                "-destination", "platform=iOS Simulator,id=" + device,
+                "-derivedDataPath", "build-ios-simulator",
+                "-resultBundlePath", result_path,
+                "-parallel-testing-enabled", "NO",
+                "-test-timeouts-enabled", "YES",
+                "-default-test-execution-time-allowance", "900",
+                "-maximum-test-execution-time-allowance", "900",
+                "-only-testing:LifeAdminUITests/LifeAdminUITests/" + method,
+                "CODE_SIGNING_ALLOWED=NO", "test",
+            ], check=True, stdout=log, stderr=subprocess.STDOUT, timeout=1200)
+    finally:
+        capture_snapshot(evidence, "after:" + method)
 
 
 def create_invalid_backups(export_path):
@@ -312,6 +318,12 @@ def main():
             # Reset after the audit; the backup journey must still start empty.
             sim("uninstall", device, bundle, timeout=120)
             sim("install", device, str(app.resolve()), timeout=120)
+            if args.device_family == "ipad":
+                run_ui_test(device, evidence, "testKeyboardEntryAfterRepeatedRelaunch",
+                            "keyboard-relaunch-ui-tests.log", str(evidence / "keyboard-relaunch.xcresult"))
+                # The full backup test still starts with an empty installation.
+                sim("uninstall", device, bundle, timeout=120)
+                sim("install", device, str(app.resolve()), timeout=120)
             print("Starting Apple interactive acceptance on a fresh installation.", flush=True)
             run_ui_test(device, evidence,
                         "testNativeBackupRoundTripAndCancellationPreserveRecords",
