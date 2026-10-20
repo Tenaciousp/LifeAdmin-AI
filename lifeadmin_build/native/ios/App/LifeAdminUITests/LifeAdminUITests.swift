@@ -853,7 +853,7 @@ final class LifeAdminUITests: XCTestCase {
                 // section near the top for a readable store screenshot.
                 let viewport = app.webViews.firstMatch.frame
                 for _ in 0..<6 {
-                    let offset = control.frame.minY - (viewport.minY + 8)
+                    let offset = control.frame.minY - (viewport.minY + 32)
                     if abs(offset) < 8 { break }
                     let distance = min(max(offset, -viewport.height * 0.4), viewport.height * 0.4)
                     let start = app.coordinate(withNormalizedOffset: .zero)
