@@ -31,7 +31,11 @@ export function CheckoutReturnHandler() {
     }
 
     let cancelled = false;
+    let verifying = false;
+    const retryAction = { label: "Retry verification", onClick: () => void verify() };
     const verify = async () => {
+      if (cancelled || verifying) return;
+      verifying = true;
       try {
         const response = await fetch(`/api/checkout/status?session_id=${encodeURIComponent(sessionId)}`, {
           credentials: "same-origin",
@@ -40,18 +44,26 @@ export function CheckoutReturnHandler() {
         if (!response.ok) throw new Error(data.error || "We could not verify this purchase yet.");
         if (cancelled) return;
         if (data.paid) {
-          toast.success(data.product_id === "all_access" ? "All Access unlocked" : "LifeAdmin AI Core unlocked");
+          toast.success("HomeAdmin Complete unlocked");
           trackEvent("purchase_verified", { product: data.product_id || "unknown" });
+          cleanUrl();
           await queryClient.invalidateQueries({ queryKey: ["/api/products"] });
         } else {
-          toast.info("Payment is still processing. Your access will update when payment completes.");
+          toast.info("Payment is still processing. Retry verification after payment completes.", {
+            action: retryAction,
+            duration: 10000,
+          });
         }
       } catch (error) {
         if (!cancelled) {
-          toast.error(error instanceof Error ? error.message : "We could not verify this purchase yet.");
+          toast.error(error instanceof Error ? error.message : "We could not verify this purchase yet.", {
+            action: retryAction,
+            description: "Retry verification or reload this page. No new checkout will be started.",
+            duration: 10000,
+          });
         }
       } finally {
-        if (!cancelled) cleanUrl();
+        verifying = false;
       }
     };
 
@@ -63,3 +75,4 @@ export function CheckoutReturnHandler() {
 
   return null;
 }
+

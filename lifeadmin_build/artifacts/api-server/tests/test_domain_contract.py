@@ -22,6 +22,26 @@ class CatalogTests(unittest.TestCase):
             self.assertTrue(all({"id", "label", "type", "required"}.issubset(field) for field in category["fields"]))
             self.assertTrue(category["examples"])
 
+    def test_base_and_composed_fields_have_unique_ids(self):
+        base_ids = [field["id"] for field in domain._BASE_FIELDS]
+        self.assertEqual(len(base_ids), len(set(base_ids)), "Base field IDs must be unique")
+
+        payload = domain.catalog()
+        for category in payload["categories"]:
+            for goal in payload["goals"]:
+                fields = domain.fields_for(category["id"], goal["id"])
+                field_ids = [field["id"] for field in fields]
+                with self.subTest(category=category["id"], goal=goal["id"]):
+                    self.assertEqual(len(field_ids), len(set(field_ids)))
+
+    def test_energy_renewal_fields_capture_comparison_inputs(self):
+        fields = {field["id"]: field for field in domain.fields_for("energy_water", "prepare_renewal")}
+        for field_id in ("utility_type", "tariff", "annual_usage", "unit_rate", "standing_charge", "exit_fee", "date", "amount", "new_quote"):
+            self.assertIn(field_id, fields)
+        self.assertEqual(fields["tariff"]["type"], "select")
+        self.assertIn("Fixed", fields["tariff"]["options"])
+        self.assertIn("Standard variable", fields["tariff"]["options"])
+
     def test_suggestion_routes_provider_and_goal(self):
         result = domain.suggest("Netflix cancel subscription")
         self.assertEqual(result["category_id"], "subscriptions_memberships")
@@ -30,6 +50,22 @@ class CatalogTests(unittest.TestCase):
         self.assertGreater(result["confidence"], 0)
         unknown = domain.suggest("unknown Netflix card payment")
         self.assertEqual(unknown["goal_id"], "identify_payment")
+
+    def test_energy_and_water_suggestions_prefill_recognised_details(self):
+        water = domain.suggest("United Utilities bill")
+        self.assertEqual(water["category_id"], "energy_water")
+        self.assertEqual(water["prefill_details"]["provider"], "United Utilities")
+        self.assertEqual(water["prefill_details"]["utility_type"], "Water")
+        self.assertEqual(water["prefill_details"]["tariff"], "Water tariff")
+
+        dual_fuel = domain.suggest("Octopus dual fuel renewal")
+        self.assertEqual(dual_fuel["category_id"], "energy_water")
+        self.assertEqual(dual_fuel["prefill_details"]["provider"], "Octopus Energy")
+        self.assertEqual(dual_fuel["prefill_details"]["utility_type"], "Dual fuel")
+
+        generic_water = domain.suggest("water bill")
+        self.assertEqual(generic_water["prefill_details"]["utility_type"], "Water")
+        self.assertEqual(generic_water["prefill_details"]["tariff"], "Water tariff")
 
     def test_suggestion_routes_all_approved_examples(self):
         examples = [

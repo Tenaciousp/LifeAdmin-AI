@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { catalog as localCatalog, suggest as localSuggest } from "@/lib/offline/domain.mjs";
 
 async function fetcher(url: string, options: RequestInit = {}) {
   let res: Response;
@@ -25,38 +26,48 @@ async function fetcher(url: string, options: RequestInit = {}) {
   return res.json();
 }
 
-// GET /api/catalog
+// Bundled catalogue is available without an account or network connection.
 export function useCatalog() {
   return useQuery({
     queryKey: ["/api/catalog"],
-    queryFn: () => fetcher("/api/catalog"),
+    queryFn: async () => localCatalog(),
   });
 }
 
-// POST /api/suggest
+// Search text stays in the client.
 export function useSuggestMatch() {
   return useMutation({
-    mutationFn: (query: string) => fetcher("/api/suggest", {
-      method: "POST",
-      body: JSON.stringify({ query })
-    }),
+    mutationFn: async (query: string) => localSuggest(query),
   });
 }
 
 // GET /api/notes
-export function useNotes(userId: string) {
+export function useNotes(userId: string, workspaceId: string) {
   return useQuery({
-    queryKey: ["/api/notes", userId],
-    queryFn: () => fetcher("/api/notes"),
+    queryKey: ["/api/notes", userId, workspaceId],
+    queryFn: ({ signal }) => fetcher("/api/notes", { signal }),
     enabled: !!userId,
   });
 }
 
+export function useDeleteNote() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (data: { id: string; user_id: string }) => fetcher("/api/notes/delete", {
+      method: "POST",
+      body: JSON.stringify({ id: data.id }),
+    }),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/notes", variables.user_id] });
+    },
+  });
+}
+
 // GET /api/tasks
-export function useTasks(userId: string) {
+export function useTasks(userId: string, workspaceId: string) {
   return useQuery({
-    queryKey: ["/api/tasks", userId],
-    queryFn: () => fetcher("/api/tasks"),
+    queryKey: ["/api/tasks", userId, workspaceId],
+    queryFn: ({ signal }) => fetcher("/api/tasks", { signal }),
     enabled: !!userId,
   });
 }
@@ -127,14 +138,20 @@ export function useAdminOverview() {
 export function useAuthMe() {
   return useQuery({
     queryKey: ["/api/auth/me"],
-    queryFn: () => fetcher("/api/auth/me").catch(() => ({ authenticated: false })),
+    queryFn: ({ signal }) => fetcher("/api/auth/me", { signal }),
+    retry: false,
+    // A different browser tab may have signed out or changed account.
+    refetchOnWindowFocus: "always",
+    refetchOnReconnect: "always",
   });
 }
 
-export function useProducts(userId: string) {
+export function useProducts(userId: string, workspaceId: string) {
   return useQuery({
-    queryKey: ["/api/products", userId],
-    queryFn: () => fetcher("/api/products"),
+    queryKey: ["/api/products", userId, workspaceId],
+    queryFn: ({ signal }) => fetcher("/api/products", { signal }),
     enabled: !!userId,
+    refetchOnWindowFocus: "always",
+    refetchOnReconnect: "always",
   });
 }

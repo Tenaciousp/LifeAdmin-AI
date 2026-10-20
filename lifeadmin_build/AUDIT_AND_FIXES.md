@@ -1,6 +1,10 @@
+> Branding note, 19 October 2026: the current product is **HomeAdmin**, published by **TenaciousPL**. This document retains historical LifeAdmin names, commands and QA evidence. Use `STORE_SUBMISSION.md` and `BRANDING.md` for current release material.
+
 # LifeAdmin AI project audit and fixes
 
 Date: 22 September 2026
+
+> Historical record: test counts and local-environment limitations below describe the original September audit passes. For current branch validation and the remaining owner/browser checks, use `FINAL_QA.md` and the latest pull-request workflow. As of 4 October 2026, the clean CI suite runs 141 tests, TypeScript/Python checks, a live API smoke test and the production frontend build.
 
 ## Executive summary
 

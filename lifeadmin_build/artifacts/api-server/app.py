@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-LifeAdmin AI by AdminPilot - sellable MVP
+HomeAdmin by TenaciousPL - retained hosted development application
 A privacy-light personal admin agent for household admin, renewals, bills and everyday document tasks.
 Run: python app.py
 Optional: export OPENAI_API_KEY="..." for AI-generated outputs.
@@ -23,7 +23,10 @@ import urllib.request
 import urllib.error
 
 import storage
+import password_recovery
+from backup_lock import data_lock, LockTimeout
 import domain
+import energy_renewal
 
 APP_DIR = os.path.dirname(os.path.abspath(__file__))
 DATA_DIR = os.path.join(APP_DIR, "data")
@@ -59,7 +62,7 @@ def _load_session_secret():
 
 _SESSION_SECRET = _load_session_secret()
 
-SYSTEM_PROMPT = """You are LifeAdmin AI, a practical personal admin assistant for household admin, renewals, bills, documents, travel preparation and small business admin.
+SYSTEM_PROMPT = """You are HomeAdmin, a practical personal admin assistant for household admin, renewals, bills, documents, travel preparation and small business admin.
 Write concise, safe, actionable outputs. Do not claim to take real-world actions. Do not send messages, make purchases, cancel accounts, access external services, or imply professional legal, medical, tax, insurance or financial advice.
 Always keep a human approval checkpoint before any real-world action. Focus on checklists, draft wording, reminders, comparison criteria, risk flags and next steps.
 Return exactly these four Markdown H2 sections in this order: Next steps, Provider message, Things to check, Approval checklist. Put genuine provider-ready draft wording only under Provider message. If no provider message is useful, leave that section empty. Do not invent additional H2 headings.
@@ -79,12 +82,12 @@ CATEGORY_PROMPTS = {
 
 CORE_PRODUCT = {
     "id": "core_app",
-    "name": "LifeAdmin AI Core",
-    "price": "£0.99 / $0.99",
-    "amount_pence": 99,
+    "name": "HomeAdmin Complete",
+    "price": "£1.99",
+    "amount_pence": 199,
     "billing": "one-time",
-    "description": "Create household admin plans, basic email drafts and daily task lists.",
-    "price_env": "STRIPE_PRICE_CORE_APP",
+    "description": "All household admin planning modes, advanced negotiation, switching, complaints and escalation guidance.",
+    "price_env": "STRIPE_PRICE_LIFEADMIN_COMPLETE",
     "apple_product_id": os.environ.get("APPLE_PRODUCT_CORE", "com.adminpilot.lifeadmin.core"),
     "google_product_id": os.environ.get("GOOGLE_PRODUCT_CORE", "lifeadmin_core"),
 }
@@ -92,13 +95,13 @@ CORE_PRODUCT = {
 ALL_ACCESS_PRODUCT = {
     "id": "all_access",
     "name": "All Access Pack",
-    "price": "£1.99 / $1.99",
+    "price": "£1.99",
     "amount_pence": 199,
     "billing": "one-time",
     "price_env": "STRIPE_PRICE_ALL_ACCESS",
     "apple_product_id": os.environ.get("APPLE_PRODUCT_ALL_ACCESS", "com.adminpilot.lifeadmin.allaccess"),
     "google_product_id": os.environ.get("GOOGLE_PRODUCT_ALL_ACCESS", "lifeadmin_all_access"),
-    "description": "Unlock advanced plans, specialist outputs and every additional LifeAdmin planning mode in this release.",
+    "description": "Unlock advanced plans, specialist outputs and every additional HomeAdmin planning mode in this release.",
 }
 ADD_ONS = [ALL_ACCESS_PRODUCT]
 ADVANCED_MODES = {"more_options", "renewal_pro", "refund_pro", "document_pro", "travel_pro", "family_board", "small_landlord"}
@@ -118,22 +121,26 @@ MODE_PROMPTS = {
 }
 
 QA_REPORT = {
-    "updated": "21 September 2026",
-    "progress_note": "Database accounts, per-user data isolation, deletion controls, legal screens and store QA are implemented.",
+    "updated": "12 October 2026",
+    "progress_note": "Release candidate under review. Earlier evidence and outstanding gates are recorded in draft PR #2 and PAID_WEB_RELEASE.md; this summary is not release approval.",
     "passed": [
         "Six task-specific playbooks produce distinct plans",
         "Streaming checklist includes provider, store, renewal, cancellation and refund checks",
         "Ambiguous renewal wording stays with insurance, travel, document, refund or bill context",
-        "Every advanced mode adds substantive specialist output behind one All Access entitlement",
-        "Core 99p/99c and All Access £1.99/$1.99 pricing, Stripe checkout, demo unlocks and privacy-light workflow remain intact",
-        "PostgreSQL account storage and account/data deletion flow are available",
-        "Privacy, terms, mobile accessibility and store-listing guidance are included"
+        "The Complete purchase includes all current planning modes; legacy entitlements remain compatible",
+        "Earlier CI #297 passed for application revision 5192c89dcfe09d935d4a52987c1b5ff4f8dcc31e",
+        "Synthetic account isolation, payment and recovery checks have recorded automated coverage",
+        "Owner-review privacy, terms and refund drafts are prepared but not approved or published"
     ],
     "failed": [],
     "blocked": [
         "Native iOS and Android packages require the mobile artifact build",
         "Apple and Google signing, store billing and submission require owner developer accounts",
-        "Final privacy disclosures require the owner's legal/business contact details"
+        "Current signed-in browser and real provider lifecycle acceptance remain incomplete",
+        "Actual email delivery, production recovery and backup custody require verification",
+        "Business address, service duration, retention and refund commitments require owner decisions",
+        "Physical iPad Safari acceptance remains the final device gate",
+        "App merge, deployment and live sales require explicit release approval"
     ]
 }
 
@@ -153,7 +160,7 @@ def ensure_data():
         write_json(NOTES_FILE, [])
     if not os.path.exists(SETTINGS_FILE):
         write_json(SETTINGS_FILE, {
-            "brand_name": "LifeAdmin AI",
+            "brand_name": "HomeAdmin",
             "plan": "Core",
             "currency": "GBP",
             "entry_price": "0.99 GBP",
@@ -206,28 +213,152 @@ def save_anonymous_items(path, user_id, items):
 
 
 def migrate_guest_workspace(guest_id, user_id):
-    """Claim guest work and entitlements when a visitor creates an account."""
+    """Claim guest work without discarding items that fail to migrate."""
     if not storage.available():
-        return
-    for path, writer in ((TASKS_FILE, storage.create_task), (NOTES_FILE, storage.add_note)):
+        return True
+    for path, writer, reader in (
+        (TASKS_FILE, storage.create_task, storage.list_tasks),
+        (NOTES_FILE, storage.add_note, storage.list_notes),
+    ):
         items = anonymous_items(path, guest_id)
+        if not items:
+            continue
+        try:
+            # A previous write may have committed before its response failed.
+            # Match by stable item ID so retries never duplicate that work.
+            existing_by_id = {str(item.get("id")): item for item in reader(user_id)}
+        except Exception:
+            # Never discard the guest copy if the destination cannot be checked.
+            continue
+        remaining = []
         for item in items:
+            item_id = str(item.get("id"))
+            if item_id in existing_by_id:
+                if existing_by_id[item_id] != item:
+                    # A matching ID with different content is not a completed
+                    # import. Keep the guest original for explicit recovery.
+                    remaining.append(item)
+                continue
             try:
                 writer(user_id, item)
+                existing_by_id[item_id] = item
             except Exception:
-                continue
-        save_anonymous_items(path, guest_id, [])
+                # A temporary DB failure must not erase the guest's only copy.
+                remaining.append(item)
+        if len(remaining) != len(items):
+            save_anonymous_items(path, guest_id, remaining)
 
     guest_entitlements = get_user_purchases(guest_id)
+    purchases_migrated = True
     for product_id, enabled in guest_entitlements.items():
         if enabled and product_id in VALID_PRODUCTS:
             try:
                 storage.unlock_purchase(user_id, product_id, "guest_migration")
             except Exception:
-                continue
-    purchase_store = load_purchase_store()
-    purchase_store.get("users", {}).pop(safe_user_id(guest_id), None)
-    write_json(PURCHASES_FILE, purchase_store)
+                purchases_migrated = False
+    if purchases_migrated:
+        purchase_store = load_purchase_store()
+        purchase_store.get("users", {}).pop(safe_user_id(guest_id), None)
+        write_json(PURCHASES_FILE, purchase_store)
+    return guest_import_pending(guest_id)
+
+
+def guest_import_pending(guest_id):
+    """True if any unclaimed guest work or entitlement remains."""
+    return bool(
+        anonymous_items(TASKS_FILE, guest_id)
+        or anonymous_items(NOTES_FILE, guest_id)
+        or any(get_user_purchases(guest_id).values())
+    )
+
+
+def pending_import_guest(user_id):
+    return load_purchase_store().get("pending_guest_imports", {}).get(str(user_id))
+
+
+def pending_import_owner(guest_id):
+    """Prevent a second account from claiming the same unfinished guest import."""
+    pending = load_purchase_store().get("pending_guest_imports", {})
+    return next((user_id for user_id, bound_guest in pending.items() if bound_guest == guest_id), None)
+
+
+def set_pending_import_guest(user_id, guest_id=None):
+    with _JSON_LOCK:
+        store = load_purchase_store()
+        pending = store.setdefault("pending_guest_imports", {})
+        if guest_id:
+            pending[str(user_id)] = guest_id
+        else:
+            pending.pop(str(user_id), None)
+        write_json(PURCHASES_FILE, store)
+
+
+def purge_deleted_accounts_pending_guest(user_id):
+    """Erase unclaimed guest work linked to an account being deleted.
+
+    Do not touch any other guest or account; clear the binding last so
+    a partial filesystem failure remains detectable for follow-up.
+    """
+    def read_for_deletion(path):
+        # A failed read is not evidence that no private guest records exist.
+        try:
+            with open(path, "r", encoding="utf-8") as handle:
+                store = json.load(handle)
+        except FileNotFoundError:
+            return {}
+        except (json.JSONDecodeError, UnicodeDecodeError) as exc:
+            raise OSError("Guest store could not be read") from exc
+        if not isinstance(store, dict) or any(
+            name in store and not isinstance(store[name], dict)
+            for name in ("users", "pending_guest_imports")
+        ):
+            raise OSError("Guest store is invalid")
+        return store
+
+    with _JSON_LOCK:
+        purchases = read_for_deletion(PURCHASES_FILE)
+        guest_id = purchases.get("pending_guest_imports", {}).get(str(user_id))
+        if not guest_id:
+            return
+        key = safe_user_id(guest_id)
+        # Validate every store before starting a potentially partial cleanup.
+        stores = [(path, read_for_deletion(path)) for path in (TASKS_FILE, NOTES_FILE)]
+        for path, store in stores:
+            if isinstance(store, dict) and isinstance(store.get("users"), dict):
+                if key in store["users"]:
+                    store["users"].pop(key)
+                    write_json(path, store)
+        purchases.get("users", {}).pop(key, None)
+        purchases.setdefault("pending_guest_imports", {}).pop(str(user_id), None)
+        write_json(PURCHASES_FILE, purchases)
+
+
+def verified_guest_cookie(handler):
+    """Accept only the existing signed guest cookie; never mint one for recovery."""
+    try:
+        cookie = SimpleCookie()
+        cookie.load(handler.headers.get("Cookie", ""))
+        token = cookie.get("lifeadmin_guest")
+        if not token:
+            return None
+        raw, sep, signature = token.value.partition(".")
+        expected = hmac.new(_SESSION_SECRET, raw.encode(), hashlib.sha256).hexdigest()
+        if sep and hmac.compare_digest(signature, expected):
+            return safe_user_id(raw)
+    except Exception:
+        pass
+    return None
+
+
+def guest_import_status(handler, user):
+    """An account must see its incomplete import on every signed-in browser."""
+    return bool(user and pending_import_guest(user["id"]))
+
+
+def guest_import_retry_available(handler, user):
+    """Only the original signed guest browser may retry that account's import."""
+    return bool(user and pending_import_guest(user["id"])
+                and pending_import_guest(user["id"]) == verified_guest_cookie(handler))
 
 
 def migrate_purchases():
@@ -270,8 +401,9 @@ def guest_session(handler):
 
 def is_database_user(user_id):
     try:
-        uuid.UUID(str(user_id))
-        return storage.available()
+        # Registered IDs are canonical UUIDs; guest IDs are unhyphenated hex.
+        canonical_id = str(uuid.UUID(str(user_id)))
+        return canonical_id == str(user_id) and storage.available()
     except (ValueError, TypeError, AttributeError):
         return False
 
@@ -309,9 +441,9 @@ def load_purchase_store():
 def normalized_entitlements(purchases):
     purchases = purchases or {}
     entitlements = {}
-    if purchases.get("core_app"):
+    # Honour all historical paid purchases while moving to one complete product.
+    if purchases.get("core_app") or purchases.get("all_access") or any(purchases.get(product_id) for product_id in LEGACY_ALL_ACCESS_PRODUCTS):
         entitlements["core_app"] = True
-    if purchases.get("all_access") or any(purchases.get(product_id) for product_id in LEGACY_ALL_ACCESS_PRODUCTS):
         entitlements["all_access"] = True
     return entitlements
 
@@ -350,8 +482,29 @@ def stripe_configured():
     return bool(os.environ.get("STRIPE_SECRET_KEY"))
 
 
+# One launch price: the complete app for GBP 1.99, paid once.
+# Keep the response shape stable for existing clients.
+REGIONAL_PRICES = {
+    "GBP": {"amount": 199, "env": "STRIPE_PRICE_LIFEADMIN_COMPLETE_GBP"},
+}
+
+
+def regional_price_id(currency):
+    market = REGIONAL_PRICES.get(currency)
+    if not market:
+        return None
+    # Backwards-compatible legacy Stripe Price is only usable for GBP.
+    return os.environ.get(market["env"]) or (
+        os.environ.get("STRIPE_PRICE_LIFEADMIN_COMPLETE") if currency == "GBP" else None
+    )
+
+
 def stripe_ready_for(product):
-    return bool(stripe_configured() and product and os.environ.get(product["price_env"]))
+    if not stripe_configured() or not product:
+        return False
+    if product["id"] == "core_app":
+        return any(regional_price_id(currency) for currency in REGIONAL_PRICES)
+    return bool(os.environ.get(product["price_env"]))
 
 
 def product_lookup(product_id):
@@ -361,24 +514,47 @@ def product_lookup(product_id):
 
 
 def public_product(item):
-    payload = {k: item[k] for k in item if k not in {"amount_pence", "price_env"}}
+    payload = {k: item[k] for k in item if k not in {"price", "amount_pence", "price_env"}}
     payload["checkout_ready"] = stripe_ready_for(item)
     return payload
 
 
 def product_payload(user_id="demo"):
     purchases = get_user_purchases(user_id)
-    products = [CORE_PRODUCT] + ADD_ONS
-    payments_live = all(stripe_ready_for(item) for item in products)
+    payments_live = stripe_ready_for(CORE_PRODUCT)
     return {
         "core": public_product(CORE_PRODUCT),
-        "addons": [public_product(item) for item in ADD_ONS],
+        "addons": [],
         "purchases": purchases,
+        "paid_access_required": env_bool("PAID_ACCESS_REQUIRED", False),
+        "planning_access": not env_bool("PAID_ACCESS_REQUIRED", False) or bool(purchases.get("core_app")),
         "payment_provider": "stripe" if payments_live else "preview",
         "payments_live": payments_live,
+        "regional_checkout_ready": {
+            currency: bool(stripe_configured() and regional_price_id(currency))
+            for currency in REGIONAL_PRICES
+        },
         # Backward-compatible name for the current client. It now means fully checkout-ready.
         "stripe_configured": payments_live,
     }
+
+
+def enforce_paid_access(handler, user_id):
+    """Return True only after responding to a blocked planning request."""
+    if not env_bool("PAID_ACCESS_REQUIRED", False):
+        return False
+    try:
+        allowed = bool(get_user_purchases(user_id).get("core_app"))
+    except Exception:
+        json_response(handler, {"error": "Access verification is temporarily unavailable. Please retry."}, 503)
+        return True
+    if allowed:
+        return False
+    json_response(handler, {
+        "error": "Purchase required before using the planning tools.",
+        "code": "purchase_required",
+    }, 402)
+    return True
 
 
 def is_mode_unlocked(mode, user_id="demo"):
@@ -391,10 +567,7 @@ def is_mode_unlocked(mode, user_id="demo"):
 
 def locked_response(mode):
     product_id = MODE_REQUIREMENTS.get(mode)
-    item = ALL_ACCESS_PRODUCT
-    name = item["name"]
-    price = item["price"]
-    content = f"# All Access required\n\n{name} unlocks this output style and every advanced feature. One-time price: {price} or equivalent local store tier. Core access is required first."
+    content = "# Planning access required\n\nSign in with your purchasing account to use these planning tools. Visit https://tenaciouspl.co.uk/#example for examples or https://tenaciouspl.co.uk/#contact for support."
     return {
         "locked": True,
         "product_id": product_id,
@@ -500,12 +673,24 @@ def create_checkout_session(handler, body):
     product = product_lookup(product_id)
     if not product:
         return json_response(handler, {"error": "Unknown product"}, 400)
-    price_id = os.environ.get(product["price_env"])
+    if product_id != "core_app":
+        return json_response(handler, {"error": "Only the HomeAdmin Complete product is available for new purchases."}, 400)
+    currency = str(body.get("currency") or "").upper()
+    if currency not in REGIONAL_PRICES:
+        return json_response(handler, {"error": "Choose a supported checkout currency."}, 400)
+    price_id = regional_price_id(currency)
     if not price_id:
-        return json_response(handler, {"error": "Checkout is not fully configured for this product."}, 400)
+        return json_response(handler, {"error": "Checkout is not configured for this currency."}, 400)
+    # Never charge a regional customer using an unverified currency/amount.
+    stripe_price = stripe_api_request("GET", "/v1/prices/" + price_id, None)
+    expected = REGIONAL_PRICES[currency]["amount"]
+    if (stripe_price.get("currency", "").upper() != currency
+            or stripe_price.get("unit_amount") != expected
+            or not stripe_price.get("active", False)
+            or stripe_price.get("type") != "one_time"
+            or stripe_price.get("recurring")):
+        return json_response(handler, {"error": "Checkout price verification failed for this currency."}, 400)
     user_id = effective_user_id(handler, body.get("user_id"))
-    if product_id == "all_access" and not get_user_purchases(user_id).get("core_app"):
-        return json_response(handler, {"error": "Purchase LifeAdmin AI Core before All Access."}, 409)
     email = str(body.get("email") or "").strip()
     base_url = get_base_url(handler)
     fields = {
@@ -517,6 +702,7 @@ def create_checkout_session(handler, body):
         "client_reference_id": user_id,
         "metadata[product_id]": product_id,
         "metadata[user_id]": user_id,
+        "metadata[currency]": currency,
         "allow_promotion_codes": "true",
     }
     if env_bool("STRIPE_TERMS_REQUIRED", False):
@@ -536,17 +722,30 @@ def stripe_retrieve_session(session_id):
     return stripe_api_request("GET", "/v1/checkout/sessions/" + safe_session, None)
 
 
+def checkout_owner(session):
+    metadata_owner = (session.get("metadata") or {}).get("user_id")
+    reference_owner = session.get("client_reference_id")
+    if metadata_owner and reference_owner and metadata_owner != reference_owner:
+        return None
+    owner = metadata_owner or reference_owner
+    if not isinstance(owner, str) or not owner or safe_user_id(owner) != owner:
+        return None
+    return owner
+
+
 def checkout_status(handler, query):
     if not stripe_configured():
         return json_response(handler, {"error": "Stripe is not configured"}, 400)
     session_id = (query.get("session_id") or [""])[0]
+    if not str(session_id).strip().startswith("cs_"):
+        return json_response(handler, {"error": "Invalid Stripe Checkout Session ID"}, 400)
     session = stripe_retrieve_session(session_id)
     metadata = session.get("metadata") or {}
     product_id = metadata.get("product_id")
-    user_id = metadata.get("user_id") or effective_user_id(handler)
+    user_id = checkout_owner(session)
     current = current_user(handler)
     browser_user_id = current["id"] if current else guest_session(handler)
-    if user_id != browser_user_id:
+    if not user_id or user_id != browser_user_id:
         return json_response(handler, {"error": "Checkout session does not belong to this browser or account"}, 403)
     paid = session.get("payment_status") == "paid"
     if paid and product_id in VALID_PRODUCTS:
@@ -598,15 +797,20 @@ def handle_stripe_webhook(handler):
     if event_type in {"checkout.session.completed", "checkout.session.async_payment_succeeded"}:
         metadata = obj.get("metadata") or {}
         product_id = metadata.get("product_id")
-        user_id = metadata.get("user_id") or obj.get("client_reference_id") or "demo"
+        user_id = checkout_owner(obj)
         session_id = obj.get("id")
-        paid = event_type == "checkout.session.async_payment_succeeded" or obj.get("payment_status") == "paid"
-        if paid and product_id in VALID_PRODUCTS:
-            unlock_purchase(user_id, product_id, "stripe_webhook", session_id)
+        paid = obj.get("payment_status") == "paid"
+        if paid and user_id and product_id in VALID_PRODUCTS:
+            try:
+                unlock_purchase(user_id, product_id, "stripe_webhook", session_id)
+            except Exception:
+                return json_response(handler, {"error": "Payment access is temporarily unavailable. Please retry delivery."}, 503)
     return json_response(handler, {"received": True})
 
 
 def demo_purchase(handler, body):
+    if env_bool("PAID_ACCESS_REQUIRED", False):
+        return json_response(handler, {"error": "Test purchases are disabled when paid access is required."}, 403)
     if os.environ.get("APP_ENV", "development").lower() == "production":
         return json_response(handler, {"error": "Test purchases are disabled in production"}, 403)
     if not env_bool("DEMO_PAYMENTS", False):
@@ -615,8 +819,8 @@ def demo_purchase(handler, body):
     if product_id not in VALID_PRODUCTS:
         return json_response(handler, {"error": "Unknown product"}, 400)
     user_id = effective_user_id(handler, body.get("user_id"))
-    if product_id == "all_access" and not get_user_purchases(user_id).get("core_app"):
-        return json_response(handler, {"error": "Demo-unlock Core before All Access."}, 409)
+    if product_id != "core_app":
+        return json_response(handler, {"error": "Only the complete product is available for new demo purchases."}, 400)
     unlock_purchase(user_id, product_id, "demo")
     return json_response(handler, product_payload(user_id))
 
@@ -627,8 +831,9 @@ def detect_playbook(task):
     canonical_route = {
         "tv_broadband_mobile": "communications", "energy_water": "utilities", "council_tax_licences": "council_tax",
         "insurance": "insurance", "subscriptions_memberships": "streaming", "rent_mortgage_property": "housing_payment",
-        "credit_loans_finance": "credit_payment", "home_security_maintenance": "bill", "transport_vehicle": "bill",
-        "health_care_pets": "bill", "family_childcare_education": "bill", "other_regular_payment": "bill",
+        "credit_loans_finance": "credit_payment", "home_security_maintenance": "home_services",
+        "transport_vehicle": "transport", "health_care_pets": "health_care_pets",
+        "family_childcare_education": "family_services", "other_regular_payment": "bill",
         "communications": "communications", "utilities": "utilities", "council_tax": "council_tax",
         "subscriptions": "streaming", "housing": "housing_payment", "credit": "credit_payment", "other_payment": "bill",
     }.get(canonical_category)
@@ -636,7 +841,11 @@ def detect_playbook(task):
         # A canonical category is authoritative; free-text heuristics only refine legacy tasks.
         if canonical.get("goal_id") == "identify_payment" or domain.is_unknown_payment(task):
             return "bill"
-        if canonical_route in {"communications", "utilities", "council_tax", "insurance", "streaming", "housing_payment", "credit_payment", "travel"}:
+        if canonical_route in {
+            "communications", "utilities", "council_tax", "insurance", "streaming",
+            "housing_payment", "credit_payment", "transport", "health_care_pets",
+            "family_services", "home_services", "travel",
+        }:
             return canonical_route
     raw_text = " ".join(str(task.get(key, "")) for key in ("title", "notes"))
     text = re.sub(r"[^a-z0-9+]+", " ", raw_text.lower()).strip()
@@ -733,6 +942,21 @@ def named_subscription_sections(task):
     ]
     if billed_through:
         supplied.append(f"- Billing route supplied: {billed_through}.")
+    supplied_context = []
+    for key, label in (("account_reference", "Account or customer reference"),
+                       ("payment_description", "Payment or bill description"),
+                       ("what_happened", "Issue supplied"),
+                       ("minimum_term_end", "Minimum term ends"),
+                       ("confirmation_received", "Cancellation confirmation supplied")):
+        value = str(details.get(key) or "").strip()
+        if value:
+            supplied.append(f"- {label}: {value}")
+            supplied_context.append(f"{label}: {value}")
+    for label, value in (("Current payment", payment),
+                         ("Next payment or renewal", renewal),
+                         ("Billing route supplied", billed_through)):
+        if value:
+            supplied_context.append(f"{label}: {value}")
     common = [(f"{provider_label} plan and billing", supplied)]
     if wants_cancellation:
         action_sections = [
@@ -770,6 +994,8 @@ def named_subscription_sections(task):
             "Provider billing review draft",
             [f"Hello, please confirm the current plan, billing frequency, next payment date and any upcoming price change for my {provider_label} subscription. Please reply in writing."],
         )
+    if supplied_context:
+        provider_draft = (provider_draft[0], [provider_draft[1][0] + "\n\n" + "\n".join(supplied_context)])
     return common + action_sections + [
         ("Conditional billing-route checks", [
             f"- Use Apple Subscriptions only if the {provider_label} charge is billed by Apple.",
@@ -793,6 +1019,61 @@ def playbook_sections(playbook, task=None):
     goal_id = canonical.get("goal_id")
     details = canonical.get("details") or {}
     provider = str(details.get("provider") or "the provider").strip()
+
+    # Goal-specific help takes precedence over the telecom savings playbook.
+    if playbook == "communications" and goal_id in {
+        "check_bill", "challenge_charge", "cancel_switch", "contact_provider"
+    }:
+        goal_help = {
+            "check_bill": (
+                ["1. Compare the latest bill with the previous bill and agreed package price.",
+                 "2. Separate recurring charges, usage, add-ons, expired discounts and one-off fees.",
+                 "3. Check the billing period and any price-change notice against the contract.",
+                 "4. Request an itemised explanation and correction of any unexplained difference before considering a new package."],
+                f"Hello, please explain my {provider} bill, including the billing period, itemised charges and any difference from the previous amount or agreed price. Please identify any expired discount, additional usage or one-off fee, and correct any billing error. Please reply in writing."
+            ),
+            "challenge_charge": (
+                ["1. Record the disputed charge, date, amount and why you believe it is wrong.",
+                 "2. Gather the bill, agreed terms, payment evidence and previous correspondence.",
+                 "3. Ask the provider to investigate and explain the charge, and request a correction or refund where appropriate.",
+                 "4. Keep the complaint reference and response deadline; check the official complaints route if unresolved."],
+                f"Hello, I am challenging a charge on my {provider} account. Please investigate the disputed charge, explain its basis and provide supporting billing information. If incorrect, please correct the bill and confirm any refund due. Please provide a complaint reference and response timeframe in writing."
+            ),
+            "cancel_switch": (
+                ["1. Check the contract end date, notice period, exit fees and any bundle discounts affected.",
+                 "2. Confirm the cancellation or switching route with the provider before acting.",
+                 "3. If switching, arrange service continuity and number transfer before ending the old service.",
+                 "4. Confirm the final bill, equipment returns and end date in writing, then review before approving."],
+                f"Hello, please confirm the cancellation or switching options for my {provider} service, including the notice period, exit fees, final bill, equipment returns and service end date. Please explain any effect on bundled services. This is an information request, not authorisation to cancel."
+            ),
+            "contact_provider": (
+                ["1. Identify the account and the specific question or issue you need resolved.",
+                 "2. Gather relevant bills, dates and earlier correspondence.",
+                 "3. Use the provider's official contact route and request a written answer.",
+                 "4. Save the response and follow-up date before deciding on any account change."],
+                f"Hello, I have a query about my {provider} account. Please review the details below, explain the available next steps and reply in writing. Please do not change my service without my approval."
+            ),
+        }
+        steps, message = goal_help[goal_id]
+        context = [f"- Provider: {provider}."]
+        for key, label in (("account_reference", "Account or customer reference"),
+                           ("amount", "Current amount"), ("previous_amount", "Previous amount"),
+                           ("date", "Relevant date"), ("what_happened", "Issue supplied")):
+            if details.get(key):
+                context.append(f"- {label}: {details[key]}.")
+                message += f"\n\n{label}: {details[key]}"
+        return [
+            ("Account details supplied", context),
+            ("Your action plan", steps),
+            ("Provider contact draft", [message]),
+            ("Things to check", ["- Check the correct account, billing period, amounts and contract terms.",
+                                  "- Use official contact details and share only information needed for the query.",
+                                  "- Do not stop payments or change service before understanding the consequences."]),
+            ("Approval checklist", ["- Facts and supporting evidence checked.",
+                                     "- Draft reviewed before contacting the provider.",
+                                     "- Any correction, refund or end date confirmed in writing.",
+                                     "- No cancellation, switch or new contract authorised by this plan."]),
+        ]
 
     if playbook == "streaming" and task:
         tailored = named_subscription_sections(task)
@@ -983,7 +1264,7 @@ def playbook_sections(playbook, task=None):
                 "- For UK TV/broadband packages, useful comparison targets often include Virgin Media, BT/EE, NOW and standalone fibre providers plus separate streaming services, subject to availability at your address.",
                 "- Record: monthly price, introductory period, price after discounts, contract length, setup fee, broadband speed, included TV/sports/cinema, equipment charge and total minimum-term cost.",
                 "- Treat advertised deals as leads only. Confirm current availability and terms on the provider's official site before acting.",
-                "- Use the AI comparison button in LifeAdmin AI to take this plan into ChatGPT or another web-enabled assistant and ask it to find current alternatives with source links."
+                "- Use the AI comparison button in HomeAdmin to take this plan into ChatGPT or another web-enabled assistant and ask it to find current alternatives with source links."
             ]),
             ("Contract and cancellation check", [
                 "- Confirm minimum term, contract-end date, notice period, exit fee, equipment return and whether changing one service affects a bundle discount.",
@@ -1030,6 +1311,102 @@ def playbook_sections(playbook, task=None):
             ("Payment-risk warning", ["- Missing or reducing a payment can affect fees, interest and credit records.", "- Use official lender information or qualified debt advice before changing payments if affordability is a concern."]),
             ("Lender contact draft", ["Hello, please confirm my current balance, required payment, due date, interest rate, fees and any available support or payment-plan options in writing."]),
             ("Approval checklist", ["- Current statement checked.", "- Due date and required amount verified.", "- Consequences understood.", "- No payment instruction changed without approval."])
+        ],
+        "transport": [
+            ("Transport or vehicle details", [
+                f"- Record the vehicle, permit, pass, booking or charging service, plus {provider}, the reference, current price and relevant renewal or travel date.",
+                "- Keep registration, booking and account references separate from passwords, payment-card details and security codes.",
+            ]),
+            ("Cost and alternative check", [
+                "- Compare like-for-like cover or service, including the total annual or journey cost, admin fees, cancellation terms, usage limits and any interruption between providers.",
+                "- For permits, tax or official charges, verify the current amount and eligibility through the issuing authority rather than treating the charge as a commercial quote.",
+            ]),
+            ("Provider contact draft", [
+                f"Hello, please confirm the current price, renewal or expiry date, service terms, cancellation or amendment fees, and any lower-cost suitable option for my account with {provider}. Please reply in writing.",
+            ]),
+            ("Things to check", [
+                "- Vehicle, traveller or account eligibility and the exact service area.",
+                "- Start and end dates, notice periods, refund rules and any automatic renewal.",
+                "- Official confirmation for tax, permits, penalties or regulated transport charges.",
+            ]),
+            ("Approval checklist", [
+                "- Reference, amount and deadline verified.",
+                "- Like-for-like costs and service limits compared.",
+                "- Any service gap, fee or refund consequence understood.",
+                "- No booking, cancellation or payment submitted without approval.",
+            ]),
+        ],
+        "health_care_pets": [
+            ("Health, care or pet service details", [
+                f"- Record the service or plan, {provider}, payment amount, appointment or treatment date, renewal date and what is included.",
+                "- Separate routine plan costs from insurance premiums, excesses, exclusions and treatment charges.",
+            ]),
+            ("Cost and continuity check", [
+                "- Compare like-for-like service, cover limits, waiting periods, exclusions, excesses, cancellation terms and total annual cost.",
+                "- Check whether changing or cancelling affects ongoing treatment, pre-existing-condition cover, appointments, medicines or continuity of care.",
+            ]),
+            ("Provider contact draft", [
+                f"Hello, please confirm the current price, services or cover included, renewal date, exclusions, cancellation terms and any suitable lower-cost option for my account with {provider}. Please reply in writing.",
+            ]),
+            ("Things to check", [
+                "- Use official provider documents for prices and plan terms.",
+                "- Seek qualified clinical or veterinary advice for treatment decisions; this plan provides admin support only.",
+                "- Do not delay urgent medical, care or veterinary help while reviewing costs.",
+            ]),
+            ("Approval checklist", [
+                "- Service, cover and appointment details verified.",
+                "- Waiting periods, exclusions and continuity risks checked.",
+                "- Total cost and cancellation terms reviewed.",
+                "- No treatment, cover or payment change submitted without approval.",
+            ]),
+        ],
+        "family_services": [
+            ("Family, childcare or education details", [
+                f"- Record the nursery, school, club, tuition or education service, {provider}, child or course reference, charge frequency and deadline.",
+                "- Note funded and paid hours, session pattern, term dates, deposits, notice periods and extras separately.",
+            ]),
+            ("Cost and support check", [
+                "- Compare the same number and length of sessions, registration or deposit charges, meals or materials, holiday rules, notice fees and total term or annual cost.",
+                "- Check current funding, tax-free childcare, bursary or local support rules through the relevant official service before relying on an estimate.",
+            ]),
+            ("Provider contact draft", [
+                f"Hello, please confirm the fees, funded or included hours, extras, payment schedule, notice period, refund terms and upcoming deadlines for my account with {provider}. Please reply in writing.",
+            ]),
+            ("Things to check", [
+                "- Attendance pattern, term dates and the deadline for changing or ending sessions.",
+                "- Which extras are optional and whether deposits are refundable.",
+                "- Official eligibility and reconfirmation dates for any funding or support.",
+            ]),
+            ("Approval checklist", [
+                "- Sessions, dates and charge frequency verified.",
+                "- Funding assumptions checked against an official source.",
+                "- Notice, deposit and refund terms understood.",
+                "- No enrolment, cancellation or payment change submitted without approval.",
+            ]),
+        ],
+        "home_services": [
+            ("Home service details", [
+                f"- Record the alarm, boiler, appliance, repair or maintenance service, {provider}, equipment covered, current price, renewal date and service history.",
+                "- Separate subscription or cover charges from call-out fees, parts, labour and one-off repair costs.",
+            ]),
+            ("Like-for-like comparison", [
+                "- Compare total annual cost, call-out fees, excess, parts and labour limits, exclusions, response targets, minimum term, cancellation fees and equipment ownership.",
+                "- Check whether self-insuring or arranging a one-off repair is a realistic alternative without assuming either route is cheaper.",
+            ]),
+            ("Provider contact draft", [
+                f"Hello, please confirm the current price, cover or service included, exclusions, call-out charges, renewal date, cancellation terms and your best suitable price for my account with {provider}. Please reply in writing.",
+            ]),
+            ("Things to check", [
+                "- Property and equipment eligibility, age limits and required maintenance.",
+                "- Emergency response route, service-area limits and claim or call-out caps.",
+                "- Contract end date, auto-renewal, notice period and any equipment return requirement.",
+            ]),
+            ("Approval checklist", [
+                "- Equipment, property and required service verified.",
+                "- Full annual cost and exclusions compared like for like.",
+                "- Response limits, fees and cancellation consequences understood.",
+                "- No contract, repair or payment approved before written terms are reviewed.",
+            ]),
         ],
         "bill": [
             ("Household payment inventory", ["- Include TV licence, boiler cover, appliance cover, breakdown cover and other recurring direct debits or card payments.", "- If relevant, also check mortgage, rent, service charges, credit card minimum payments and loan payments."]),
@@ -1098,6 +1475,25 @@ def fallback_agent(task, mode="full"):
         lines = [f"# Admin plan: {task.get('title', 'Unknown payment')}"]
         lines.extend([f"## Next steps\n{sections['next_steps']}", f"## Things to check\n{sections['things_to_check']}", f"## Approval checklist\n{sections['approval_checklist']}"])
         return "\n\n".join(lines)
+
+    canonical = domain.normalise_task(task)
+    details = canonical.get("details") or {}
+    utility_type = str(details.get("utility_type") or "").strip().lower()
+    tariff = str(details.get("tariff") or "").strip().lower()
+    if (
+        canonical.get("category_id") == "energy_water"
+        and canonical.get("goal_id") == "prepare_renewal"
+        and utility_type != "water"
+        and tariff != "water tariff"
+    ):
+        sections = energy_renewal.renewal_sections(canonical)
+        return "\n\n".join([
+            f"## Next steps\n{sections['next_steps']}",
+            f"## Provider message\n{sections['provider_message']}",
+            f"## Things to check\n{sections['things_to_check']}",
+            f"## Approval checklist\n{sections['approval_checklist']}",
+        ])
+
     title = task.get("title", "Admin task")
     category = task.get("category", "General")
     notes = task.get("notes", "")
@@ -1404,9 +1800,11 @@ def admin_overview(user):
     if storage.available():
         try:
             return storage.admin_overview()
-        except Exception:
-            # Fall back to aggregate guest/demo metrics without exposing a database error.
-            pass
+        except Exception as exc:
+            # A failed database query must not be reported as empty demo metrics.
+            raise storage.StorageUnavailable("Administrator statistics unavailable") from exc
+    if os.environ.get("DATABASE_URL"):
+        raise storage.StorageUnavailable("Administrator statistics unavailable")
     store = read_json(TASKS_FILE, {})
     tasks = [task for values in (store.get("users", {}).values() if isinstance(store, dict) else []) for task in (values if isinstance(values, list) else [])]
     note_store = read_json(NOTES_FILE, {})
@@ -1492,20 +1890,45 @@ class AdminPilotHandler(SimpleHTTPRequestHandler):
         self.send_header("X-Frame-Options", "DENY")
         super().end_headers()
 
+    def _with_data_lock(self, action):
+        try:
+            with data_lock(DATA_DIR, timeout=0.5):
+                return action()
+        except LockTimeout:
+            return json_response(
+                self,
+                {"error": "Data maintenance in progress. Please retry shortly."},
+                503,
+                {"Retry-After": "2"},
+            )
+
     def do_GET(self):
+        path = urlparse(self.path).path
+        # Static assets and liveness checks stay available during snapshots.
+        if path not in {"/api/health", "/api/healthz"} and path.startswith("/api/"):
+            return AdminPilotHandler._with_data_lock(self, lambda: AdminPilotHandler._do_GET(self))
+        return AdminPilotHandler._do_GET(self)
+
+    def do_POST(self):
+        # Includes Stripe webhook and account/session writes.
+        return AdminPilotHandler._with_data_lock(self, lambda: AdminPilotHandler._do_POST(self))
+
+    def _do_GET(self):
         parsed = urlparse(self.path)
         path = parsed.path
+        if path in {"/api/health", "/api/healthz"}:
+            return json_response(self, {"status": "ok", "service": "lifeadmin-ai"})
         query = parse_qs(parsed.query)
         user = current_user(self)
         user_id = user["id"] if user else guest_session(self)
-        if path in {"/api/health", "/api/healthz"}:
-            return json_response(self, {"status": "ok", "service": "lifeadmin-ai"})
         if path == "/":
             index_path = os.path.join(WEB_DIR, "index.html")
             if os.path.isfile(index_path):
                 self.path = "/index.html"
                 return super().do_GET()
             return json_response(self, {"error": "Web app has not been built yet. Run the frontend build first."}, 503)
+        if path in {"/api/tasks", "/api/notes"} and enforce_paid_access(self, user_id):
+            return
         if path == "/api/tasks":
             tasks = storage.list_tasks(user_id) if user else anonymous_items(TASKS_FILE, user_id, DEFAULT_TASKS)
             return json_response(self, {"tasks": tasks, "storage": storage.backend() if user else "browser"})
@@ -1517,21 +1940,32 @@ class AdminPilotHandler(SimpleHTTPRequestHandler):
             notes = storage.list_notes(user_id) if user else anonymous_items(NOTES_FILE, user_id)
             return json_response(self, {"notes": notes})
         if path == "/api/auth/me":
-            return json_response(self, auth_payload(user))
+            payload = auth_payload(user)
+            payload["guest_import_pending"] = guest_import_status(self, user)
+            payload["guest_import_retry_available"] = guest_import_retry_available(self, user)
+            return json_response(self, payload)
         if path == "/api/products":
-            return json_response(self, product_payload(user_id))
+            try:
+                return json_response(self, product_payload(user_id))
+            except Exception:
+                return json_response(self, {"error": "Access verification is temporarily unavailable. Please retry."}, 503)
         if path == "/api/catalog":
             return json_response(self, domain.catalog())
         if path == "/api/admin/overview":
-            overview = admin_overview(user)
-            return json_response(self, overview if overview is not None else {"error": "Admin access required"}, 200 if overview is not None else 403)
+            if not is_admin(user):
+                return json_response(self, {"error": "Admin access required"}, 403)
+            try:
+                overview = admin_overview(user)
+            except storage.StorageUnavailable:
+                return json_response(self, {"error": "Administrator statistics are temporarily unavailable. Please retry."}, 503)
+            return json_response(self, overview)
         if path == "/api/qa-report":
             return json_response(self, QA_REPORT)
         if path == "/api/checkout/status":
             try:
                 return checkout_status(self, query)
-            except Exception as exc:
-                return json_response(self, {"error": str(exc)}, 400)
+            except Exception:
+                return json_response(self, {"error": "Payment verification is temporarily unavailable. Please retry. Do not pay again."}, 503)
         if path.startswith("/api/"):
             return json_response(self, {"error": "Unknown endpoint"}, 404)
         requested = os.path.join(WEB_DIR, path.lstrip("/"))
@@ -1543,7 +1977,7 @@ class AdminPilotHandler(SimpleHTTPRequestHandler):
             return super().do_GET()
         return json_response(self, {"error": "Web app has not been built yet."}, 503)
 
-    def do_POST(self):
+    def _do_POST(self):
         path = urlparse(self.path).path
         if path == "/api/stripe/webhook":
             return handle_stripe_webhook(self)
@@ -1553,16 +1987,56 @@ class AdminPilotHandler(SimpleHTTPRequestHandler):
             return json_response(self, {"error": str(exc)}, 413)
         user = current_user(self)
         user_id = user["id"] if user else guest_session(self)
+        if path == "/api/auth/forgot-password":
+            if auth_rate_limited(self, "forgot-password", 3):
+                return json_response(self, {"error": "Please wait before requesting another reset link."}, 429, {"Retry-After": "60"})
+            if not password_recovery.configured():
+                return json_response(self, {"error": "Password recovery is unavailable. Contact tenaciouspl@icloud.com. Do not pay again."}, 503)
+            email = storage.normalize_email(body.get("email"))
+            if not isinstance(body.get("email"), str) or len(email) > 254 or "@" not in email or "\n" in email or "\r" in email:
+                return json_response(self, {"error": "Enter a valid email address."}, 400)
+            if not password_recovery.enqueue("request", email):
+                return json_response(self, {"error": "Recovery is busy. Please retry shortly."}, 503)
+            return json_response(self, {"message": "If an account matches, a reset link will arrive by email. Check your inbox and spam folder. Do not pay again."}, 202)
+        if path == "/api/auth/reset-password":
+            if auth_rate_limited(self, "reset-password", 5):
+                return json_response(self, {"error": "Please wait before trying another reset link."}, 429, {"Retry-After": "60"})
+            if not password_recovery.configured():
+                return json_response(self, {"error": "Password recovery is unavailable. Contact support."}, 503)
+            password = body.get("password")
+            if not isinstance(password, str) or password != body.get("password_confirm"):
+                return json_response(self, {"error": "Enter matching new passwords."}, 400)
+            try:
+                email = storage.reset_password(body.get("token"), password)
+            except ValueError as exc:
+                return json_response(self, {"error": str(exc)}, 400)
+            except Exception:
+                return json_response(self, {"error": "Password reset is temporarily unavailable. Please retry."}, 503)
+            password_recovery.enqueue("changed", email)
+            return json_response(self, {"message": "Password changed. Sign in with your new password."}, headers={"Set-Cookie": session_cookie(self, "", 0)})
         if path == "/api/auth/register":
             if auth_rate_limited(self, "register", 6):
                 return json_response(self, {"error": "Too many account attempts. Please wait and try again."}, 429, {"Retry-After": "60"})
             try:
                 guest_id = None if user else guest_session(self)
+                if guest_id and pending_import_owner(guest_id):
+                    return json_response(self, {"error": "This browser has unfinished guest work linked to an existing account. Sign in to that account and retry the transfer before creating another."}, 409)
                 user = storage.create_user(body.get("email"), body.get("password"))
-                if guest_id:
-                    migrate_guest_workspace(guest_id, user["id"])
+                pending = False
+                if guest_id and guest_import_pending(guest_id):
+                    # Persist an account-to-guest binding before attempting any transfer.
+                    set_pending_import_guest(user["id"], guest_id)
+                    try:
+                        pending = migrate_guest_workspace(guest_id, user["id"])
+                    except Exception:
+                        pending = True
+                    if not pending:
+                        set_pending_import_guest(user["id"])
                 token = storage.create_session(user["id"])
-                return json_response(self, auth_payload(user), 201, {"Set-Cookie": session_cookie(self, token)})
+                payload = auth_payload(user)
+                payload["guest_import_pending"] = pending
+                payload["guest_import_retry_available"] = pending
+                return json_response(self, payload, 201, {"Set-Cookie": session_cookie(self, token)})
             except (ValueError, storage.StorageUnavailable) as exc:
                 return json_response(self, {"error": str(exc)}, 400)
         if path == "/api/auth/login":
@@ -1574,6 +2048,19 @@ class AdminPilotHandler(SimpleHTTPRequestHandler):
                 return json_response(self, auth_payload(user), headers={"Set-Cookie": session_cookie(self, token)})
             except (ValueError, storage.StorageUnavailable) as exc:
                 return json_response(self, {"error": str(exc)}, 401)
+        if path == "/api/auth/retry-guest-import":
+            if not user:
+                return json_response(self, {"error": "Sign in before retrying guest import"}, 401)
+            guest_id = pending_import_guest(user["id"])
+            if not guest_id or guest_id != verified_guest_cookie(self):
+                return json_response(self, {"error": "No guest import is available for this account and browser"}, 403)
+            try:
+                pending = migrate_guest_workspace(guest_id, user["id"])
+                if not pending:
+                    set_pending_import_guest(user["id"])
+                return json_response(self, {"guest_import_pending": pending})
+            except Exception:
+                return json_response(self, {"error": "Import is temporarily unavailable. Remaining guest work is safe. Try again."}, 503)
         if path == "/api/auth/logout":
             storage.delete_session(session_token(self))
             return json_response(self, auth_payload(), headers={"Set-Cookie": session_cookie(self, "", 0)})
@@ -1581,17 +2068,30 @@ class AdminPilotHandler(SimpleHTTPRequestHandler):
             if not user:
                 return json_response(self, {"error": "Sign in before deleting an account"}, 401)
             try:
-                storage.delete_account(user["id"], body.get("password"))
+                # Verify the password before cleanup, and preserve the account
+                # and session if guest-file cleanup fails so deletion is retryable.
+                storage.delete_account(
+                    user["id"], body.get("password"),
+                    before_delete=lambda: purge_deleted_accounts_pending_guest(user["id"]),
+                )
                 return json_response(self, {"deleted": True}, headers={"Set-Cookie": session_cookie(self, "", 0)})
             except ValueError as exc:
                 return json_response(self, {"error": str(exc)}, 403)
+            except Exception:
+                return json_response(self, {"error": "Account deletion is temporarily unavailable. Please retry."}, 503)
         if path == "/api/checkout":
+            if env_bool("PAID_ACCESS_REQUIRED", False) and not user:
+                return json_response(self, {"error": "Sign in before purchasing access."}, 401)
             try:
+                if env_bool("PAID_ACCESS_REQUIRED", False) and get_user_purchases(user_id).get("core_app"):
+                    return json_response(self, {"error": "Access is already purchased for this account."}, 409)
                 return create_checkout_session(self, body)
-            except Exception as exc:
-                return json_response(self, {"error": str(exc)}, 400)
+            except Exception:
+                return json_response(self, {"error": "Checkout is temporarily unavailable. Please try again."}, 503)
         if path == "/api/demo-purchase":
             return demo_purchase(self, body)
+        if path in {"/api/suggest", "/api/tasks", "/api/tasks/update", "/api/tasks/delete", "/api/notes/delete", "/api/agent"} and enforce_paid_access(self, user_id):
+            return
         if path == "/api/suggest":
             return json_response(self, domain.suggest(body.get("query", "")))
         if path == "/api/tasks":
@@ -1650,6 +2150,19 @@ class AdminPilotHandler(SimpleHTTPRequestHandler):
             if not deleted:
                 return json_response(self, {"error": "Task not found"}, 404)
             return json_response(self, {"deleted": True, "id": task_id})
+        if path == "/api/notes/delete":
+            note_id = body.get("id")
+            if user:
+                deleted = storage.delete_note(user_id, note_id)
+            else:
+                notes = anonymous_items(NOTES_FILE, user_id)
+                remaining = [note for note in notes if note.get("id") != note_id]
+                deleted = len(remaining) != len(notes)
+                if deleted:
+                    save_anonymous_items(NOTES_FILE, user_id, remaining)
+            if not deleted:
+                return json_response(self, {"error": "Saved plan not found"}, 404)
+            return json_response(self, {"deleted": True, "id": note_id})
         if path == "/api/purchases":
             return demo_purchase(self, body)
         if path == "/api/agent":
@@ -1691,18 +2204,53 @@ class AdminPilotHandler(SimpleHTTPRequestHandler):
         return json_response(self, {"error": "Unknown endpoint"}, 404)
 
 
+def validate_production_configuration():
+    if os.environ.get("APP_ENV", "development").lower() != "production":
+        return
+    live_payments = os.environ.get("STRIPE_SECRET_KEY", "").startswith(("sk_live_", "rk_live_"))
+    if live_payments and not env_bool("PAID_ACCESS_REQUIRED", False):
+        raise RuntimeError("Live payment configuration requires PAID_ACCESS_REQUIRED=true.")
+    configured_secret = os.environ.get("SESSION_SECRET", "")
+    if len(configured_secret) < 32 or any(character.isspace() for character in configured_secret):
+        raise RuntimeError("SESSION_SECRET must contain at least 32 random characters in production.")
+    if env_bool("DEMO_PAYMENTS", False):
+        raise RuntimeError("DEMO_PAYMENTS must be false in production.")
+    recovery_enabled = env_bool("PASSWORD_RECOVERY_ENABLED", False)
+    if live_payments or recovery_enabled:
+        try:
+            origin_value = os.environ.get("APP_BASE_URL", "")
+            origin = urlparse(origin_value)
+            valid_origin = (origin.scheme == "https" and bool(origin.hostname)
+                            and not origin.username and not origin.password
+                            and origin.path in ("", "/") and not origin.query and not origin.fragment
+                            and not any(character.isspace() or ord(character) < 32 or ord(character) == 127 for character in origin_value))
+            # Accessing port also validates malformed/out-of-range port values.
+            origin.port
+        except ValueError:
+            valid_origin = False
+        if not valid_origin:
+            raise RuntimeError("APP_BASE_URL must be an HTTPS app origin without credentials, path, query or fragment.")
+    if live_payments and (not os.environ.get("STRIPE_WEBHOOK_SECRET") or not regional_price_id("GBP")):
+        raise RuntimeError("Live payments require the webhook secret and Complete GBP Price configuration.")
+    if recovery_enabled and not password_recovery.configured():
+        raise RuntimeError("Enabled password recovery requires complete encrypted SMTP configuration.")
+    if not storage.available():
+        raise RuntimeError("Production account storage is unavailable; startup stopped.")
+
+
 def main():
+    validate_production_configuration()
     ensure_data()
-    if os.environ.get("APP_ENV", "development").lower() == "production" and not os.environ.get("SESSION_SECRET"):
-        raise RuntimeError("SESSION_SECRET must be set in production")
     if storage.available():
         try:
             storage.ensure_schema()
-        except Exception as exc:
-            print(f"Account storage unavailable during startup: {exc}")
+        except Exception:
+            if os.environ.get("APP_ENV", "development").lower() == "production":
+                raise RuntimeError("Account storage unavailable; production startup stopped.") from None
+            print("Account storage unavailable during startup. Check storage configuration.")
     port = int(os.environ.get("PORT", "8000"))
     server = ThreadingHTTPServer(("0.0.0.0", port), AdminPilotHandler)
-    print(f"LifeAdmin AI running at http://localhost:{port}")
+    print(f"HomeAdmin running at http://localhost:{port}")
     if stripe_configured():
         print("Stripe Checkout enabled. Make sure product Price IDs and webhook secret are set.")
     else:

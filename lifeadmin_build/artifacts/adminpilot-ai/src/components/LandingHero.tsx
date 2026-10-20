@@ -1,7 +1,9 @@
 import { ArrowRight, ShieldCheck, Lock, CheckCircle2, Sparkles } from "lucide-react";
 import { trackEvent } from "@/lib/analytics";
 
+
 export function LandingHero() {
+
   const scrollToApp = (event: React.MouseEvent) => {
     event.preventDefault();
     trackEvent("start_flow", { location: "hero_cta" });
@@ -17,15 +19,15 @@ export function LandingHero() {
         <div className="lg:col-span-7 space-y-7">
           <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/10 border border-white/15 text-sm font-semibold text-blue-100">
             <Sparkles className="w-4 h-4 text-cyan-300" />
-            Household admin without the admin headache
+            List. Plan. Save.
           </div>
 
           <h1 className="text-4xl sm:text-5xl md:text-6xl font-extrabold tracking-tight leading-[1.06] max-w-4xl">
-            Sort bills, renewals and subscriptions without the admin headache.
+            Your household bills. One place.
           </h1>
 
           <p className="text-lg sm:text-xl text-blue-100/85 leading-relaxed max-w-2xl">
-            Choose a bill, add what you know, and get clear next steps, a provider message and a checklist you stay in control of.
+            List your household bills, plan your next steps and save useful plans. Prepare provider messages and review every action before sending.
           </p>
 
           <div className="flex flex-col sm:flex-row gap-3 pt-2">
@@ -36,10 +38,12 @@ export function LandingHero() {
               Start with a bill <ArrowRight className="w-5 h-5" />
             </button>
             <a
-              href="#examples"
+              href="https://tenaciouspl.co.uk/#example"
+              target="_blank"
+              rel="noopener noreferrer"
               className="min-h-[52px] bg-white/10 hover:bg-white/15 text-white px-7 py-3.5 rounded-xl font-bold text-base sm:text-lg flex items-center justify-center transition-all border border-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300"
             >
-              See examples
+              See website examples
             </a>
           </div>
 
@@ -55,7 +59,7 @@ export function LandingHero() {
             <div className="bg-white rounded-2xl p-5 sm:p-6 text-slate-900 shadow-xl">
               <div className="flex items-center justify-between gap-3 mb-5">
                 <div>
-                  <p className="text-xs font-bold text-primary uppercase tracking-wider">LifeAdmin plan</p>
+                  <p className="text-xs font-bold text-primary uppercase tracking-wider">HomeAdmin plan</p>
                   <h2 className="text-xl font-extrabold mt-1">Sky bill too high</h2>
                 </div>
                 <span className="px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 text-xs font-bold">Ready to review</span>
@@ -68,13 +72,9 @@ export function LandingHero() {
                 <PreviewRow number="4" title="Approval checklist" text="Review the price, term and exit fees before agreeing." />
               </div>
 
-              <div className="mt-5 rounded-xl bg-slate-900 text-white p-4 flex items-center justify-between gap-3">
-                <div>
-                  <p className="text-xs text-slate-300 font-semibold">Core one-time price</p>
-                  <p className="text-sm text-slate-200">No subscription</p>
-                </div>
-                <strong className="text-2xl">£0.99</strong>
-              </div>
+              <a href="https://tenaciouspl.co.uk/#contact" target="_blank" rel="noopener noreferrer" className="mt-5 block rounded-xl bg-slate-900 text-white p-4 font-semibold underline underline-offset-4 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300">
+                Examples and support at tenaciouspl.co.uk
+              </a>
             </div>
           </div>
         </div>

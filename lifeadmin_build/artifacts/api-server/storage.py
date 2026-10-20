@@ -1,4 +1,4 @@
-"""Portable account and persistence layer for LifeAdmin AI.
+"""Portable account and persistence layer for HomeAdmin.
 
 PostgreSQL is used when DATABASE_URL is configured. For zero-config local and
 small-host deployments, the app falls back to SQLite in the API data folder.
@@ -15,7 +15,7 @@ import sqlite3
 import uuid
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Any, Iterator
+from typing import Any, Callable, Iterator
 from contextlib import contextmanager
 
 try:  # PostgreSQL is optional for local/free deployments.
@@ -86,6 +86,12 @@ def ensure_schema() -> bool:
                    password_hash TEXT NOT NULL,
                    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
                )""",
+            """CREATE TABLE IF NOT EXISTS adminpilot_password_resets (
+                   token_hash TEXT PRIMARY KEY,
+                   user_id UUID NOT NULL REFERENCES adminpilot_users(id) ON DELETE CASCADE,
+                   expires_at TIMESTAMPTZ NOT NULL,
+                   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+               )""",
             """CREATE TABLE IF NOT EXISTS adminpilot_sessions (
                    token_hash TEXT PRIMARY KEY,
                    user_id UUID NOT NULL REFERENCES adminpilot_users(id) ON DELETE CASCADE,
@@ -132,6 +138,12 @@ def ensure_schema() -> bool:
                 id TEXT PRIMARY KEY,
                 email TEXT NOT NULL UNIQUE,
                 password_hash TEXT NOT NULL,
+                created_at TEXT NOT NULL
+            );
+            CREATE TABLE IF NOT EXISTS adminpilot_password_resets (
+                token_hash TEXT PRIMARY KEY,
+                user_id TEXT NOT NULL REFERENCES adminpilot_users(id) ON DELETE CASCADE,
+                expires_at TEXT NOT NULL,
                 created_at TEXT NOT NULL
             );
             CREATE TABLE IF NOT EXISTS adminpilot_sessions (
@@ -317,7 +329,8 @@ def delete_session(token: str | None) -> None:
             conn.execute("DELETE FROM adminpilot_sessions WHERE token_hash = ?", (token_hash,))
 
 
-def delete_account(user_id: str, password: str) -> None:
+def delete_account(user_id: str, password: str, *, before_delete: Callable[[], None] | None = None) -> None:
+    """Verify first; allow cleanup to fail before erasing the retry identity."""
     if backend() == "postgresql":
         with connect() as conn:
             with conn.cursor() as cur:
@@ -325,6 +338,8 @@ def delete_account(user_id: str, password: str) -> None:
                 row = cur.fetchone()
                 if not row or not _password_matches(password or "", row[0]):
                     raise ValueError("Password is incorrect")
+                if before_delete is not None:
+                    before_delete()
                 cur.execute("DELETE FROM adminpilot_users WHERE id = %s", (user_id,))
     else:
         ensure_schema()
@@ -332,6 +347,8 @@ def delete_account(user_id: str, password: str) -> None:
             row = conn.execute("SELECT password_hash FROM adminpilot_users WHERE id = ?", (user_id,)).fetchone()
             if not row or not _password_matches(password or "", row[0]):
                 raise ValueError("Password is incorrect")
+            if before_delete is not None:
+                before_delete()
             conn.execute("DELETE FROM adminpilot_users WHERE id = ?", (user_id,))
 
 
@@ -420,6 +437,18 @@ def list_notes(user_id: str) -> list[dict[str, Any]]:
     return [json.loads(row[0]) for row in rows]
 
 
+def delete_note(user_id: str, note_id: str) -> bool:
+    if backend() == "postgresql":
+        with connect() as conn:
+            with conn.cursor() as cur:
+                cur.execute("DELETE FROM adminpilot_notes WHERE user_id = %s AND id = %s", (user_id, note_id))
+                return cur.rowcount > 0
+    ensure_schema()
+    with sqlite_connect() as conn:
+        cur = conn.execute("DELETE FROM adminpilot_notes WHERE user_id = ? AND id = ?", (user_id, note_id))
+        return cur.rowcount > 0
+
+
 def get_purchases(user_id: str) -> dict[str, bool]:
     if backend() == "postgresql":
         with connect() as conn:
@@ -433,25 +462,27 @@ def get_purchases(user_id: str) -> dict[str, bool]:
 
 
 def unlock_purchase(user_id: str, product_id: str, source: str, session_id: str | None = None) -> None:
+    # Delayed signed payment events must not recreate a deleted account's access.
+    # Select the existing owner in the same statement rather than checking first.
     if backend() == "postgresql":
         with connect() as conn:
             with conn.cursor() as cur:
                 cur.execute(
                     """INSERT INTO adminpilot_purchases (user_id, product_id, source, session_id)
-                       VALUES (%s, %s, %s, %s)
+                       SELECT id, %s, %s, %s FROM adminpilot_users WHERE id = %s
                        ON CONFLICT (user_id, product_id)
                        DO UPDATE SET source = EXCLUDED.source, session_id = EXCLUDED.session_id, unlocked_at = NOW()""",
-                    (user_id, product_id, source, session_id),
+                    (product_id, source, session_id, user_id),
                 )
     else:
         ensure_schema()
         with sqlite_connect() as conn:
             conn.execute(
                 """INSERT INTO adminpilot_purchases (user_id, product_id, source, session_id, unlocked_at)
-                   VALUES (?, ?, ?, ?, ?)
+                   SELECT id, ?, ?, ?, ? FROM adminpilot_users WHERE id = ?
                    ON CONFLICT(user_id, product_id)
                    DO UPDATE SET source = excluded.source, session_id = excluded.session_id, unlocked_at = excluded.unlocked_at""",
-                (user_id, product_id, source, session_id, _now_iso()),
+                (product_id, source, session_id, _now_iso(), user_id),
             )
 
 
@@ -510,3 +541,70 @@ def admin_overview() -> dict[str, Any]:
         "goals": goals,
         "recent_activity": recent_activity,
     }
+
+
+def issue_password_reset(email: str) -> tuple[str, str] | None:
+    """Worker-only issuance. Keep existing valid links; throttle each account."""
+    ensure_schema()
+    token = secrets.token_urlsafe(32)
+    digest = hashlib.sha256(token.encode()).hexdigest()
+    now = datetime.now(timezone.utc)
+    expires = now + timedelta(minutes=30)
+    cutoff = now - timedelta(minutes=2)
+    if backend() == "postgresql":
+        with connect() as conn:
+            with conn.cursor() as cur:
+                cur.execute("SELECT id, email FROM adminpilot_users WHERE email = %s FOR UPDATE", (normalize_email(email),))
+                row = cur.fetchone()
+                if not row:
+                    return None
+                cur.execute("DELETE FROM adminpilot_password_resets WHERE expires_at <= NOW()")
+                cur.execute("SELECT 1 FROM adminpilot_password_resets WHERE user_id = %s AND created_at > %s", (row[0], cutoff))
+                if cur.fetchone():
+                    return None
+                cur.execute("INSERT INTO adminpilot_password_resets (token_hash, user_id, expires_at) VALUES (%s, %s, %s)", (digest, row[0], expires))
+                return row[1], token
+    with sqlite_connect() as conn:
+        conn.execute("BEGIN IMMEDIATE")
+        row = conn.execute("SELECT id, email FROM adminpilot_users WHERE email = ?", (normalize_email(email),)).fetchone()
+        if not row:
+            return None
+        conn.execute("DELETE FROM adminpilot_password_resets WHERE expires_at <= ?", (now.isoformat(),))
+        if conn.execute("SELECT 1 FROM adminpilot_password_resets WHERE user_id = ? AND created_at > ?", (row[0], cutoff.isoformat())).fetchone():
+            return None
+        conn.execute("INSERT INTO adminpilot_password_resets VALUES (?, ?, ?, ?)", (digest, row[0], expires.isoformat(), now.isoformat()))
+        return row[1], token
+
+
+def reset_password(token: str, password: str) -> str:
+    """Consume a valid token atomically with password change and session revocation."""
+    if not isinstance(token, str) or not 32 <= len(token) <= 128:
+        raise ValueError("Reset link is invalid or expired. Request a new link.")
+    validate_credentials("recovery@example.invalid", password)
+    digest = hashlib.sha256(token.encode()).hexdigest()
+    password_hash = _password_hash(password)
+    ensure_schema()
+    if backend() == "postgresql":
+        with connect() as conn:
+            with conn.cursor() as cur:
+                # Lock the owner first so two different links cannot reset concurrently.
+                cur.execute("SELECT u.id, u.email FROM adminpilot_users u JOIN adminpilot_password_resets r ON r.user_id = u.id WHERE r.token_hash = %s FOR UPDATE OF u", (digest,))
+                owner = cur.fetchone()
+                if not owner:
+                    raise ValueError("Reset link is invalid or expired. Request a new link.")
+                cur.execute("DELETE FROM adminpilot_password_resets WHERE token_hash = %s AND expires_at > NOW() RETURNING user_id", (digest,))
+                if not cur.fetchone():
+                    raise ValueError("Reset link is invalid or expired. Request a new link.")
+                cur.execute("UPDATE adminpilot_users SET password_hash = %s WHERE id = %s", (password_hash, owner[0]))
+                cur.execute("DELETE FROM adminpilot_sessions WHERE user_id = %s", (owner[0],))
+                cur.execute("DELETE FROM adminpilot_password_resets WHERE user_id = %s", (owner[0],))
+                return owner[1]
+    with sqlite_connect() as conn:
+        conn.execute("BEGIN IMMEDIATE")
+        owner = conn.execute("SELECT u.id, u.email FROM adminpilot_users u JOIN adminpilot_password_resets r ON r.user_id = u.id WHERE r.token_hash = ? AND r.expires_at > ?", (digest, _now_iso())).fetchone()
+        if not owner:
+            raise ValueError("Reset link is invalid or expired. Request a new link.")
+        conn.execute("UPDATE adminpilot_users SET password_hash = ? WHERE id = ?", (password_hash, owner[0]))
+        conn.execute("DELETE FROM adminpilot_sessions WHERE user_id = ?", (owner[0],))
+        conn.execute("DELETE FROM adminpilot_password_resets WHERE user_id = ?", (owner[0],))
+        return owner[1]

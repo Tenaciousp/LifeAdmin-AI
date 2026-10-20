@@ -1,0 +1,32 @@
+# Review-only configuration. Do not submit without owner cost/publication approval.
+# This file is deliberately not named render.yaml at the repository root.
+services:
+  - type: web
+    name: lifeadmin-web
+    runtime: docker
+    plan: 0.5c-512mb
+    region: frankfurt
+    branch: dev/energy-renewal-plan
+    dockerfilePath: ./lifeadmin_build/Dockerfile
+    dockerContext: ./lifeadmin_build
+    autoDeployTrigger: "off"
+    healthCheckPath: /api/health
+    disk:
+      name: lifeadmin-data
+      mountPath: /app/artifacts/api-server/data
+      sizeGB: 1
+    envVars:
+      - key: APP_ENV
+        value: production
+      - key: SESSION_SECRET
+        generateValue: true
+      - key: APP_BASE_URL
+        sync: false
+      - key: ADMIN_EMAILS
+        sync: false
+      - key: SQLITE_DB_PATH
+        value: /app/artifacts/api-server/data/lifeadmin.sqlite3
+      - key: DEMO_PAYMENTS
+        value: "false"
+# Stripe and AI secrets are intentionally absent. Checkout stays in preview.
+# autoDeployTrigger does not prevent an initial deployment if submitted.
