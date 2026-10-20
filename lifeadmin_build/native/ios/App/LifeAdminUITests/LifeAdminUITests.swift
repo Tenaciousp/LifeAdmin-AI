@@ -42,11 +42,24 @@ final class LifeAdminUITests: XCTestCase {
             if element.exists {
                 let frame = element.frame
                 let centre = CGPoint(x: frame.midX, y: frame.midY)
-                if element.isHittable && viewport.contains(centre) { return }
+                // A small text label must be fully visible before hit testing;
+                // a clipped glyph can have an invalid activation point even
+                // when its frame centre falls inside the viewport.
+                let inView = element.elementType == .staticText
+                    ? viewport.contains(frame) : viewport.contains(centre)
+                if !frame.isEmpty && inView && element.isHittable { return }
                 // Opening the editor can shorten the plan and move its fields
                 // above the viewport. Scroll toward the observed target.
                 if frame.minY < viewport.minY {
-                    app.swipeDown()
+                    // A full swipe can overshoot a heading near the top after
+                    // rotation. Keep the native gesture proportional and bounded.
+                    let distance = min(viewport.height * 0.6,
+                                       max(60, viewport.minY - frame.minY + 24))
+                    let start = app.coordinate(withNormalizedOffset: .zero)
+                        .withOffset(CGVector(dx: viewport.midX,
+                                             dy: viewport.minY + viewport.height * 0.2))
+                    start.press(forDuration: 0.01,
+                                thenDragTo: start.withOffset(CGVector(dx: 0, dy: distance)))
                     continue
                 }
             }
