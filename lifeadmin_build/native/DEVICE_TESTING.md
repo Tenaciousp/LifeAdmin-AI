@@ -181,7 +181,8 @@ migrations and supported OS/device transfer remain separate acceptance gates.
 - Verify the customer workflow has no automatic household-data network requests.
 - Complete physical iPad QA last, after compilation and the preceding checks.
 - Finish signing, store purchase configuration, seller/privacy details, listing
-  materials and store review. No voluntary 14-day refund promise is approved.
+  materials and store review. Confirm refund handling and final purchase wording
+  against the current submission pack before sale.
 
 There is no Tenaciouspl recovery copy and no guaranteed OS restore route. Test
 results must distinguish configured support from observed successful recovery.
