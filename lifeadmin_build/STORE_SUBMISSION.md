@@ -1,6 +1,6 @@
 # HomeAdmin store submission pack
 
-Updated 19 October 2026. This pack supersedes earlier account-based web release plans.
+Updated 20 October 2026. This pack supersedes earlier account-based web release plans.
 
 Current branding: **HomeAdmin**, by **TenaciousPL**. The Account Holder confirmed the name saved successfully in the existing Apple record on 19 October. The approved logo master is `branding/homeadmin-logo.png`; see `BRANDING.md`. New app screenshots must be captured from the renamed build. Earlier screenshots and reports retain their original names as historical evidence and are not the final listing artwork.
 
@@ -43,6 +43,11 @@ Open your preferred service and paste the prompt yourself. Pasting shares the
 text with the chosen service. Review its reply before updating your bill or
 message in HomeAdmin. Prompt edits are temporary and do not change saved bills, plans or messages.
 
+Optionally connect a writable calendar for contract expiry, renewal, notice and
+follow-up dates. Calendar permission is requested when you choose to connect.
+Your calendar provider might sync these entries. Removing an entry from
+HomeAdmin does not remove every external calendar or backup copy.
+
 Export a readable JSON backup to a private location of your choice. Restore
 replaces existing records after confirmation. Device and cloud backups depend
 on your settings; downloading the app again does not guarantee recovery of bills.
@@ -64,7 +69,7 @@ general guidance and do not guarantee savings.
 | App identifier | uk.co.tenaciouspl.lifeadmin |
 | Initial version | 1.0, build 1 |
 | Seller address | Owner deferred review on 18 October 2026; keep address unresolved and do not publish the home address |
-| Store accounts / signing | Apple membership active, Team ID C8T85FCR6R; signing credentials and TestFlight delivery still outstanding |
+| Store accounts / signing | Apple membership active, Team ID C8T85FCR6R; three protected-environment signing secrets configured; PR #4 awaiting CI; no signed build or TestFlight delivery yet |
 | Ratings | Complete store questionnaires from the final app |
 | Refunds | Owner-approved 14-day full-refund policy; verify store-compatible process and wording before publishing purchase terms |
 
@@ -99,6 +104,44 @@ required-reason declarations and questionnaire review.
 
 ## Evidence and remaining gates
 
+### Current handoff: 20 October 2026
+
+- PR #2 merged into main as `ddeb463c6ba75e7158ad0e0ae20907fc3f29a286`.
+  Full main CI #415 passed all eight jobs:
+  https://github.com/Tenaciousp/LifeAdmin-AI/actions/runs/39400139173
+- The owner approved merging the app and signing preparation. Signing PR #4
+  remains open at `3389e4b6ad25847499a7e42c4cd159fc7257cc2e`:
+  https://github.com/Tenaciousp/LifeAdmin-AI/pull/4
+- PR CI #416 has seven successful jobs. Its second iPad attempt passed the
+  application journey, including exact backup/restore and storage recovery, but
+  correctly failed capture completeness: 73,293 kernel drops from 1,003,493
+  received packets, with 930,198 metadata-filter drops and two retained packets.
+  The requested buffer was 64 MiB; the reported kernel ceiling was 32 MiB.
+  Neither figure measures actual allocation or establishes the cause of loss.
+  A third iPad attempt is running; do not treat the rerun as a pass:
+  https://github.com/Tenaciousp/LifeAdmin-AI/actions/runs/39400158655
+- On 20 October all ten #416 store PNGs were downloaded, dimensions and SHA-256
+  hashes matched their manifests, and both contact sheets were visually reviewed.
+  Source merge: `5180902dc3882380a6fd9346bfd76326098da1f0`; screenshot
+  code/assets fingerprint:
+  `9392a929c29f37846d2660fa5af5914e85ce898c4acdc39a702faa8ea0c0c6c1`.
+  HomeAdmin branding, invented records and the selected section headings are
+  visible. Some scrolled captures include preceding content; final listing
+  composition remains open. These simulator captures are not signed-build QA.
+- The signing-profile synthetic check passed locally, including rejection of
+  wrong team/app, expired, ad-hoc, enterprise, development and non-iOS profiles.
+  This does not validate the real private credentials on macOS.
+- All three signing secrets are configured in environment `apple-signing`.
+  Planned first version/build: 1.0 (1), preserving
+  `uk.co.tenaciouspl.lifeadmin` and Team `C8T85FCR6R`.
+- Next gate: require successful PR CI before merging signing preparation, then
+  successful full CI for the exact resulting main commit before manually
+  dispatching the signed build. Inspect the exported IPA and source/build
+  evidence before upload. Upload, TestFlight installation, submission and public
+  release remain separate stages; none has occurred.
+
+### Earlier evidence: 19 October 2026
+
 Reviewed application/test source: `4a16999f2017ef77bb6b063651556a2e58e27259`.
 Tested merge: `00a4da507192b3d29d30f591e0a5d391a5963bc3`.
 All eight CI #405 jobs passed: verification, unsigned archive, both full
@@ -131,23 +174,26 @@ journal, not native-process interruption, storage pressure or power loss.
 ### Signing and release preparation
 
 Apple membership is active and the existing app record is named HomeAdmin.
-Configure the approved signing route before TestFlight. Signed delivery and physical-device tests
-have not been completed. Do not purchase additional services automatically.
+The approved GitHub Mac signing workflow is prepared in PR #4; credentials are
+configured, but the workflow is not merged or executed. Signed delivery and
+physical-device tests have not been completed. Do not purchase additional services automatically.
 
 - Listing and reviewer copy: prepared; validate final console limits and fields.
-- Screenshot tooling: both #405 capture jobs passed and all ten original images
-  were reviewed. Final listing image selection and presentation remain open.
+- Screenshot tooling: both #416 capture jobs passed and all ten current images
+  were reviewed on 20 October. Final listing image selection and presentation
+  remain open.
 - Privacy declaration: draft only; finish native live-network/SDK review and
   repeat against the eventual signed package before submitting answers.
 - Support/privacy URLs: HTTPS availability and content checked on 18 October.
-  Website version 13 is live with HomeAdmin/TenaciousPL branding and explicit manual-AI
-  sharing guidance. This does not establish final signed-package privacy answers.
+  Website version 14 is live with HomeAdmin/TenaciousPL branding, manual-AI
+  sharing guidance and optional calendar-provider syncing disclosures. This does not establish final signed-package privacy answers.
 - Manual accessibility, supported minimum OS, cloud file-provider behaviour,
   device transfer and native interruption/storage-pressure checks remain open.
 - Seller name: owner approved Paul Lonergan. Address review remains deferred;
   do not publish the home address.
 - The owner has no Android test device. Physical iPad QA follows earlier checks.
-- Keep PR #2 draft pending explicit merge/submission/release approval.
+- PR #2 is merged with owner approval. PR #4 awaits green CI; signed build,
+  submission and public release are not yet complete.
 
 ### Store screenshot production plan
 
@@ -181,8 +227,10 @@ Native clipboard writes are local-only and expire after five minutes; exported
 JSON files are readable and remain under the customer's control.
 
 Capacitor and Cordova each include a privacy manifest declaring tracking false
-with empty collected-data, tracking-domain and accessed-API arrays. No app-level
-manifest is present. These observations do not establish a final App Store
+with empty collected-data, tracking-domain and accessed-API arrays. That archive predates the current app-level manifest. Current source includes
+`native/ios/App/App/PrivacyInfo.xcprivacy`, declaring UserDefaults reason CA92.1
+for local app preferences used by the optional calendar integration. Its presence
+and SDK manifests still require verification in the eventual signed export. These observations do not establish a final App Store
 privacy classification or prove absence of every required-reason API.
 Capacitor retains networking capability; static review is not live traffic
 measurement. Native live-network and final signed-package checks remain open.
@@ -212,7 +260,8 @@ capture check. Existing native assertions and time limits are unchanged.
 
 Artifacts: network-packets.txt, network-capture.log and network-capture.json
 inside the usual Apple launch evidence. CI execution and manual attribution of
-App/WebKit traffic are pending. WebKit traffic without App effective-process attribution is outside this capture;
+App/WebKit traffic remain incomplete for PR #4 because of the iPad capture loss
+described above. WebKit traffic without App effective-process attribution is outside this capture;
 review attribution and use broader targeted Instruments checks before final sign-off. Successful capture is not a zero-network result, a signed
 binary review or a final privacy declaration.
 
