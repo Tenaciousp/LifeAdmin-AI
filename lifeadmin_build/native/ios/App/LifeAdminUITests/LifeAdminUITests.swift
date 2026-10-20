@@ -9,12 +9,17 @@ final class LifeAdminUITests: XCTestCase {
     }
 
     override func tearDownWithError() throws {
-        let screen = XCTAttachment(screenshot: app.screenshot())
+        // Tests may deliberately terminate the app; retain evidence without
+        // requesting an app-region screenshot from a missing process.
+        let screenshot = app.state == .runningForeground
+            ? app.screenshot() : XCUIScreen.main.screenshot()
+        let screen = XCTAttachment(screenshot: screenshot)
         screen.name = "Final customer screen"
         screen.lifetime = .keepAlways
         add(screen)
         if let run = testRun, run.hasSucceeded == false {
-            let description = app.debugDescription
+            let description = app.state == .notRunning
+                ? "App was not running at teardown." : app.debugDescription
             print(description)
             let tree = XCTAttachment(string: description)
             tree.name = "Accessibility tree on failure"
@@ -97,12 +102,15 @@ final class LifeAdminUITests: XCTestCase {
     }
 
     private func enterText(_ value: String, into field: XCUIElement) {
+        let started = Date()
+        print("Keyboard entry started at \(started.timeIntervalSince1970)")
         prepareKeyboard(for: field)
         // Use one native typing operation; verify the complete controlled value.
         field.typeText(value)
         let complete = XCTNSPredicateExpectation(
             predicate: NSPredicate(format: "value == %@", value), object: field)
         XCTAssertEqual(XCTWaiter.wait(for: [complete], timeout: 10), .completed)
+        print("Keyboard entry completed in \(Date().timeIntervalSince(started))s")
     }
 
     private func confirm(timeout: TimeInterval = 5) {
@@ -308,6 +316,23 @@ final class LifeAdminUITests: XCTestCase {
         let prepare = app.buttons["Prepare AI prompt"]
         reveal(prepare)
         XCTAssertTrue(prepare.isHittable, "The newer app's AI review feature must be present")
+    }
+
+    func testKeyboardEntryAfterRepeatedRelaunch() throws {
+        // Isolate the post-relaunch keyboard path without file pickers or restore.
+        // Keep native idle synchronization and exact text/keyboard assertions.
+        for cycle in 1...4 {
+            print("Keyboard relaunch cycle \(cycle) started at \(Date().timeIntervalSince1970)")
+            app.launch()
+            assertWorkspaceReady()
+            let search = app.textFields.firstMatch
+            search.tap()
+            enterText("Cancel Netflix", into: search)
+            closeKeyboard()
+            app.terminate()
+            XCTAssertTrue(app.wait(for: .notRunning, timeout: 10))
+            print("Keyboard relaunch cycle \(cycle) completed at \(Date().timeIntervalSince1970)")
+        }
     }
 
     func testNativeBackupRoundTripAndCancellationPreserveRecords() throws {

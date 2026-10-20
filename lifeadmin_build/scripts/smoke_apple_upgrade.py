@@ -13,7 +13,7 @@ import plistlib
 import subprocess
 
 from smoke_apple_simulator import (
-    run_ui_test, select_ios_runtime, select_simulator_type, sim,
+    restart_simulator, run_ui_test, select_ios_runtime, select_simulator_type, sim,
     verify_device_records, verify_export_staging_removed,
 )
 
@@ -93,6 +93,9 @@ def main():
             raise RuntimeError("Candidate application was not installed")
         verify_device_records(device, BUNDLE, backup)
         for method, label, root in cases[1:]:
+            if args.device_family == "ipad":
+                restart_simulator(device)
+                verify_device_records(device, BUNDLE, backup)
             run_ui_test(device, evidence, method, label + ".log", str(evidence / (label + ".xcresult")))
             verify_device_records(device, BUNDLE, backup)
         if backup.read_bytes() != original_export:
