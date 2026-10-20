@@ -9,12 +9,17 @@ final class LifeAdminUITests: XCTestCase {
     }
 
     override func tearDownWithError() throws {
-        let screen = XCTAttachment(screenshot: app.screenshot())
+        // Tests may deliberately terminate the app; retain evidence without
+        // requesting an app-region screenshot from a missing process.
+        let screenshot = app.state == .runningForeground
+            ? app.screenshot() : XCUIScreen.main.screenshot()
+        let screen = XCTAttachment(screenshot: screenshot)
         screen.name = "Final customer screen"
         screen.lifetime = .keepAlways
         add(screen)
         if let run = testRun, run.hasSucceeded == false {
-            let description = app.debugDescription
+            let description = app.state == .notRunning
+                ? "App was not running at teardown." : app.debugDescription
             print(description)
             let tree = XCTAttachment(string: description)
             tree.name = "Accessibility tree on failure"
