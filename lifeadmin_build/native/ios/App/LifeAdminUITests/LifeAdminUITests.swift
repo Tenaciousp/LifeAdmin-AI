@@ -102,7 +102,8 @@ final class LifeAdminUITests: XCTestCase {
         field.typeText(value)
         let complete = XCTNSPredicateExpectation(
             predicate: NSPredicate(format: "value == %@", value), object: field)
-        XCTAssertEqual(XCTWaiter.wait(for: [complete], timeout: 10), .completed)
+        XCTAssertEqual(XCTWaiter.wait(for: [complete], timeout: 10), .completed,
+                       "Expected text: \(value.debugDescription); observed value: \(String(reflecting: field.value))")
     }
 
     private func confirm(timeout: TimeInterval = 5) {
