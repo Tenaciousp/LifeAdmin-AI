@@ -3,6 +3,7 @@
 macOS CI only. No packet payload file or HTTP body/header dump is saved.
 Only App-attributed traffic and this synthetic control process are retained.
 """
+from contextlib import contextmanager
 import json
 import os
 from pathlib import Path
@@ -41,20 +42,24 @@ def capture_snapshot(evidence, stage):
         output.write(json.dumps(sample) + "\n")
 
 
-def main():
-    command = sys.argv[1:]
-    if command[:1] == ["--"]:
-        command = command[1:]
-    if sys.platform != "darwin" or not command:
-        raise SystemExit("Requires macOS and a test command after --")
+@contextmanager
+def capture_network(segment="acceptance"):
+    """Capture all native acceptance activity after simulator boot/install."""
+    if sys.platform != "darwin":
+        raise RuntimeError("Native packet capture requires macOS")
     evidence = Path("apple-launch-evidence")
     evidence.mkdir(exist_ok=True)
-    packets = evidence / "network-packets.txt"
-    diagnostic = evidence / "network-capture.log"
+    if segment not in ("acceptance", "preflight"):
+        raise ValueError("Unknown capture segment")
+    suffix = "-preflight" if segment == "preflight" else ""
+    packets = evidence / ("network-packets" + suffix + ".txt")
+    diagnostic = evidence / ("network-capture" + suffix + ".log")
     pidfile = evidence / "network-capture.pid"
     pidfile.unlink(missing_ok=True)
     report = {
-        "scope": "Packet metadata attributed to App plus the synthetic control process; not signed-device or payload inspection",
+        "scope": "Packet metadata during native app acceptance, after simulator boot/install; not signed-device or payload inspection",
+        "simulator_boot_and_initial_install_excluded": True,
+        "segment": segment,
         "manual_process_attribution_required": True,
         "attribution_limit": "Loopback traffic except the control, and WebKit traffic without App effective-process attribution, are outside this capture",
         "started_at_unix": time.time(),
@@ -66,7 +71,8 @@ def main():
         int(ceiling.stdout.strip())
         if ceiling.returncode == 0 and ceiling.stdout.strip().isdigit() else None
     )
-    (evidence / "network-stages.jsonl").write_text("")
+    if segment == "preflight":
+        (evidence / "network-stages.jsonl").write_text("")
     # Reserve the control port before compiling the capture filter. Exclude
     # unrelated loopback/debug traffic in BPF, before packets reach the buffer.
     receiver = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -112,8 +118,9 @@ def main():
             report["control_packet_seen"] = True
             report["test_started_at_unix"] = time.time()
             capture_snapshot(evidence, "before-test-command")
-            result = subprocess.run(command, check=False)
-            report["test_exit_code"] = result.returncode
+            report["test_exit_code"] = 1
+            yield report
+            report["test_exit_code"] = 0
             if trace.poll() is not None:
                 raise RuntimeError("Packet capture ended before the test command")
         finally:
@@ -130,12 +137,23 @@ def main():
             drops = re.findall(r"(\d+) packets dropped by kernel", diagnostic.read_text())
             report["packets_dropped_by_kernel"] = int(drops[-1]) if drops else None
             report["ended_at_unix"] = time.time()
-            (evidence / "network-capture.json").write_text(json.dumps(report, indent=2) + "\n")
+            (evidence / ("network-capture" + suffix + ".json")).write_text(json.dumps(report, indent=2) + "\n")
             pidfile.unlink(missing_ok=True)
     if report["capture_exit_code"] != 0 or report["packets_dropped_by_kernel"] != 0:
         raise RuntimeError("Capture incomplete; inspect network-capture.log")
     # Successful capture is not a zero-network or privacy classification.
-    raise SystemExit(report["test_exit_code"])
+
+
+def main():
+    command = sys.argv[1:]
+    if command[:1] == ["--"]:
+        command = command[1:]
+    if not command:
+        raise SystemExit("Provide a test command after --")
+    with capture_network():
+        result = subprocess.run(command, check=False)
+        if result.returncode:
+            raise SystemExit(result.returncode)
 
 
 if __name__ == "__main__":

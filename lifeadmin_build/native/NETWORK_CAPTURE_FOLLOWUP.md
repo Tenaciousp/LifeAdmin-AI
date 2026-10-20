@@ -40,3 +40,30 @@ Final signed-package and physical-device privacy review remain outstanding.
 Source references:
 - https://github.com/apple-oss-distributions/tcpdump/blob/main/tcpdump/tcpdump.c
 - https://github.com/apple-oss-distributions/xnu/blob/main/bsd/net/bpf.c
+
+
+## 20 October: CI #422 diagnostic repair
+
+The allocated buffer was measured at 33,554,432 bytes. All 34,923 kernel drops
+were already present before the first accessibility test; the counter did not
+increase during the app test stages. The isolated four-cycle keyboard test
+passed, but the following freshly reinstalled backup test again exhausted its
+unchanged 900-second limit in animation-idle waits. The iPad upgrade failed
+before a later test could start because SpringBoard reported the test runner
+still installing/uninstalling. No app assertion established data loss.
+
+The full simulator script now starts capture only after initial boot/install,
+before any app launch. Preflight accessibility/keyboard tests and the full
+acceptance journey have separate control-verified capture segments, each with
+the zero-drop gate. Simulator preparation and the intervening OS restart are
+outside capture; no customer-app workflow executes during that gap. Both
+network-capture-preflight.json and network-capture.json must pass. Packet and
+log files retain the same suffix scheme. Per-stage counters remain available.
+
+After the iPad keyboard test and fresh reinstall, restart the disposable OS
+before the backup journey. Restart the iPad upgrade simulator before each
+candidate test session without uninstalling, reseeding or replacing app data;
+compare the original exported records again before testing. These changes do
+not retry failed app tests, bypass native idle synchronization or extend limits.
+They require fresh macOS execution before signing. Zero loss in the shorter
+#421 preflight run did not establish completeness for the full journey.

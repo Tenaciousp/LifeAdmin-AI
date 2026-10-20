@@ -1,12 +1,14 @@
 """Synthetic checks for allocation/counter evidence and process filtering."""
+from contextlib import chdir
 import json
+import re
 from pathlib import Path
 import subprocess
 import tempfile
 import unittest
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
-from capture_apple_network import capture_snapshot
+from capture_apple_network import capture_network, capture_snapshot
 from smoke_apple_simulator import run_ui_test
 
 
@@ -42,6 +44,45 @@ class CaptureSnapshotTests(unittest.TestCase):
             with patch("capture_apple_network.subprocess.run") as run:
                 capture_snapshot(evidence, "uncaptured-upgrade")
                 run.assert_not_called()
+
+    def test_capture_segments_keep_zero_loss_gate_and_record_failure(self):
+        for dropped, customer_failure in ((0, False), (3, False), (0, True)):
+            with self.subTest(dropped=dropped, customer_failure=customer_failure), tempfile.TemporaryDirectory() as temporary, chdir(temporary):
+                trace = Mock(returncode=0)
+                trace.poll.return_value = None
+                def start(*args, **kwargs):
+                    port = re.search(r"port (\d+)", args[0][-1]).group(1)
+                    kwargs["stdout"].write("127.0.0.1." + port + " control\n")
+                    kwargs["stdout"].flush()
+                    kwargs["stderr"].write("listening on pktap,all\n")
+                    kwargs["stderr"].flush()
+                    Path("apple-launch-evidence/network-capture.pid").write_text("7319")
+                    def finish(**_):
+                        kwargs["stderr"].write(str(dropped) + " packets dropped by kernel\n")
+                        kwargs["stderr"].flush()
+                    trace.wait.side_effect = finish
+                    return trace
+                with patch("capture_apple_network.sys.platform", "darwin"), patch(
+                    "capture_apple_network.subprocess.Popen", side_effect=start
+                ), patch("capture_apple_network.subprocess.run", return_value=
+                         subprocess.CompletedProcess([], 0, "33554432", "")), patch(
+                    "capture_apple_network.capture_snapshot"
+                ):
+                    expected = ValueError if customer_failure else RuntimeError if dropped else None
+                    def acceptance():
+                        with capture_network("preflight"):
+                            if customer_failure:
+                                raise ValueError("Native assertion failed")
+                    if expected:
+                        with self.assertRaises(expected):
+                            acceptance()
+                    else:
+                        acceptance()
+                report = json.loads(Path("apple-launch-evidence/network-capture-preflight.json").read_text())
+                self.assertEqual(report["packets_dropped_by_kernel"], dropped)
+                self.assertEqual(report["test_exit_code"], int(customer_failure))
+                self.assertTrue(report["control_packet_seen"])
+                self.assertFalse(Path("apple-launch-evidence/network-capture.pid").exists())
 
     def test_failed_ui_test_keeps_timeout_and_after_snapshot(self):
         with tempfile.TemporaryDirectory() as temporary:

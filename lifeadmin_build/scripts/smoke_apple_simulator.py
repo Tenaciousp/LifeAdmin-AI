@@ -7,7 +7,7 @@ import json
 import selectors
 import signal
 import sqlite3
-from contextlib import closing
+from contextlib import closing, nullcontext
 from pathlib import Path
 import subprocess
 import sys
@@ -59,6 +59,14 @@ def run_ui_test(device, evidence, method, log_name, result_path):
             ], check=True, stdout=log, stderr=subprocess.STDOUT, timeout=1200)
     finally:
         capture_snapshot(evidence, "after:" + method)
+
+
+def restart_simulator(device):
+    # Restart the disposable OS without deleting app data or retrying a test.
+    # This clears keyboard/runner state left across UI test sessions.
+    sim("shutdown", device, timeout=120)
+    sim("boot", device)
+    sim("bootstatus", device, "-b", timeout=300)
 
 
 def create_invalid_backups(export_path):
@@ -306,147 +314,153 @@ def main():
         sim("boot", device)
         sim("bootstatus", device, "-b", timeout=300)
         sim("install", device, str(app.resolve()), timeout=120)
-        # Let XCTest own the initial launch so a simctl launch timeout does not
-        # prevent collection of UI-test diagnostics. Both checks must still pass.
+        from capture_apple_network import capture_network
+        # Capture every app launch, but not simulator boot/install traffic.
         if args.ui_tests:
-            fixture = prepare_accessibility_fixture(device, bundle, evidence, fixture_text)
-            run_ui_test(device, evidence, "testAppleAccessibilityAuditOnBillsAndPlan",
-                        "accessibility-ui-tests.log", str(evidence / "accessibility.xcresult"))
-            accessibility = verify_device_records(device, bundle, fixture)
-            accessibility["sampled_screen_accessibility_audits_passed"] = True
-            accessibility["scope"] = f"Synthetic seeded fixture on disposable {args.device_family} simulator; manual assistive-technology acceptance outstanding"
-            (evidence / "accessibility.json").write_text(json.dumps(accessibility, indent=2) + "\n")
-            # Reset after the audit; the backup journey must still start empty.
-            sim("uninstall", device, bundle, timeout=120)
-            sim("install", device, str(app.resolve()), timeout=120)
-            if args.device_family == "ipad":
-                run_ui_test(device, evidence, "testKeyboardEntryAfterRepeatedRelaunch",
-                            "keyboard-relaunch-ui-tests.log", str(evidence / "keyboard-relaunch.xcresult"))
-                # The full backup test still starts with an empty installation.
+            with capture_network("preflight"):
+                fixture = prepare_accessibility_fixture(device, bundle, evidence, fixture_text)
+                run_ui_test(device, evidence, "testAppleAccessibilityAuditOnBillsAndPlan",
+                            "accessibility-ui-tests.log", str(evidence / "accessibility.xcresult"))
+                accessibility = verify_device_records(device, bundle, fixture)
+                accessibility["sampled_screen_accessibility_audits_passed"] = True
+                accessibility["scope"] = f"Synthetic seeded fixture on disposable {args.device_family} simulator; manual assistive-technology acceptance outstanding"
+                (evidence / "accessibility.json").write_text(json.dumps(accessibility, indent=2) + "\n")
+                # Reset after the audit; the backup journey must still start empty.
                 sim("uninstall", device, bundle, timeout=120)
                 sim("install", device, str(app.resolve()), timeout=120)
-            print("Starting Apple interactive acceptance on a fresh installation.", flush=True)
-            run_ui_test(device, evidence,
-                        "testNativeBackupRoundTripAndCancellationPreserveRecords",
-                        "ui-tests.log", "apple-ui-tests.xcresult")
-            container = Path(sim("get_app_container", device, bundle, "data"))
-            device_data = next(parent for parent in container.parents if parent.name == "data")
-            exports = [path for path in device_data.rglob("homeadmin-backup.json")
-                       if path.is_file() and "lifeadmin-export-" not in str(path)]
-            if len(exports) != 1:
-                raise RuntimeError(f"Expected one exported JSON document, found {len(exports)}")
-            verification = verify_device_records(device, bundle, exports[0])
-            (evidence / "backup-round-trip.json").write_text(json.dumps(verification, indent=2) + "\n")
-            print("Complete exported/restored native records match.", flush=True)
-            run_ui_test(device, evidence, "testInterruptedBackupPickersPreserveRecords",
-                        "interrupted-picker-ui-tests.log",
-                        str(evidence / "interrupted-pickers.xcresult"))
-            verify_device_records(device, bundle, exports[0])
-            verify_export_staging_removed(device, bundle)
-            verification["export_staging_cleanup_passed"] = True
-            verification["interrupted_picker_checks_passed"] = True
-            (evidence / "backup-round-trip.json").write_text(json.dumps(verification, indent=2) + "\n")
-            create_invalid_backups(exports[0])
-            run_ui_test(device, evidence, "testNativeBackupRejectsInvalidFiles",
-                        "invalid-backup-ui-tests.log",
-                        str(evidence / "invalid-backups.xcresult"))
-            verification = verify_device_records(device, bundle, exports[0])
-            verify_export_staging_removed(device, bundle)
-            verification["export_staging_cleanup_passed"] = True
-            verification["interrupted_picker_checks_passed"] = True
-            verification["invalid_file_checks_passed"] = True
-            (evidence / "backup-round-trip.json").write_text(json.dumps(verification, indent=2) + "\n")
-            print("Native invalid-file rejection preserved the complete saved records.", flush=True)
-            # Install over the populated app without uninstalling. This checks
-            # same-build replacement, not cross-version schema migration.
-            sim("install", device, str(app.resolve()), timeout=120)
-            sim("launch", device, bundle, timeout=120)
-            time.sleep(10)
-            sim("io", device, "screenshot", str(evidence / "package-reinstall.png"))
-            sim("terminate", device, bundle)
-            verify_device_records(device, bundle, exports[0])
-            recovery = {"package_reinstall_preserved_records": True,
-                        "scope": "Disposable CI simulator; same-build reinstall and injected SQL rejection only"}
-            (evidence / "storage-recovery.json").write_text(json.dumps(recovery, indent=2) + "\n")
-            configure_write_failure(device, bundle, True)
-            try:
-                run_ui_test(device, evidence, "testRejectedNativeWritePreservesRecords",
-                            "rejected-write-ui-tests.log", str(evidence / "rejected-write.xcresult"))
+                if args.device_family == "ipad":
+                    run_ui_test(device, evidence, "testKeyboardEntryAfterRepeatedRelaunch",
+                                "keyboard-relaunch-ui-tests.log", str(evidence / "keyboard-relaunch.xcresult"))
+            if args.device_family == "ipad":
+                # Isolate the backup test from the prior keyboard/UI session.
+                # This resets only the disposable OS, never acknowledged data.
+                sim("uninstall", device, bundle, timeout=120)
+                sim("install", device, str(app.resolve()), timeout=120)
+                restart_simulator(device)
+        with capture_network() if args.ui_tests else nullcontext():
+            if args.ui_tests:
+                print("Starting Apple interactive acceptance on a fresh installation.", flush=True)
+                run_ui_test(device, evidence,
+                            "testNativeBackupRoundTripAndCancellationPreserveRecords",
+                            "ui-tests.log", "apple-ui-tests.xcresult")
+                container = Path(sim("get_app_container", device, bundle, "data"))
+                device_data = next(parent for parent in container.parents if parent.name == "data")
+                exports = [path for path in device_data.rglob("homeadmin-backup.json")
+                           if path.is_file() and "lifeadmin-export-" not in str(path)]
+                if len(exports) != 1:
+                    raise RuntimeError(f"Expected one exported JSON document, found {len(exports)}")
+                verification = verify_device_records(device, bundle, exports[0])
+                (evidence / "backup-round-trip.json").write_text(json.dumps(verification, indent=2) + "\n")
+                print("Complete exported/restored native records match.", flush=True)
+                run_ui_test(device, evidence, "testInterruptedBackupPickersPreserveRecords",
+                            "interrupted-picker-ui-tests.log",
+                            str(evidence / "interrupted-pickers.xcresult"))
                 verify_device_records(device, bundle, exports[0])
-                recovery["rejected_write_preserved_records"] = True
-            finally:
-                configure_write_failure(device, bundle, False)
-            run_ui_test(device, evidence, "testNativeWriteRecoversAfterRejection",
-                        "write-recovery-ui-tests.log", str(evidence / "write-recovery.xcresult"))
-            verify_device_records(device, bundle, exports[0])
-            recovery["successful_writes_after_rejection"] = True
-            (evidence / "storage-recovery.json").write_text(json.dumps(recovery, indent=2) + "\n")
-            original_version = configure_storage_version(device, bundle, 2)
-            try:
-                if original_version != 1:
-                    raise RuntimeError("Expected supported storage version before future-version test")
-                run_ui_test(device, evidence, "testUnsupportedNativeStorageVersionBlocksWorkspace",
-                            "unsupported-storage-ui-tests.log", str(evidence / "unsupported-storage.xcresult"))
+                verify_export_staging_removed(device, bundle)
+                verification["export_staging_cleanup_passed"] = True
+                verification["interrupted_picker_checks_passed"] = True
+                (evidence / "backup-round-trip.json").write_text(json.dumps(verification, indent=2) + "\n")
+                create_invalid_backups(exports[0])
+                run_ui_test(device, evidence, "testNativeBackupRejectsInvalidFiles",
+                            "invalid-backup-ui-tests.log",
+                            str(evidence / "invalid-backups.xcresult"))
+                verification = verify_device_records(device, bundle, exports[0])
+                verify_export_staging_removed(device, bundle)
+                verification["export_staging_cleanup_passed"] = True
+                verification["interrupted_picker_checks_passed"] = True
+                verification["invalid_file_checks_passed"] = True
+                (evidence / "backup-round-trip.json").write_text(json.dumps(verification, indent=2) + "\n")
+                print("Native invalid-file rejection preserved the complete saved records.", flush=True)
+                # Install over the populated app without uninstalling. This checks
+                # same-build replacement, not cross-version schema migration.
+                sim("install", device, str(app.resolve()), timeout=120)
+                sim("launch", device, bundle, timeout=120)
+                time.sleep(10)
+                sim("io", device, "screenshot", str(evidence / "package-reinstall.png"))
+                sim("terminate", device, bundle)
                 verify_device_records(device, bundle, exports[0])
-            finally:
-                preserved_version = configure_storage_version(device, bundle, original_version)
-            if preserved_version != 2:
-                raise RuntimeError("App rewrote the unsupported storage version")
-            run_ui_test(device, evidence, "testNativeStorageVersionRecoveryPreservesRecords",
-                        "storage-version-recovery-ui-tests.log", str(evidence / "storage-version-recovery.xcresult"))
-            verify_device_records(device, bundle, exports[0])
-            recovery["unsupported_storage_version_preserved"] = True
-            recovery["supported_storage_version_recovered"] = True
-            (evidence / "storage-recovery.json").write_text(json.dumps(recovery, indent=2) + "\n")
-            interrupted = interrupt_snapshot_transaction(device, bundle)
-            (evidence / "interrupted-transaction.json").write_text(json.dumps(interrupted, indent=2) + "\n")
-            # No host SQLite read between SIGKILL and native app launch: native
-            # SQLite must be the first opener of the hot journal.
-            run_ui_test(device, evidence, "testInterruptedSnapshotRecoveryPreservesRecords",
-                        "interrupted-transaction-ui-tests.log", str(evidence / "interrupted-transaction.xcresult"))
-            interrupted.update(verify_device_records(device, bundle, exports[0]))
-            interrupted["native_reopen_and_subsequent_saves_passed"] = True
-            interrupted["scope"] = "Host-injected hot rollback journal; native reopen and saves on disposable simulator only"
-            (evidence / "interrupted-transaction.json").write_text(json.dumps(interrupted, indent=2) + "\n")
-            run_ui_test(device, evidence, "testRotationPreservesSavedRecordsAndPlan",
-                        "rotation-ui-tests.log", str(evidence / "rotation.xcresult"))
-            rotation = verify_device_records(device, bundle, exports[0])
-            rotation["landscape_portrait_checks_passed"] = True
-            (evidence / "rotation.json").write_text(json.dumps(rotation, indent=2) + "\n")
-            run_ui_test(device, evidence, "testNativePlanClipboardPastePreservesRecords",
-                        "clipboard-ui-tests.log", str(evidence / "clipboard.xcresult"))
-            clipboard = verify_device_records(device, bundle, exports[0])
-            clipboard["native_copy_paste_checks_passed"] = True
-            (evidence / "clipboard.json").write_text(json.dumps(clipboard, indent=2) + "\n")
-            run_ui_test(device, evidence, "testMessageEditingCancelSaveAndRestart",
-                        "message-edit-ui-tests.log", str(evidence / "message-edit.xcresult"))
-            message_edit = verify_device_records(device, bundle, exports[0])
-            message_edit["cancel_save_restart_and_restore_passed"] = True
-            (evidence / "message-edit.json").write_text(json.dumps(message_edit, indent=2) + "\n")
-            run_ui_test(device, evidence, "testManualAiPromptReviewAndCopyPreserveRecords",
-                        "ai-handoff-ui-tests.log", str(evidence / "ai-handoff.xcresult"))
-            handoff = verify_device_records(device, bundle, exports[0])
-            handoff["review_copy_local_paste_and_restart_passed"] = True
-            (evidence / "ai-handoff.json").write_text(json.dumps(handoff, indent=2) + "\n")
-            print("Unsupported native storage failed closed and recovery preserved exact records.")
-            print("Native rejected-write recovery and package reinstallation preserved exact records.")
-            print("Apple interactive persistence and deletion test passed.")
-        results = []
-        labels = ("post-ui-launch", "relaunch") if args.ui_tests else ("first-launch", "relaunch")
-        for label in labels:
-            launched = sim("launch", device, bundle, timeout=120)
-            results.append({"stage": label, "launch": launched})
-            time.sleep(10)
-            sim("io", device, "screenshot", str(evidence / (label + ".png")))
-            # Termination fails if the app already crashed or exited.
-            sim("terminate", device, bundle)
-        (evidence / "result.json").write_text(json.dumps({
-            "runtime": runtime["version"], "device": selected["name"],
-            "device_family": args.device_family,
-            "interactive_acceptance_passed": args.ui_tests,
-            "launches": results, "scope": "Simulator only; physical-device acceptance outstanding",
-        }, indent=2) + "\n")
-        print("Apple simulator launch and relaunch completed; review screenshots.")
+                recovery = {"package_reinstall_preserved_records": True,
+                            "scope": "Disposable CI simulator; same-build reinstall and injected SQL rejection only"}
+                (evidence / "storage-recovery.json").write_text(json.dumps(recovery, indent=2) + "\n")
+                configure_write_failure(device, bundle, True)
+                try:
+                    run_ui_test(device, evidence, "testRejectedNativeWritePreservesRecords",
+                                "rejected-write-ui-tests.log", str(evidence / "rejected-write.xcresult"))
+                    verify_device_records(device, bundle, exports[0])
+                    recovery["rejected_write_preserved_records"] = True
+                finally:
+                    configure_write_failure(device, bundle, False)
+                run_ui_test(device, evidence, "testNativeWriteRecoversAfterRejection",
+                            "write-recovery-ui-tests.log", str(evidence / "write-recovery.xcresult"))
+                verify_device_records(device, bundle, exports[0])
+                recovery["successful_writes_after_rejection"] = True
+                (evidence / "storage-recovery.json").write_text(json.dumps(recovery, indent=2) + "\n")
+                original_version = configure_storage_version(device, bundle, 2)
+                try:
+                    if original_version != 1:
+                        raise RuntimeError("Expected supported storage version before future-version test")
+                    run_ui_test(device, evidence, "testUnsupportedNativeStorageVersionBlocksWorkspace",
+                                "unsupported-storage-ui-tests.log", str(evidence / "unsupported-storage.xcresult"))
+                    verify_device_records(device, bundle, exports[0])
+                finally:
+                    preserved_version = configure_storage_version(device, bundle, original_version)
+                if preserved_version != 2:
+                    raise RuntimeError("App rewrote the unsupported storage version")
+                run_ui_test(device, evidence, "testNativeStorageVersionRecoveryPreservesRecords",
+                            "storage-version-recovery-ui-tests.log", str(evidence / "storage-version-recovery.xcresult"))
+                verify_device_records(device, bundle, exports[0])
+                recovery["unsupported_storage_version_preserved"] = True
+                recovery["supported_storage_version_recovered"] = True
+                (evidence / "storage-recovery.json").write_text(json.dumps(recovery, indent=2) + "\n")
+                interrupted = interrupt_snapshot_transaction(device, bundle)
+                (evidence / "interrupted-transaction.json").write_text(json.dumps(interrupted, indent=2) + "\n")
+                # No host SQLite read between SIGKILL and native app launch: native
+                # SQLite must be the first opener of the hot journal.
+                run_ui_test(device, evidence, "testInterruptedSnapshotRecoveryPreservesRecords",
+                            "interrupted-transaction-ui-tests.log", str(evidence / "interrupted-transaction.xcresult"))
+                interrupted.update(verify_device_records(device, bundle, exports[0]))
+                interrupted["native_reopen_and_subsequent_saves_passed"] = True
+                interrupted["scope"] = "Host-injected hot rollback journal; native reopen and saves on disposable simulator only"
+                (evidence / "interrupted-transaction.json").write_text(json.dumps(interrupted, indent=2) + "\n")
+                run_ui_test(device, evidence, "testRotationPreservesSavedRecordsAndPlan",
+                            "rotation-ui-tests.log", str(evidence / "rotation.xcresult"))
+                rotation = verify_device_records(device, bundle, exports[0])
+                rotation["landscape_portrait_checks_passed"] = True
+                (evidence / "rotation.json").write_text(json.dumps(rotation, indent=2) + "\n")
+                run_ui_test(device, evidence, "testNativePlanClipboardPastePreservesRecords",
+                            "clipboard-ui-tests.log", str(evidence / "clipboard.xcresult"))
+                clipboard = verify_device_records(device, bundle, exports[0])
+                clipboard["native_copy_paste_checks_passed"] = True
+                (evidence / "clipboard.json").write_text(json.dumps(clipboard, indent=2) + "\n")
+                run_ui_test(device, evidence, "testMessageEditingCancelSaveAndRestart",
+                            "message-edit-ui-tests.log", str(evidence / "message-edit.xcresult"))
+                message_edit = verify_device_records(device, bundle, exports[0])
+                message_edit["cancel_save_restart_and_restore_passed"] = True
+                (evidence / "message-edit.json").write_text(json.dumps(message_edit, indent=2) + "\n")
+                run_ui_test(device, evidence, "testManualAiPromptReviewAndCopyPreserveRecords",
+                            "ai-handoff-ui-tests.log", str(evidence / "ai-handoff.xcresult"))
+                handoff = verify_device_records(device, bundle, exports[0])
+                handoff["review_copy_local_paste_and_restart_passed"] = True
+                (evidence / "ai-handoff.json").write_text(json.dumps(handoff, indent=2) + "\n")
+                print("Unsupported native storage failed closed and recovery preserved exact records.")
+                print("Native rejected-write recovery and package reinstallation preserved exact records.")
+                print("Apple interactive persistence and deletion test passed.")
+            results = []
+            labels = ("post-ui-launch", "relaunch") if args.ui_tests else ("first-launch", "relaunch")
+            for label in labels:
+                launched = sim("launch", device, bundle, timeout=120)
+                results.append({"stage": label, "launch": launched})
+                time.sleep(10)
+                sim("io", device, "screenshot", str(evidence / (label + ".png")))
+                # Termination fails if the app already crashed or exited.
+                sim("terminate", device, bundle)
+            (evidence / "result.json").write_text(json.dumps({
+                "runtime": runtime["version"], "device": selected["name"],
+                "device_family": args.device_family,
+                "interactive_acceptance_passed": args.ui_tests,
+                "launches": results, "scope": "Simulator only; physical-device acceptance outstanding",
+            }, indent=2) + "\n")
+            print("Apple simulator launch and relaunch completed; review screenshots.")
     except Exception:
         for filename in ("ui-tests.log", "interrupted-picker-ui-tests.log", "invalid-backup-ui-tests.log",
                          "rejected-write-ui-tests.log", "write-recovery-ui-tests.log",
