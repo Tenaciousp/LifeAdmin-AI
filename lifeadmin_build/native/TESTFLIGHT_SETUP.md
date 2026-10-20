@@ -27,13 +27,17 @@ The team is configured for both app and UI-test Debug/Release targets. Team ID i
 
 ## Signing and upload
 
-Choose one secure signing route before proceeding: an Account Holder-authenticated Xcode installation on a Mac, or a separately configured CI signing environment. No authenticated Apple signing session, distribution certificate/private key, provisioning profile or App Store Connect API key is configured by this change.
+The browser-based GitHub signing workflow is prepared in [PR #4](https://github.com/Tenaciousp/LifeAdmin-AI/pull/4). Real signing is still unvalidated. Follow the reviewed workflow after its required checks pass; do not bypass source checks or environment review.
 
-On an authenticated Mac, synchronize the offline assets with `npm run sync -- ios` from `lifeadmin_build/native`, open the Xcode project, select the approved team and automatic signing, and resolve any account/profile errors. Select an unused build number for version 1.0 after checking App Store Connect. The current source value 1 has not been verified as unused in Apple. Archive for a generic iOS device, validate the signed archive, then distribute to App Store Connect for TestFlight processing. Keep the tested source revision and build number with the archive evidence.
+[Main CI #415](https://github.com/Tenaciousp/LifeAdmin-AI/actions/runs/39400139173) passed. The signing candidate still has incomplete network-capture evidence despite passing iPad functionality. [Draft PR #6](https://github.com/Tenaciousp/LifeAdmin-AI/pull/6) investigates capture delivery without relaxing the zero-drop requirement. Check current results before progressing.
 
-For CI, configure signing and API credentials only through the build system's secure secret interface, with scoped access. API authentication alone is not distribution code signing. Never place passwords, private keys, certificate exports or provisioning contents in chat, repository files or build artifacts. No new paid build service is required merely to store this configuration.
+The approved sequence is: resolve required failures, merge the signing workflow, complete CI on the merged source, then run the manual signed build. Record the source revision, workflow run and version/build with the signed package. Recheck App Store Connect for an unused build number immediately before upload.
 
-No App Store release submission or public tester invitation is part of this setup. Complete the remaining CI issue, calendar permission/alert checks and signed-package privacy review before treating the build as accepted. A TestFlight upload is for controlled testing; it does not establish store readiness.
+A signed IPA artifact is separate from Apple upload, TestFlight processing, tester distribution and device acceptance. Prepare and verify the upload route separately after signing succeeds. No upload, tester invitation, store submission or publication is performed by this guide update.
+
+Use the [physical-device checklist](TESTFLIGHT_DEVICE_CHECKLIST.md) after a TestFlight installation. It covers saved records, backups, calendar permissions/alerts, AI handoff and accessibility. A later numbered TestFlight build is needed for a genuine signed-update check. Keep every unexecuted check open.
+
+[Draft PR #5](https://github.com/Tenaciousp/LifeAdmin-AI/pull/5) contains screenshot improvements. [Gallery review](STORE_GALLERY_REVIEW.md) records the reviewed iPhone candidate and remaining composition work. Simulator evidence does not establish signed-device behaviour or final store readiness.
 
 References:
 - https://developer.apple.com/help/account/identifiers/register-an-app-id/
