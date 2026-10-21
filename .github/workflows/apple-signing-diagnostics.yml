@@ -1,0 +1,46 @@
+name: HomeAdmin signing diagnostics
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify-p12:
+    if: github.ref == 'refs/heads/main'
+    runs-on: macos-26
+    timeout-minutes: 5
+    environment: apple-signing
+    steps:
+      - name: Verify encrypted certificate and saved password
+        env:
+          P12_BASE64: ${{ secrets.APPLE_DISTRIBUTION_P12_BASE64 }}
+          P12_PASSWORD: ${{ secrets.APPLE_DISTRIBUTION_P12_PASSWORD }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          p12="$RUNNER_TEMP/signing-diagnostic.p12"
+          trap 'rm -f "$RUNNER_TEMP/signing-diagnostic.p12"' EXIT
+          python3 - <<'PY'
+          import base64, os
+          from pathlib import Path
+          value = os.environ.get("P12_BASE64", "")
+          if not value or not os.environ.get("P12_PASSWORD"):
+              raise SystemExit("Certificate data or password is missing.")
+          try:
+              data = base64.b64decode("".join(value.split()), validate=True)
+          except ValueError:
+              raise SystemExit("Certificate data is not valid base64.") from None
+          (Path(os.environ["RUNNER_TEMP"]) / "signing-diagnostic.p12").write_bytes(data)
+          PY
+          openssl3="$(brew --prefix openssl@3)/bin/openssl"
+          "$openssl3" version
+          if "$openssl3" pkcs12 -in "$p12" -passin env:P12_PASSWORD -info -noout; then
+            echo "P12_PASSWORD_VERIFIED"
+            echo "The saved password verifies the encrypted certificate. A native import failure requires format compatibility investigation." >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "::error::OpenSSL could not verify the certificate with the saved password. Check the matching export password and file."
+            exit 1
+          fi
