@@ -9,7 +9,7 @@ permissions:
 jobs:
   verify-p12:
     if: github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
+    runs-on: macos-26-intel
     timeout-minutes: 5
     environment: apple-signing
     steps:
@@ -35,7 +35,7 @@ jobs:
               raise SystemExit("Certificate data is not valid base64.") from None
           (Path(os.environ["RUNNER_TEMP"]) / "signing-diagnostic.p12").write_bytes(data)
           PY
-          openssl3="$(command -v openssl)"
+          openssl3="$(brew --prefix openssl@3)/bin/openssl"
           "$openssl3" version
           if "$openssl3" pkcs12 -in "$p12" -passin env:P12_PASSWORD -info -noout; then
             echo "P12_PASSWORD_VERIFIED"
@@ -44,3 +44,11 @@ jobs:
             echo "::error::OpenSSL could not verify the certificate with the saved password. Check the matching export password and file."
             exit 1
           fi
+          keychain="$RUNNER_TEMP/signing-diagnostic.keychain-db"
+          trap 'security delete-keychain "$RUNNER_TEMP/signing-diagnostic.keychain-db" 2>/dev/null || true; rm -f "$RUNNER_TEMP/signing-diagnostic.p12"' EXIT
+          temporary_password=$("$openssl3" rand -hex 32)
+          security create-keychain -p "$temporary_password" "$keychain"
+          security unlock-keychain -p "$temporary_password" "$keychain"
+          security import "$p12" -k "$keychain" -P "$P12_PASSWORD" -T /usr/bin/codesign -T /usr/bin/security
+          echo "NATIVE_P12_IMPORT_VERIFIED"
+          echo "macOS native certificate import succeeded." >> "$GITHUB_STEP_SUMMARY"
