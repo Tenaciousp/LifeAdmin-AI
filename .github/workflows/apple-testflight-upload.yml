@@ -129,9 +129,13 @@ jobs:
           action = os.environ['UPLOAD_ACTION']
           assert action in ('validate', 'upload')
           ipa = next((Path(os.environ['RUNNER_TEMP']) / 'signed-build').glob('*.ipa'))
+          local_help = subprocess.run(['xcrun', 'altool', '--help'], capture_output=True, text=True)
+          if '--use-old-altool' not in local_help.stdout + local_help.stderr:
+              raise SystemExit('This runner does not document the required legacy compatibility option; no Apple authentication attempted.')
+          print('Documented altool compatibility mode selected.')
           def execute(operation):
               result = subprocess.run([
-                  'xcrun', 'altool', operation, '-f', str(ipa), '--type', 'ios',
+                  'xcrun', 'altool', '--use-old-altool', operation, '-f', str(ipa), '--type', 'ios',
                   '--username', os.environ['APPLE_UPLOAD_APPLE_ID'],
                   '--password', '@env:APPLE_UPLOAD_APP_PASSWORD', '--output-format', 'json'
               ], capture_output=True, text=True)
