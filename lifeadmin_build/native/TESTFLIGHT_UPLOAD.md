@@ -55,8 +55,25 @@ Account Holder must review and accept those terms personally.
 
 Workflow YAML, shell and embedded Python syntax checks passed. The existing
 artifact digest, IPA hash, build evidence, bundle/version/build and signature
-resources were independently checked after download. The new upload workflow
-has not yet run with Apple upload authentication and no upload is claimed.
+resources were independently checked after download. Apple validation and upload both succeeded in
+[run 39666509617](https://github.com/Tenaciousp/LifeAdmin-AI/actions/runs/39666509617)
+on 21 October 2026. Apple accepted HomeAdmin 1.0 build 1 for processing.
+TestFlight processing, compliance and installability still require verification
+in App Store Connect. No tester invitations or App Store review submission
+were performed.
+
+The upload runner uses the current altool interface: positional IPA path,
+`--platform ios`, explicit bundle/version/build metadata and
+`--app-password @env:APPLE_UPLOAD_APP_PASSWORD`. The separate offline
+`diagnose` action reports fixed format/whitespace checks without authenticating.
+Apple error `-22938` requires a valid generated app-specific password for the
+Apple Account stored in `APPLE_UPLOAD_APPLE_ID`. Password format alone does
+not establish valid authentication.
+
+A temporary owner-approved encrypted error diagnostic identified the earlier
+authentication failure. The diagnostic artifact expires after one day; the
+temporary response capture was removed from the workflow afterward. Raw Apple
+responses and credentials are not printed in public logs.
 
 References:
 - https://developer.apple.com/help/app-store-connect/manage-builds/upload-builds/
