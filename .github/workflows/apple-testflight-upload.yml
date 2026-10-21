@@ -1,0 +1,146 @@
+name: HomeAdmin verified-build TestFlight upload
+
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: Validate only, or validate and upload the verified version 1.0 build 1
+        required: true
+        type: choice
+        default: validate
+        options:
+          - validate
+          - upload
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: homeadmin-apple-upload
+  cancel-in-progress: false
+
+jobs:
+  upload:
+    if: github.ref == 'refs/heads/main'
+    runs-on: macos-26-intel
+    timeout-minutes: 30
+    environment: apple-signing
+    steps:
+      - name: Require upload credentials and the successful signed build
+        env:
+          GH_TOKEN: ${{ github.token }}
+          APPLE_UPLOAD_APPLE_ID: ${{ secrets.APPLE_UPLOAD_APPLE_ID }}
+          APPLE_UPLOAD_APP_PASSWORD: ${{ secrets.APPLE_UPLOAD_APP_PASSWORD }}
+        run: |
+          python3 - <<'PY'
+          import json, os, subprocess
+          for name in ('APPLE_UPLOAD_APPLE_ID', 'APPLE_UPLOAD_APP_PASSWORD'):
+              if not os.environ.get(name, '').strip():
+                  raise SystemExit('Missing protected environment secret: ' + name)
+          run = json.loads(subprocess.check_output([
+              'gh', 'api', 'repos/' + os.environ['GITHUB_REPOSITORY'] + '/actions/runs/39619888350'
+          ]))
+          assert run['conclusion'] == 'success'
+          assert run['head_sha'] == '34d1f74cb586c9bcbdce6b5a0d1ea384532f5d97'
+          assert run['path'] == '.github/workflows/apple-signing-recovery.yml'
+          assert run['event'] == 'workflow_dispatch'
+          print('Successful signed-build provenance verified.')
+          PY
+
+      - name: Download the existing signed build
+        uses: actions/download-artifact@v4
+        with:
+          artifact-ids: 12355587018
+          run-id: 39619888350
+          github-token: ${{ github.token }}
+          path: ${{ runner.temp }}/signed-build
+
+      - name: Verify the exact IPA before Apple receives the build
+        run: |
+          python3 - <<'PY'
+          import hashlib, json, os, plistlib, subprocess, zipfile
+          from pathlib import Path
+          temporary = Path(os.environ['RUNNER_TEMP'])
+          files = temporary / 'signed-build'
+          evidence = json.loads((files / 'build-evidence.json').read_text())
+          assert evidence['source_commit'] == '42755483eeea11581bc2e89530eb9f6974e8ff17'
+          assert evidence['build'] == '1' and evidence['version'] == '1.0'
+          assert evidence['team'] == 'C8T85FCR6R'
+          ipas = list(files.glob('*.ipa'))
+          assert len(ipas) == 1
+          assert hashlib.sha256(ipas[0].read_bytes()).hexdigest() == 'a92a7e7792f5244539f4ff81b77036c7dc000fca4bdbc8d27b079d4cc371efc8'
+          extracted = temporary / 'verify-upload'
+          with zipfile.ZipFile(ipas[0]) as archive:
+              for name in archive.namelist():
+                  target = (extracted / name).resolve()
+                  assert target.is_relative_to(extracted.resolve())
+              archive.extractall(extracted)
+          apps = list((extracted / 'Payload').glob('*.app'))
+          assert len(apps) == 1
+          info = plistlib.loads((apps[0] / 'Info.plist').read_bytes())
+          assert info['CFBundleIdentifier'] == 'uk.co.tenaciouspl.lifeadmin'
+          assert info['CFBundleVersion'] == '1' and info['CFBundleShortVersionString'] == '1.0'
+          subprocess.run(['codesign', '--verify', '--deep', '--strict', str(apps[0])], check=True)
+          signed = plistlib.loads(subprocess.check_output([
+              'codesign', '-d', '--entitlements', ':-', str(apps[0])
+          ]))
+          assert signed['application-identifier'] == 'C8T85FCR6R.uk.co.tenaciouspl.lifeadmin'
+          assert signed['com.apple.developer.team-identifier'] == 'C8T85FCR6R'
+          assert signed.get('get-task-allow', False) is False
+          print('Exact signed HomeAdmin version 1.0 build 1 verified.')
+          PY
+
+      - name: Validate with Apple and optionally upload for processing
+        env:
+          UPLOAD_ACTION: ${{ inputs.action }}
+          APPLE_UPLOAD_APPLE_ID: ${{ secrets.APPLE_UPLOAD_APPLE_ID }}
+          APPLE_UPLOAD_APP_PASSWORD: ${{ secrets.APPLE_UPLOAD_APP_PASSWORD }}
+        run: |
+          python3 - <<'PY'
+          import json, os, re, subprocess
+          from pathlib import Path
+          action = os.environ['UPLOAD_ACTION']
+          assert action in ('validate', 'upload')
+          ipa = next((Path(os.environ['RUNNER_TEMP']) / 'signed-build').glob('*.ipa'))
+          def execute(operation):
+              result = subprocess.run([
+                  'xcrun', 'altool', operation, '--file', str(ipa), '--type', 'ios',
+                  '--username', os.environ['APPLE_UPLOAD_APPLE_ID'],
+                  '--password', '@env:APPLE_UPLOAD_APP_PASSWORD', '--output-format', 'json'
+              ], capture_output=True, text=True)
+              if result.returncode:
+                  try:
+                      payload = json.loads(result.stdout)
+                      errors = payload.get('product-errors') or payload.get('errors') or []
+                      for error in errors[:5]:
+                          message = str(error.get('message', 'Apple operation failed'))
+                          for value in (os.environ['APPLE_UPLOAD_APPLE_ID'], os.environ['APPLE_UPLOAD_APP_PASSWORD']):
+                              message = message.replace(value, '[redacted]')
+                          message = re.sub(r'[^\s@]+@[^\s@]+', '[redacted email]', message)
+                          print('Apple error', error.get('code', 'unknown'), message[:1000])
+                  except (ValueError, AttributeError, TypeError):
+                      pass
+                  raise SystemExit('Apple operation failed: ' + operation + '; no automatic retry performed.')
+          execute('--validate-app')
+          print('Apple validation succeeded.')
+          summary = Path(os.environ['GITHUB_STEP_SUMMARY'])
+          if action == 'upload':
+              execute('--upload-app')
+              print('Apple accepted the upload for processing. TestFlight availability is not yet confirmed.')
+              summary.write_text('HomeAdmin 1.0 (1) upload accepted for Apple processing.\n\nSource: `42755483eeea11581bc2e89530eb9f6974e8ff17`.\n\nNo tester invitations or App Store review submission performed.\n')
+          else:
+              summary.write_text('HomeAdmin 1.0 (1) passed Apple validation. No upload performed.\n')
+          PY
+
+      - name: Remove temporary build copies
+        if: always()
+        run: |
+          python3 - <<'PY'
+          import os, shutil
+          from pathlib import Path
+          for name in ('signed-build', 'verify-upload'):
+              path = Path(os.environ['RUNNER_TEMP']) / name
+              if path.is_dir():
+                  shutil.rmtree(path)
+          PY
