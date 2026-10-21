@@ -52,6 +52,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           artifact-ids: 12355587018
+          merge-multiple: true
           run-id: 39619888350
           github-token: ${{ github.token }}
           path: ${{ runner.temp }}/signed-build
