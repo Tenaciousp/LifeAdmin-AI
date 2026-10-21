@@ -130,20 +130,22 @@ jobs:
           assert action in ('validate', 'upload')
           ipa = next((Path(os.environ['RUNNER_TEMP']) / 'signed-build').glob('*.ipa'))
           local_help = subprocess.run(['xcrun', 'altool', '--help'], capture_output=True, text=True)
-          if '--use-old-altool' not in local_help.stdout + local_help.stderr:
-              raise SystemExit('This runner does not document the required legacy compatibility option; no Apple authentication attempted.')
-          print('Documented altool compatibility mode selected.')
+          if '--app-password' not in local_help.stdout + local_help.stderr:
+              raise SystemExit('This runner does not document the required upload authentication option; no Apple authentication attempted.')
+          print('Documented current altool interface selected.')
           def execute(operation):
               result = subprocess.run([
-                  'xcrun', 'altool', '--use-old-altool', operation, '-f', str(ipa), '--type', 'ios',
+                  'xcrun', 'altool', operation, str(ipa), '--platform', 'ios',
                   '--username', os.environ['APPLE_UPLOAD_APPLE_ID'],
-                  '--password', '@env:APPLE_UPLOAD_APP_PASSWORD', '--output-format', 'json'
+                  '--app-password', '@env:APPLE_UPLOAD_APP_PASSWORD', '--output-format', 'json'
               ], capture_output=True, text=True)
               if result.returncode:
                   detail = (result.stdout + chr(10) + result.stderr).lower()
                   categories = {
-                      'upload-tool option or command unsupported': ('unrecognized option', 'unknown option', 'no longer supported', 'invalid option', 'unsupported command'),
+                      'upload-tool option or command unsupported': ('unrecognized option', 'unknown option', 'no longer supported', 'invalid option', 'unsupported command', 'invalid parameter', 'missing required', 'required argument'),
                       'Apple upload authentication rejected': ('failed to authenticate', 'unable to authenticate', 'authentication failed', 'authentication error', 'incorrect password', 'invalid credentials', '-20101'),
+                      'Apple provider selection required': ('multiple providers', 'provider-public-id is required', 'specify a provider'),
+                      'Apple app-specific password required': ('app-specific password is required', 'application-specific password is required', 'must use an app-specific password', 'app-specific password you entered is incorrect'),
                       'Apple app record unavailable or mismatched': ('no suitable application', 'application record', 'bundle identifier'),
                       'Apple agreement requires account-holder action': ('agreement', 'contract'),
                       'Apple service connection failure': ('timed out', 'network', 'connection refused', 'could not connect'),
@@ -152,13 +154,17 @@ jobs:
                   matched = [label for label, needles in categories.items() if any(value in detail for value in needles)]
                   for label in matched or ['Apple error not yet classified']:
                       print('Apple diagnostic category:', label)
+                  known_codes = {'-20101', '-1011', '-1012', '-19000', '-19209', '-1009', '-1200', '-1001', '-18000', '-1027', '-22421', '-22411'}
+                  for code in sorted(known_codes):
+                      if re.search(r'(?<![0-9])' + re.escape(code) + r'(?![0-9])', detail):
+                          print('Recognized Apple diagnostic code:', code)
                   print('Upload tool exit status:', result.returncode)
                   raise SystemExit('Apple operation failed: ' + operation + '; no automatic retry performed.')
           execute('--validate-app')
           print('Apple validation succeeded.')
           summary = Path(os.environ['GITHUB_STEP_SUMMARY'])
           if action == 'upload':
-              execute('--upload-app')
+              execute('--upload-package')
               print('Apple accepted the upload for processing. TestFlight availability is not yet confirmed.')
               summary.write_text('HomeAdmin 1.0 (1) upload accepted for Apple processing.\n\nSource: `42755483eeea11581bc2e89530eb9f6974e8ff17`.\n\nNo tester invitations or App Store review submission performed.\n')
           else:
