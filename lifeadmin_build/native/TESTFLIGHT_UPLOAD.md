@@ -58,8 +58,12 @@ artifact digest, IPA hash, build evidence, bundle/version/build and signature
 resources were independently checked after download. Apple validation and upload both succeeded in
 [run 39666509617](https://github.com/Tenaciousp/LifeAdmin-AI/actions/runs/39666509617)
 on 21 October 2026. Apple accepted HomeAdmin 1.0 build 1 for processing.
-TestFlight processing, compliance and installability still require verification
-in App Store Connect. No tester invitations or App Store review submission
+The uploaded build is now visible in App Store Connect TestFlight as version
+1.0 build 1, build ID `f498df6a-b171-41c5-9cd8-5c434eda1277`.
+Its observed status is **Missing Compliance**. The encryption questionnaire
+answer is prepared but has not been submitted; explicit owner approval is
+required for the regulatory declaration. Internal testing and installability
+are not yet verified. No tester invitations or App Store review submission
 were performed.
 
 The upload runner uses the current altool interface: positional IPA path,
@@ -79,3 +83,23 @@ References:
 - https://developer.apple.com/help/app-store-connect/manage-builds/upload-builds/
 - https://help.apple.com/asc/appsaltool/en.lproj/static.html
 - https://support.apple.com/en-us/102654
+
+## Encryption review for uploaded build 1
+
+Review used the exact signed source `42755483eeea11581bc2e89530eb9f6974e8ff17`
+and the previously verified IPA. The local native app exports readable JSON
+backups; its Swift storage and file plugins use Apple's file protection.
+Native dependencies are Capacitor/Cordova 8.5.3. The five shipped JavaScript
+files contained none of the checked standalone encryption markers
+(`crypto.subtle`, AES-GCM/AES-CBC, PBKDF2, CryptoJS, tweetnacl, libsodium,
+or node:crypto). This marker check supports the source review; it is not a
+standalone proof of every binary dependency.
+
+The reviewed questionnaire answer is **None of the algorithms mentioned above**,
+because no app-level implementation beyond Apple's operating-system facilities
+was identified. Apple states that encryption limited to its operating system
+requires no encryption documentation in App Store Connect:
+https://developer.apple.com/help/app-store-connect/reference/app-information/export-compliance-documentation-for-encryption
+
+The answer must be reviewed again if the app or its dependencies change their
+encryption behavior. No signed build was modified during this review.
