@@ -51,7 +51,7 @@ jobs:
               print('Password surrounding whitespace:', 'present' if password != password.strip() else 'absent')
               help_result = subprocess.run(['xcrun', 'altool', '--help'], capture_output=True, text=True)
               help_text = help_result.stdout + help_result.stderr
-              for option in ('--validate-app', '--file', '--upload-app', '--password'):
+              for option in ('--validate-app', '-f', '--upload-app', '--password'):
                   print('Upload-tool option ' + option + ':', 'documented' if option in help_text else 'not listed')
               print('Offline checks only; no Apple authentication attempted.')
               raise SystemExit(0)
@@ -126,7 +126,7 @@ jobs:
           ipa = next((Path(os.environ['RUNNER_TEMP']) / 'signed-build').glob('*.ipa'))
           def execute(operation):
               result = subprocess.run([
-                  'xcrun', 'altool', operation, '--file', str(ipa), '--type', 'ios',
+                  'xcrun', 'altool', operation, '-f', str(ipa), '--type', 'ios',
                   '--username', os.environ['APPLE_UPLOAD_APPLE_ID'],
                   '--password', '@env:APPLE_UPLOAD_APP_PASSWORD', '--output-format', 'json'
               ], capture_output=True, text=True)
@@ -134,7 +134,7 @@ jobs:
                   detail = (result.stdout + chr(10) + result.stderr).lower()
                   categories = {
                       'upload-tool option or command unsupported': ('unrecognized option', 'unknown option', 'no longer supported', 'invalid option', 'unsupported command'),
-                      'Apple upload authentication rejected': ('authenticate', 'authentication', 'app-specific password', 'incorrect password', 'invalid credentials', '-20101'),
+                      'Apple upload authentication rejected': ('failed to authenticate', 'unable to authenticate', 'authentication failed', 'authentication error', 'incorrect password', 'invalid credentials', '-20101'),
                       'Apple app record unavailable or mismatched': ('no suitable application', 'application record', 'bundle identifier'),
                       'Apple agreement requires account-holder action': ('agreement', 'contract'),
                       'Apple service connection failure': ('timed out', 'network', 'connection refused', 'could not connect'),
