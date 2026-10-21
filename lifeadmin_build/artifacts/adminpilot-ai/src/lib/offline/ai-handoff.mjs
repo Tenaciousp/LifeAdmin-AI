@@ -16,9 +16,16 @@ export const aiActions = [
   { id: "complaint", label: "Complain or query a charge", request: "Draft a factual complaint or charge-query email, clearly separating the supplied facts, questions and requested resolution. Ask for missing dates and evidence. Do not invent legal rights or deadlines." },
   { id: "compare", label: "Research cheaper alternatives", request: "Research current alternatives for my location and needs. Ask for my country, region and requirements if missing. Request only the minimum location detail needed. Compare equivalent service or cover, total contract cost, introductory and later prices, eligibility, exit fees and contract terms. Provide source links and the date each offer was checked. If live research is unavailable, say so and provide a research checklist instead of invented offers. Do not claim a guaranteed cheapest deal or savings." },
 ];
+export function actionsFor(plan) {
+  if (plan.category_id !== "water" && !/water/i.test(String(plan.known_details?.utility_type || ""))) return aiActions;
+  return aiActions.filter(action => !["cancel", "negotiate"].includes(action.id)).map(action => action.id === "compare" ? {
+    ...action, label: "Research water charging and support options",
+    request: "Research current household water charging, metering, usage and payment-support options for my region. Ask for my country or region and charging basis if missing. Use official company, regulator or consumer-body sources with links and dates. Check eligibility and conditions; do not assume household supplier switching, a guaranteed saving or eligibility for support. If live research is unavailable, provide a research checklist."
+  } : action);
+}
 const labels = new Map(catalog().categories.flatMap(x => x.fields).concat(catalog().goals.flatMap(x => x.fields)).map(x => [x.id, x.label]));
 for (const field of diaryDates) labels.set(field.id, field.label);
-const defaultFields = new Set([...diaryDates.map(x => x.id),"provider", "amount", "date", "next_payment_date", "minimum_term_end", "new_quote", "tariff", "utility_type", "annual_usage", "unit_rate", "standing_charge", "exit_fee", "policy_type", "billing_route", "auto_renewal"]);
+const defaultFields = new Set([...diaryDates.map(x => x.id),"provider", "amount", "billing_frequency", "water_region", "billing_basis", "water_services", "reading_basis", "water_usage", "bill_period", "date", "next_payment_date", "minimum_term_end", "new_quote", "tariff", "utility_type", "annual_usage", "unit_rate", "standing_charge", "exit_fee", "policy_type", "billing_route", "auto_renewal"]);
 const preferenceKey = "lifeadmin-preferred-ai-v1";
 
 export function promptFields(plan) {
@@ -41,7 +48,7 @@ export function savePreferredAi(storage, id) {
   } catch { throw new Error("Your AI choice works for this session, but could not be remembered on this device."); }
 }
 export function taskAiPrompt(plan, { action = "review", fieldKeys, includeDraft = false } = {}) {
-  const choice = aiActions.find(x => x.id === action);
+  const choice = actionsFor(plan).find(x => x.id === action);
   if (!choice) throw new Error("Choose an AI task.");
   const fields = promptFields(plan);
   const keys = fieldKeys || fields.filter(x => x.selected).map(x => x.key);

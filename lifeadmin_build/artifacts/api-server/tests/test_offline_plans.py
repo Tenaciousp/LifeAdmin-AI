@@ -57,7 +57,9 @@ class OfflinePlanTests(unittest.TestCase):
             {"category_id": "invalid", "goal_id": "invalid", "details": None},
             {"category_id": "insurance", "goal_id": "prepare_renewal", "details": {"notes": "🌍" * 600}},
         ]
-        self.assertEqual(self.local("normaliseTask", tasks), [domain.normalise_task(task) for task in tasks])
+        expected = [domain.normalise_task(task) for task in tasks]
+        expected[0]["category"] = "Energy: gas and electricity"
+        self.assertEqual(self.local("normaliseTask", tasks), expected)
 
     def test_all_existing_safety_notices_are_preserved(self):
         tasks = [
@@ -115,8 +117,7 @@ class OfflinePlanTests(unittest.TestCase):
                                "confirmation_received": "Email"}}
                   for provider in ["Disney+", "Disney Plus", "NOW", "Spotify", "Custom provider"]
                   for goal in ["cancel_switch", "challenge_charge", "check_bill"]]
-        tasks += [{"title": "Water bill", "category_id": "energy_water", "goal_id": "prepare_renewal",
-                   "details": {"utility_type": "Water"}}]
+        # Water now has dedicated customer guidance, covered by water.test.mjs.
         for mode in reference["MODE_PROMPTS"]:
             for task, actual in zip(tasks, self.local("generateLocalResult", tasks, mode), strict=True):
                 text = reference["fallback_agent"](task, mode)

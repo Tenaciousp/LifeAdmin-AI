@@ -1,4 +1,4 @@
-import bundledCatalog from "./catalog.json" with { type: "json" };
+import { customerCatalog as bundledCatalog, goalsFor } from "./bill-types.mjs";
 
 // No request, account, device identifier or analytics event is needed to route a bill.
 export function catalog() {
@@ -62,15 +62,21 @@ export function suggest(query) {
     tv_broadband_mobile: [["virgin media", "Virgin Media"], ["sky", "Sky"], ["bt", "BT"], ["ee", "EE"], ["vodafone", "Vodafone"], ["o2", "O2"]],
     insurance: [["direct line", "Direct Line"], ["admiral", "Admiral"], ["aviva", "Aviva"], ["axa", "AXA"]],
     subscriptions_memberships: [["netflix", "Netflix"], ["spotify", "Spotify"], ["disney+", "Disney+"], ["amazon prime", "Amazon Prime"]],
-    energy_water: [["octopus", "Octopus Energy"], ["british gas", "British Gas"], ["e.on", "E.ON"], ["eon", "E.ON"], ["edf", "EDF"], ["ovo", "OVO"], ["scottishpower", "ScottishPower"], ["utilita", "Utilita"], ["united utilities", "United Utilities"], ["thames water", "Thames Water"], ["yorkshire water", "Yorkshire Water"], ["severn trent", "Severn Trent"]],
+    energy_water: [["octopus", "Octopus Energy"], ["british gas", "British Gas"], ["e.on", "E.ON"], ["eon", "E.ON"], ["edf", "EDF"], ["ovo", "OVO"], ["scottishpower", "ScottishPower"], ["utilita", "Utilita"]],
+    water: [["united utilities", "United Utilities"], ["thames water", "Thames Water"], ["yorkshire water", "Yorkshire Water"], ["severn trent", "Severn Trent"]],
   };
   const details = {};
   const provider = (providers[categoryId] || []).find(([phrase]) => matches(phrase))?.[1] || "";
   if (provider) details.provider = provider;
-  if (categoryId === "energy_water") {
-    if (["United Utilities", "Thames Water", "Yorkshire Water", "Severn Trent"].includes(provider) || matches("water")) {
-      details.utility_type = "Water"; details.tariff = "Water tariff";
-    } else if (matches("dual fuel")) details.utility_type = "Dual fuel";
+  if (categoryId === "water") {
+    if (matches("meter") || matches("metered")) details.billing_basis = "Metered";
+    if (matches("unmetered")) details.billing_basis = "Unmetered / rateable value";
+    if (matches("leak") || matches("high usage")) goalId = "water_usage";
+    else if (matches("help paying") || matches("cannot pay")) goalId = "water_support";
+    else if (matches("get a meter") || matches("fit a meter")) goalId = "water_meter";
+    if (!goalsFor("water").some(goal => goal.id === goalId)) goalId = "check_bill";
+  } else if (categoryId === "energy_water") {
+    if (matches("dual fuel")) details.utility_type = "Dual fuel";
     else if (matches("electricity")) details.utility_type = "Electricity";
     else if (matches("gas") && provider !== "British Gas") details.utility_type = "Gas";
   }
