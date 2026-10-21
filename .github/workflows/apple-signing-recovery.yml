@@ -108,6 +108,52 @@ jobs:
       - name: Validate profile and configure the app Release target
         run: |
           python ../scripts/prepare_apple_signing.py
+          python - <<'PY'
+          import hashlib, os, plistlib, re, subprocess
+          from pathlib import Path
+          temporary = Path(os.environ["RUNNER_TEMP"])
+          profile = plistlib.loads(subprocess.check_output([
+              "security", "cms", "-D", "-i", str(temporary / "homeadmin.mobileprovision")
+          ], stderr=subprocess.DEVNULL))
+          profile_name = profile.get("Name")
+          if not isinstance(profile_name, str) or not profile_name.strip():
+              raise SystemExit("Distribution profile has no usable name")
+          profile_uuid = profile["UUID"]
+          identities = subprocess.check_output([
+              "security", "find-identity", "-v", "-p", "codesigning",
+              str(temporary / "homeadmin-signing.keychain-db")
+          ], text=True)
+          available = set(re.findall(r"\b[0-9A-Fa-f]{40}\b", identities))
+          available = {value.upper() for value in available}
+          allowed = {hashlib.sha1(value).hexdigest().upper()
+                     for value in profile.get("DeveloperCertificates", [])}
+          matching = available & allowed
+          print("Valid signing identities:", len(available))
+          print("Profile certificates matching valid signing identities:", len(matching))
+          if len(matching) != 1:
+              raise SystemExit("Profile must include exactly one imported valid signing identity")
+          identity = matching.pop()
+          project = Path("ios/App/App.xcodeproj/project.pbxproj")
+          tree = plistlib.loads(project.read_bytes())
+          updated = 0
+          for item in tree["objects"].values():
+              settings = item.get("buildSettings", {})
+              if (item.get("name") == "Release"
+                      and settings.get("PRODUCT_BUNDLE_IDENTIFIER") == "uk.co.tenaciouspl.lifeadmin"):
+                  settings.update(PROVISIONING_PROFILE_SPECIFIER=profile_name,
+                                  PROVISIONING_PROFILE=profile_uuid,
+                                  CODE_SIGN_IDENTITY=identity)
+                  updated += 1
+          assert updated == 1
+          project.write_bytes(plistlib.dumps(tree))
+          options_path = temporary / "ExportOptions.plist"
+          options = plistlib.loads(options_path.read_bytes())
+          options["signingCertificate"] = identity
+          options["provisioningProfiles"]["uk.co.tenaciouspl.lifeadmin"] = profile_name
+          options_path.write_bytes(plistlib.dumps(options))
+          (temporary / "profile-uuid.txt").write_text(profile_uuid)
+          print("Profile name and matching certificate selected for runner-only signing.")
+          PY
           profile_uuid=$(cat "$RUNNER_TEMP/profile-uuid.txt")
           for profiles in "$HOME/Library/MobileDevice/Provisioning Profiles" "$HOME/Library/Developer/Xcode/UserData/Provisioning Profiles"; do
             mkdir -p "$profiles"
