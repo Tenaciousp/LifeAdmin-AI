@@ -870,15 +870,16 @@ final class LifeAdminUITests: XCTestCase {
     func testStoreScreenshots() throws {
         // Separate capture job only. Never run against a customer's installation.
         XCUIDevice.shared.orientation = .portrait
-        func capture(_ scene: String, showing control: XCUIElement? = nil) {
+        func capture(_ scene: String, showing control: XCUIElement? = nil,
+                     including requiredControls: [XCUIElement] = []) {
             if let control {
                 reveal(control)
                 // Hittable only guarantees a usable tap centre. Frame the
                 // section near the top for a readable store screenshot.
                 let viewport = app.webViews.firstMatch.frame
                 for _ in 0..<6 {
-                    let offset = control.frame.minY - (viewport.minY + 20)
-                    if abs(offset) < 24 { break }
+                    let offset = control.frame.minY - (viewport.minY + 32)
+                    if abs(offset) < 8 { break }
                     let distance = min(max(offset, -viewport.height * 0.4), viewport.height * 0.4)
                     let start = app.coordinate(withNormalizedOffset: .zero)
                         .withOffset(CGVector(dx: viewport.minX + 8, dy: viewport.midY))
@@ -895,6 +896,14 @@ final class LifeAdminUITests: XCTestCase {
                 XCTAssertTrue(viewport.contains(control.frame),
                               "Store screenshot section heading must be fully visible")
             }
+            let viewport = app.webViews.firstMatch.frame
+            for required in requiredControls {
+                XCTAssertTrue(required.exists && !required.frame.isEmpty
+                              && viewport.contains(required.frame),
+                              "Store screenshot must include the complete control: \(required)")
+            }
+            XCTAssertFalse(app.keyboards.firstMatch.exists,
+                           "A keyboard must not cover a store screenshot")
             let image = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
             image.name = "Store " + scene
             image.lifetime = .keepAlways
@@ -908,6 +917,8 @@ final class LifeAdminUITests: XCTestCase {
         app.launch()
         assertWorkspaceReady()
         capture("01 home")
+        capture("01b bills", showing: app.otherElements["Your bills (1)"],
+                including: [app.staticTexts["Streaming subscription"], app.buttons["Create plan"]])
 
         let create = app.buttons["Create plan"]
         reveal(create)
@@ -943,6 +954,19 @@ final class LifeAdminUITests: XCTestCase {
         reveal(prepare)
         prepare.tap()
         capture("04 ai-review", showing: app.staticTexts["Review your AI prompt"])
+        let prompt = app.textViews["AI prompt"]
+        XCTAssertTrue(prompt.waitForExistence(timeout: 10))
+        XCTAssertTrue((prompt.value as? String ?? "").contains("Selected bill details"))
+        XCTAssertFalse((prompt.value as? String ?? "").contains("DEMO-2401"),
+                       "Account references must remain excluded from the default AI question")
+        let copyPrompt = app.buttons["Copy AI prompt"]
+        XCTAssertTrue(copyPrompt.isEnabled)
+        // A second genuine viewport shows the prepared question and handoff
+        // controls without changing text, opening an AI service or sharing data.
+        let promptNotice = app.staticTexts[
+            "Question edits are temporary. Save any returned letter in the message editor before closing the app."]
+        capture("04b ai-prompt", showing: promptNotice,
+                including: [prompt, copyPrompt, app.links["Open ChatGPT"]])
         let close = app.buttons["Close AI prompt"]
         reveal(close)
         close.tap()
