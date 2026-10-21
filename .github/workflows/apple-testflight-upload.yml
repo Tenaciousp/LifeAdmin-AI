@@ -11,6 +11,7 @@ on:
         options:
           - validate
           - upload
+          - diagnose
 
 permissions:
   contents: read
@@ -32,12 +33,28 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           APPLE_UPLOAD_APPLE_ID: ${{ secrets.APPLE_UPLOAD_APPLE_ID }}
           APPLE_UPLOAD_APP_PASSWORD: ${{ secrets.APPLE_UPLOAD_APP_PASSWORD }}
+          CHECK_MODE: ${{ inputs.action }}
         run: |
           python3 - <<'PY'
-          import json, os, subprocess
+          import json, os, re, subprocess
           for name in ('APPLE_UPLOAD_APPLE_ID', 'APPLE_UPLOAD_APP_PASSWORD'):
               if not os.environ.get(name, '').strip():
                   raise SystemExit('Missing protected environment secret: ' + name)
+          if os.environ['CHECK_MODE'] == 'diagnose':
+              username = os.environ['APPLE_UPLOAD_APPLE_ID']
+              password = os.environ['APPLE_UPLOAD_APP_PASSWORD']
+              email_ok = re.fullmatch(r"[^\s@]+@[^\s@]+\.[^\s@]+", username.strip()) is not None
+              password_ok = re.fullmatch(r"(?:[a-zA-Z]{4}-){3}[a-zA-Z]{4}|[a-zA-Z]{16}", password.strip()) is not None
+              print('Apple ID email format:', 'valid' if email_ok else 'invalid')
+              print('Apple ID surrounding whitespace:', 'present' if username != username.strip() else 'absent')
+              print('App-specific password format:', 'expected format' if password_ok else 'unexpected format')
+              print('Password surrounding whitespace:', 'present' if password != password.strip() else 'absent')
+              help_result = subprocess.run(['xcrun', 'altool', '--help'], capture_output=True, text=True)
+              help_text = help_result.stdout + help_result.stderr
+              for option in ('--validate-app', '--file', '--upload-app', '--password'):
+                  print('Upload-tool option ' + option + ':', 'documented' if option in help_text else 'not listed')
+              print('Offline checks only; no Apple authentication attempted.')
+              raise SystemExit(0)
           run = json.loads(subprocess.check_output([
               'gh', 'api', 'repos/' + os.environ['GITHUB_REPOSITORY'] + '/actions/runs/39619888350'
           ]))
@@ -49,6 +66,7 @@ jobs:
           PY
 
       - name: Download the existing signed build
+        if: inputs.action != 'diagnose'
         uses: actions/download-artifact@v4
         with:
           artifact-ids: 12355587018
@@ -58,6 +76,7 @@ jobs:
           path: ${{ runner.temp }}/signed-build
 
       - name: Verify the exact IPA before Apple receives the build
+        if: inputs.action != 'diagnose'
         run: |
           python3 - <<'PY'
           import hashlib, json, os, plistlib, subprocess, zipfile
@@ -93,6 +112,7 @@ jobs:
           PY
 
       - name: Validate with Apple and optionally upload for processing
+        if: inputs.action != 'diagnose'
         env:
           UPLOAD_ACTION: ${{ inputs.action }}
           APPLE_UPLOAD_APPLE_ID: ${{ secrets.APPLE_UPLOAD_APPLE_ID }}
