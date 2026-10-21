@@ -142,24 +142,12 @@ jobs:
                   '--app-password', '@env:APPLE_UPLOAD_APP_PASSWORD', '--output-format', 'json'
               ], capture_output=True, text=True)
               if result.returncode:
-                  diagnostic_dir = Path(os.environ['RUNNER_TEMP']) / 'upload-private-diagnostic'
-                  diagnostic_dir.mkdir(mode=0o700, exist_ok=True)
-                  plain = diagnostic_dir / 'response.txt'
-                  plain.write_text(result.stdout + chr(10) + result.stderr)
-                  plain.chmod(0o600)
-                  recipient = diagnostic_dir / 'recipient.pem'
-                  recipient.write_text("-----BEGIN CERTIFICATE-----\nMIIERzCCAq+gAwIBAgIUf5Cb7vR/9X5CnG4Nor34SUYlfpEwDQYJKoZIhvcNAQEL\nBQAwMzExMC8GA1UEAwwoSG9tZUFkbWluIHRlbXBvcmFyeSBkaWFnbm9zdGljIHJl\nY2lwaWVudDAeFw0yNjEwMjExOTQyMTJaFw0yNjEwMjIxOTQyMTJaMDMxMTAvBgNV\nBAMMKEhvbWVBZG1pbiB0ZW1wb3JhcnkgZGlhZ25vc3RpYyByZWNpcGllbnQwggGi\nMA0GCSqGSIb3DQEBAQUAA4IBjwAwggGKAoIBgQCuKTtKVTeWTTmwnmBCWvMUQdo1\ny4H3PqsrEdNhSxRalWGnkr2ouQLIh2FTbI2q08MQFs1tgpMUC33UaRwNLwa+RX6t\norqHunxey68TTaxmVJfYKiGtCuEX6CKxUanaUCoqf/a+6ewjKd9D26x5JErWwhsH\nYDlkRMdJJEBSph0sDmUwLeHQIy47H2hPif6vbVUazaXIa1y5KHmGrRoYtVkzfFlR\n96D4q1+fBjn76upLzuNwbgL4W7USSnW7ewdIkglO+LpxakM8OT3BL3+je+ysqTRG\ntr5R14x3bNJcMqnOsrNndu9wVgvjfHaSNYe05+jDDQKefIfvWBSohDAthZppJTcU\nEfJX6fvxzYW7Y4U3kM6PvtseJEi2+TprqPY63PpmewHmjqpGnKUBoubm+PqWu0uZ\nuImHDV1dxPaPz1allo1kVQ+KY/jVRxzpOOhAXLtpQkuASz2GOrAaItuyUYtjlSaJ\nfqmSWnyGnpWY7WR/5Yv2Jl5rVURsP+ATLVqxdiMCAwEAAaNTMFEwHQYDVR0OBBYE\nFPa/zSg9teS8zMNktWOSK84PfY3nMB8GA1UdIwQYMBaAFPa/zSg9teS8zMNktWOS\nK84PfY3nMA8GA1UdEwEB/wQFMAMBAf8wDQYJKoZIhvcNAQELBQADggGBAKB5zvbW\nYamBK4wgb7/aVknDieYCNo3PWxSEMhyfApR8mzZTgcsdXjocpIrPQOKxm+eXpo4w\nvZrpK8d6t1SDQpmhL/ev+pEdaJNtmSKkkU27sL7tY3373dsGefbrGfrOHr6e09yv\nFy/Qmtea63Hmf2LWvv+J0tRmlwm3N3QVPLQBrXqmSVnGnWDv0qTS10ZHswCgy1fp\n6v4XcDjLjRJ6uqKYzQ16LLyGlrXCR3wY+UBjxspxsOTMJHxv8MlIDwT+CPgUJRYT\nuS2zD0zE7dP+cHG1DPuBlmjzSQTe+wTdqajOKj6SVnEV5mRQFeGKjC2Sms0OWoq3\nwmuZOE987f+yM1ABadsXTKOVu+NGQqoquU/75yD2ySwtiZVQcoR245VQuVGpQ0F6\nVsvDvMpW4uliqdorM4syweDoH9wzz7M1e28Lzgp888BaswfaATNTYWNRz6gRWdCD\nbxqes1hEhn804/gJu01SclsF8OMJKYsqw4r6VK4d9+lf8D+mPIdlfWTpJQ==\n-----END CERTIFICATE-----\n")
-                  try:
-                      subprocess.run(['openssl', 'cms', '-encrypt', '-binary', '-aes-256-cbc', '-outform', 'DER', '-in', str(plain), '-out', str(diagnostic_dir / 'response.p7m'), str(recipient)], check=True, capture_output=True)
-                  finally:
-                      plain.unlink(missing_ok=True)
-                      recipient.unlink(missing_ok=True)
                   detail = (result.stdout + chr(10) + result.stderr).lower()
                   categories = {
                       'upload-tool option or command unsupported': ('unrecognized option', 'unknown option', 'no longer supported', 'invalid option', 'unsupported command', 'invalid parameter', 'missing required', 'required argument'),
                       'Apple upload authentication rejected': ('failed to authenticate', 'unable to authenticate', 'authentication failed', 'authentication error', 'incorrect password', 'invalid credentials', '-20101'),
                       'Apple provider selection required': ('multiple providers', 'provider-public-id is required', 'specify a provider'),
-                      'Apple app-specific password required': ('app-specific password is required', 'application-specific password is required', 'must use an app-specific password', 'app-specific password you entered is incorrect'),
+                      'Apple app-specific password required': ('-22938', 'sign in with the app-specific password', 'app-specific password is required', 'application-specific password is required', 'must use an app-specific password', 'app-specific password you entered is incorrect'),
                       'Apple app record unavailable or mismatched': ('no suitable application', 'application record', 'bundle identifier'),
                       'Apple agreement requires account-holder action': ('agreement', 'contract'),
                       'Apple service connection failure': ('timed out', 'network', 'connection refused', 'could not connect'),
@@ -172,7 +160,7 @@ jobs:
                   for marker in markers:
                       if marker in detail:
                           print('Fixed diagnostic marker:', marker)
-                  known_codes = {'-20101', '-1011', '-1012', '-19000', '-19209', '-1009', '-1200', '-1001', '-18000', '-1027', '-22421', '-22411'}
+                  known_codes = {'-22938', '-20101', '-1011', '-1012', '-19000', '-19209', '-1009', '-1200', '-1001', '-18000', '-1027', '-22421', '-22411'}
                   for code in sorted(known_codes):
                       if re.search(r'(?<![0-9])' + re.escape(code) + r'(?![0-9])', detail):
                           print('Recognized Apple diagnostic code:', code)
@@ -189,22 +177,13 @@ jobs:
               summary.write_text('HomeAdmin 1.0 (1) passed Apple validation. No upload performed.\n')
           PY
 
-      - name: Save encrypted diagnostic for private inspection
-        if: failure() && inputs.action != 'diagnose'
-        uses: actions/upload-artifact@v4
-        with:
-          name: encrypted-upload-diagnostic
-          path: ${{ runner.temp }}/upload-private-diagnostic/response.p7m
-          retention-days: 1
-          if-no-files-found: ignore
-
       - name: Remove temporary build copies
         if: always()
         run: |
           python3 - <<'PY'
           import os, shutil
           from pathlib import Path
-          for name in ('signed-build', 'verify-upload', 'upload-private-diagnostic'):
+          for name in ('signed-build', 'verify-upload'):
               path = Path(os.environ['RUNNER_TEMP']) / name
               if path.is_dir():
                   shutil.rmtree(path)
