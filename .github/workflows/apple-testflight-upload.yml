@@ -53,6 +53,11 @@ jobs:
               help_text = help_result.stdout + help_result.stderr
               for option in ('--validate-app', '-f', '--upload-app', '--password'):
                   print('Upload-tool option ' + option + ':', 'documented' if option in help_text else 'not listed')
+              relevant = ('usage:', '--validate-app', '--upload-app', '--upload-package', '--type', '--platform', '--file', '--username', '--password', '--output-format', '--apple-id', '--provider-public-id', '--asc-public-id')
+              for line in help_text.splitlines():
+                  cleaned = line.strip()
+                  if any(cleaned.lower().startswith(option) for option in relevant):
+                      print('Local altool help:', cleaned[:700])
               print('Offline checks only; no Apple authentication attempted.')
               raise SystemExit(0)
           run = json.loads(subprocess.check_output([
