@@ -1,7 +1,27 @@
 # HomeAdmin signing through GitHub Mac runners
 
-Selected by the Account Holder on 19 October 2026. Preparation only: no
-certificate, profile, secret, signed build or Apple upload has been created.
+Selected by the Account Holder on 19 October 2026.
+
+## Verified signing result, 21 October 2026
+
+The release-specific workflow `.github/workflows/apple-signing-recovery.yml`
+successfully archived, signed and exported HomeAdmin 1.0 build 1 in
+[run 39619888350](https://github.com/Tenaciousp/LifeAdmin-AI/actions/runs/39619888350).
+The app source is `42755483eeea11581bc2e89530eb9f6974e8ff17`, which passed
+all eight full CI jobs. Archive and exported-app signature and entitlement
+checks passed. Signed artifact 12355587018 expires on 28 October 2026.
+
+The recovery runs on `macos-26-intel`, imports the existing signing identity
+through a temporary macOS-compatible P12 copy, and matches the profile name,
+raw UUID and certificate fingerprint. Temporary signing files are removed.
+The protected `apple-signing` environment remains restricted to main with
+owner review and no administrator bypass.
+
+For this release, use the verified recovery artifact and
+[TESTFLIGHT_UPLOAD.md](TESTFLIGHT_UPLOAD.md). The generic workflow documented
+below has not completed a successful real-credential signing run and is not the
+verified release path. A signed IPA does not establish Apple upload, processing,
+TestFlight availability or physical-device acceptance.
 
 ## Prepared workflow
 
