@@ -9,7 +9,7 @@ permissions:
 jobs:
   verify-p12:
     if: github.ref == 'refs/heads/main'
-    runs-on: macos-26
+    runs-on: ubuntu-latest
     timeout-minutes: 5
     environment: apple-signing
     steps:
@@ -35,7 +35,7 @@ jobs:
               raise SystemExit("Certificate data is not valid base64.") from None
           (Path(os.environ["RUNNER_TEMP"]) / "signing-diagnostic.p12").write_bytes(data)
           PY
-          openssl3="$(brew --prefix openssl@3)/bin/openssl"
+          openssl3="$(command -v openssl)"
           "$openssl3" version
           if "$openssl3" pkcs12 -in "$p12" -passin env:P12_PASSWORD -info -noout; then
             echo "P12_PASSWORD_VERIFIED"
