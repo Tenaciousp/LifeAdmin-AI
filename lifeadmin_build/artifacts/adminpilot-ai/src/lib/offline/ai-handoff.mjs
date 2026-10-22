@@ -2,9 +2,9 @@ import { catalog } from "./domain.mjs";
 import { diaryDates } from "./diary.mjs";
 
 export const aiServices = [
+  { id: "copilot", name: "Copilot (Microsoft, free option)", url: "https://copilot.microsoft.com/" },
+  { id: "gemini", name: "Gemini (Google, free option)", url: "https://gemini.google.com/" },
   { id: "chatgpt", name: "ChatGPT", url: "https://chatgpt.com/" },
-  { id: "gemini", name: "Gemini", url: "https://gemini.google.com/" },
-  { id: "copilot", name: "Copilot", url: "https://copilot.microsoft.com/" },
   { id: "claude", name: "Claude", url: "https://claude.ai/new" },
   { id: "perplexity", name: "Perplexity", url: "https://www.perplexity.ai/" },
 ];
@@ -38,8 +38,8 @@ export function promptFields(plan) {
     }));
 }
 export function preferredAi(storage) {
-  try { return aiServices.find(x => x.id === storage?.getItem(preferenceKey))?.id || "chatgpt"; }
-  catch { return "chatgpt"; }
+  try { return aiServices.find(x => x.id === storage?.getItem(preferenceKey))?.id || "copilot"; }
+  catch { return "copilot"; }
 }
 export function savePreferredAi(storage, id) {
   if (!aiServices.some(x => x.id === id)) throw new Error("Choose a supported AI service.");

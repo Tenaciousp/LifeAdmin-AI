@@ -18,7 +18,7 @@ const assert = require("node:assert/strict");
     await page.getByRole("button", { name: "Water", exact: true }).click();
     await page.getByLabel("What would you like help with?").selectOption("check_bill");
     await page.getByLabel("Bill name", { exact: true }).fill("Synthetic water case");
-    await page.getByLabel("Water company").fill("Example Water");
+    await page.getByLabel("Water company (useful)", { exact: true }).fill("Example Water");
     await page.getByLabel("Country / region of this bill").selectOption("Canada");
     await page.getByLabel("Bill currency").selectOption("CAD");
     await page.locator("summary").filter({ hasText: "More bill details (optional)" }).click();
