@@ -96,10 +96,10 @@ def capture_network(segment="acceptance"):
             packet_filter,
         ], stdout=output, stderr=errors)
         try:
-            deadline = time.monotonic() + 10
+            deadline = time.monotonic() + 30
             while "listening on" not in diagnostic.read_text():
                 if trace.poll() is not None or time.monotonic() > deadline:
-                    raise RuntimeError("Packet capture did not start; inspect network-capture.log")
+                    raise RuntimeError(f"Packet capture did not start; inspect {diagnostic.name}")
                 time.sleep(0.1)
 
             # Controlled loopback traffic contains no household or account data.
