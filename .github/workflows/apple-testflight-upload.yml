@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       action:
-        description: Validate only, or validate and upload the verified version 1.0 build 1
+        description: Validate only, validate and upload, or run offline diagnostics
         required: true
         type: choice
         default: validate
@@ -12,6 +12,18 @@ on:
           - validate
           - upload
           - diagnose
+      signed_run_id:
+        description: Successful HomeAdmin manual signed-build run ID
+        required: false
+        type: string
+      source_commit:
+        description: Exact 40-character main commit signed by that run
+        required: false
+        type: string
+      build_number:
+        description: Version 1.0 build number in the signed artifact
+        required: false
+        type: string
 
 permissions:
   contents: read
@@ -28,142 +40,168 @@ jobs:
     timeout-minutes: 30
     environment: apple-signing
     steps:
-      - name: Require upload credentials and the successful signed build
+      - name: Check credentials and requested inputs
         env:
           GH_TOKEN: ${{ github.token }}
           APPLE_UPLOAD_APPLE_ID: ${{ secrets.APPLE_UPLOAD_APPLE_ID }}
           APPLE_UPLOAD_APP_PASSWORD: ${{ secrets.APPLE_UPLOAD_APP_PASSWORD }}
           CHECK_MODE: ${{ inputs.action }}
+          SIGNED_RUN_ID: ${{ inputs.signed_run_id }}
+          SOURCE_COMMIT: ${{ inputs.source_commit }}
+          BUILD_NUMBER: ${{ inputs.build_number }}
         run: |
           python3 - <<'PY'
-          import json, os, re, subprocess
+          import os, re, subprocess
           for name in ('APPLE_UPLOAD_APPLE_ID', 'APPLE_UPLOAD_APP_PASSWORD'):
               if not os.environ.get(name, '').strip():
                   raise SystemExit('Missing protected environment secret: ' + name)
           if os.environ['CHECK_MODE'] == 'diagnose':
-              username = os.environ['APPLE_UPLOAD_APPLE_ID']
-              password = os.environ['APPLE_UPLOAD_APP_PASSWORD']
-              email_ok = re.fullmatch(r"[^\s@]+@[^\s@]+\.[^\s@]+", username.strip()) is not None
-              password_ok = re.fullmatch(r"(?:[a-zA-Z]{4}-){3}[a-zA-Z]{4}|[a-zA-Z]{16}", password.strip()) is not None
-              print('Apple ID email format:', 'valid' if email_ok else 'invalid')
-              print('Apple ID surrounding whitespace:', 'present' if username != username.strip() else 'absent')
-              print('App-specific password format:', 'expected format' if password_ok else 'unexpected format')
-              print('Password surrounding whitespace:', 'present' if password != password.strip() else 'absent')
-              help_result = subprocess.run(['xcrun', 'altool', '--help'], capture_output=True, text=True)
-              help_text = help_result.stdout + help_result.stderr
-              for option in ('--validate-app', '-f', '--upload-app', '--password'):
-                  print('Upload-tool option ' + option + ':', 'documented' if option in help_text else 'not listed')
-              relevant = ('usage:', '--validate-app', '--upload-app', '--upload-package', '--type', '--platform', '--file', '--username', '--password', '--output-format', '--apple-id', '--provider-public-id', '--asc-public-id')
-              for line in help_text.splitlines():
-                  cleaned = line.strip()
-                  if any(cleaned.lower().startswith(option) for option in relevant):
-                      print('Local altool help:', cleaned[:700])
+              result = subprocess.run(['xcrun', 'altool', '--help'], capture_output=True, text=True)
+              help_text = result.stdout + result.stderr
+              for option in ('--validate-app', '--upload-package', '--app-password'):
+                  print('Local altool option ' + option + ':',
+                        'documented' if option in help_text else 'not listed')
               print('Offline checks only; no Apple authentication attempted.')
               raise SystemExit(0)
-          run = json.loads(subprocess.check_output([
-              'gh', 'api', 'repos/' + os.environ['GITHUB_REPOSITORY'] + '/actions/runs/39619888350'
-          ]))
-          assert run['conclusion'] == 'success'
-          assert run['head_sha'] == '34d1f74cb586c9bcbdce6b5a0d1ea384532f5d97'
-          assert run['path'] == '.github/workflows/apple-signing-recovery.yml'
-          assert run['event'] == 'workflow_dispatch'
-          print('Successful signed-build provenance verified.')
+          if not re.fullmatch(r'[0-9]+', os.environ.get('SIGNED_RUN_ID', '')):
+              raise SystemExit('Provide the successful signed-build run ID.')
+          if not re.fullmatch(r'[0-9a-fA-F]{40}', os.environ.get('SOURCE_COMMIT', '')):
+              raise SystemExit('Provide the exact signed source commit.')
+          build = os.environ.get('BUILD_NUMBER', '')
+          if not re.fullmatch(r'[0-9]{1,4}', build) or int(build) < 1:
+              raise SystemExit('Provide a valid unused Apple build number.')
           PY
 
-      - name: Download the existing signed build
+      - name: Verify signed-build provenance and locate its artifact
+        if: inputs.action != 'diagnose'
+        id: provenance
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SIGNED_RUN_ID: ${{ inputs.signed_run_id }}
+          SOURCE_COMMIT: ${{ inputs.source_commit }}
+          BUILD_NUMBER: ${{ inputs.build_number }}
+        run: |
+          python3 - <<'PY'
+          import json, os, subprocess
+          repo = os.environ['GITHUB_REPOSITORY']
+          run_id = os.environ['SIGNED_RUN_ID']
+          source = os.environ['SOURCE_COMMIT'].lower()
+          build = os.environ['BUILD_NUMBER']
+          run = json.loads(subprocess.check_output(
+              ['gh', 'api', f'repos/{repo}/actions/runs/{run_id}'], text=True))
+          assert run.get('conclusion') == 'success', 'Signed build run did not succeed.'
+          assert run.get('head_sha', '').lower() == source, 'Signed run source does not match.'
+          assert run.get('path') == '.github/workflows/apple-signing.yml', 'Unexpected signing workflow.'
+          assert run.get('event') == 'workflow_dispatch', 'Signed build was not manually dispatched.'
+          assert run.get('head_branch') == 'main', 'Signed build did not run from main.'
+          artifact_name = f'homeadmin-signed-{source}-{build}'
+          data = json.loads(subprocess.check_output(
+              ['gh', 'api', f'repos/{repo}/actions/runs/{run_id}/artifacts'], text=True))
+          matches = [item for item in data.get('artifacts', [])
+                     if item.get('name') == artifact_name and not item.get('expired')]
+          assert len(matches) == 1, 'Expected one unexpired signed artifact.'
+          artifact = matches[0]
+          if not artifact.get('id') or not artifact.get('size_in_bytes'):
+              raise SystemExit('Signed artifact metadata is incomplete.')
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as output:
+              output.write('artifact_id=' + str(artifact['id']) + '\n')
+          print('Successful signed-build source and exact artifact verified.')
+          PY
+
+      - name: Download the verified signed artifact
         if: inputs.action != 'diagnose'
         uses: actions/download-artifact@v4
         with:
-          artifact-ids: 12355587018
-          merge-multiple: true
-          run-id: 39619888350
+          artifact-ids: ${{ steps.provenance.outputs.artifact_id }}
+          run-id: ${{ inputs.signed_run_id }}
           github-token: ${{ github.token }}
           path: ${{ runner.temp }}/signed-build
 
-      - name: Verify the exact IPA before Apple receives the build
+      - name: Verify signed IPA identity and provenance
         if: inputs.action != 'diagnose'
+        env:
+          SOURCE_COMMIT: ${{ inputs.source_commit }}
+          BUILD_NUMBER: ${{ inputs.build_number }}
         run: |
           python3 - <<'PY'
           import hashlib, json, os, plistlib, subprocess, zipfile
           from pathlib import Path
-          temporary = Path(os.environ['RUNNER_TEMP'])
-          files = temporary / 'signed-build'
+          files = Path(os.environ['RUNNER_TEMP']) / 'signed-build'
           evidence = json.loads((files / 'build-evidence.json').read_text())
-          assert evidence['source_commit'] == '42755483eeea11581bc2e89530eb9f6974e8ff17'
-          assert evidence['build'] == '1' and evidence['version'] == '1.0'
-          assert evidence['team'] == 'C8T85FCR6R'
+          assert evidence.get('source_commit') == os.environ['SOURCE_COMMIT']
+          assert evidence.get('build') == os.environ['BUILD_NUMBER']
+          assert evidence.get('version') == '1.0'
+          assert evidence.get('team') == 'C8T85FCR6R'
           ipas = list(files.glob('*.ipa'))
-          assert len(ipas) == 1
-          assert hashlib.sha256(ipas[0].read_bytes()).hexdigest() == 'a92a7e7792f5244539f4ff81b77036c7dc000fca4bdbc8d27b079d4cc371efc8'
-          extracted = temporary / 'verify-upload'
-          with zipfile.ZipFile(ipas[0]) as archive:
+          assert len(ipas) == 1, 'Expected exactly one signed IPA.'
+          ipa = ipas[0]
+          extracted = Path(os.environ['RUNNER_TEMP']) / 'verify-upload'
+          with zipfile.ZipFile(ipa) as archive:
               for name in archive.namelist():
                   target = (extracted / name).resolve()
-                  assert target.is_relative_to(extracted.resolve())
+                  assert target.is_relative_to(extracted.resolve()), 'Unsafe path in IPA archive.'
               archive.extractall(extracted)
           apps = list((extracted / 'Payload').glob('*.app'))
-          assert len(apps) == 1
-          info = plistlib.loads((apps[0] / 'Info.plist').read_bytes())
+          assert len(apps) == 1, 'Expected exactly one iOS app.'
+          app = apps[0]
+          info = plistlib.loads((app / 'Info.plist').read_bytes())
           assert info['CFBundleIdentifier'] == 'uk.co.tenaciouspl.lifeadmin'
-          assert info['CFBundleVersion'] == '1' and info['CFBundleShortVersionString'] == '1.0'
-          subprocess.run(['codesign', '--verify', '--deep', '--strict', str(apps[0])], check=True)
+          assert info['CFBundleVersion'] == os.environ['BUILD_NUMBER']
+          assert info['CFBundleShortVersionString'] == '1.0'
+          subprocess.run(['codesign', '--verify', '--deep', '--strict', str(app)], check=True)
           signed = plistlib.loads(subprocess.check_output([
-              'codesign', '-d', '--entitlements', ':-', str(apps[0])
+              'codesign', '-d', '--entitlements', ':-', str(app)
           ]))
           assert signed['application-identifier'] == 'C8T85FCR6R.uk.co.tenaciouspl.lifeadmin'
           assert signed['com.apple.developer.team-identifier'] == 'C8T85FCR6R'
           assert signed.get('get-task-allow', False) is False
-          print('Exact signed HomeAdmin version 1.0 build 1 verified.')
+          print('Signed HomeAdmin 1.0 build verified.')
+          print('IPA SHA-256:', hashlib.sha256(ipa.read_bytes()).hexdigest())
           PY
 
-      - name: Validate with Apple and optionally upload for processing
+      - name: Validate with Apple, then upload only when selected
         if: inputs.action != 'diagnose'
         env:
           UPLOAD_ACTION: ${{ inputs.action }}
           APPLE_UPLOAD_APPLE_ID: ${{ secrets.APPLE_UPLOAD_APPLE_ID }}
           APPLE_UPLOAD_APP_PASSWORD: ${{ secrets.APPLE_UPLOAD_APP_PASSWORD }}
+          SIGNED_RUN_ID: ${{ inputs.signed_run_id }}
+          SOURCE_COMMIT: ${{ inputs.source_commit }}
+          BUILD_NUMBER: ${{ inputs.build_number }}
         run: |
           python3 - <<'PY'
-          import json, os, re, subprocess
+          import os, subprocess
           from pathlib import Path
           action = os.environ['UPLOAD_ACTION']
           assert action in ('validate', 'upload')
           ipa = next((Path(os.environ['RUNNER_TEMP']) / 'signed-build').glob('*.ipa'))
           local_help = subprocess.run(['xcrun', 'altool', '--help'], capture_output=True, text=True)
           if '--app-password' not in local_help.stdout + local_help.stderr:
-              raise SystemExit('This runner does not document the required upload authentication option; no Apple authentication attempted.')
-          print('Documented current altool interface selected.')
+              raise SystemExit('Runner altool lacks the required password option; no Apple authentication attempted.')
           def execute(operation):
               result = subprocess.run([
                   'xcrun', 'altool', operation, str(ipa), '--platform', 'ios',
                   '--bundle-id', 'uk.co.tenaciouspl.lifeadmin',
-                  '--bundle-version', '1', '--bundle-short-version-string', '1.0',
+                  '--bundle-version', os.environ['BUILD_NUMBER'],
+                  '--bundle-short-version-string', '1.0',
                   '--username', os.environ['APPLE_UPLOAD_APPLE_ID'],
-                  '--app-password', '@env:APPLE_UPLOAD_APP_PASSWORD', '--output-format', 'json'
+                  '--app-password', '@env:APPLE_UPLOAD_APP_PASSWORD',
+                  '--output-format', 'json'
               ], capture_output=True, text=True)
               if result.returncode:
                   detail = (result.stdout + chr(10) + result.stderr).lower()
                   categories = {
-                      'upload-tool option or command unsupported': ('unrecognized option', 'unknown option', 'no longer supported', 'invalid option', 'unsupported command', 'invalid parameter', 'missing required', 'required argument'),
-                      'Apple upload authentication rejected': ('failed to authenticate', 'unable to authenticate', 'authentication failed', 'authentication error', 'incorrect password', 'invalid credentials', '-20101'),
+                      'Apple upload authentication rejected': ('failed to authenticate', 'unable to authenticate', 'authentication failed', 'incorrect password', 'invalid credentials', '-20101'),
+                      'Apple app-specific password required': ('-22938', 'sign in with the app-specific password', 'app-specific password is required', 'must use an app-specific password'),
                       'Apple provider selection required': ('multiple providers', 'provider-public-id is required', 'specify a provider'),
-                      'Apple app-specific password required': ('-22938', 'sign in with the app-specific password', 'app-specific password is required', 'application-specific password is required', 'must use an app-specific password', 'app-specific password you entered is incorrect'),
-                      'Apple app record unavailable or mismatched': ('no suitable application', 'application record', 'bundle identifier'),
                       'Apple agreement requires account-holder action': ('agreement', 'contract'),
                       'Apple service connection failure': ('timed out', 'network', 'connection refused', 'could not connect'),
                       'Apple binary validation rejected': ('asset validation failed', 'invalid binary', 'invalid signature'),
                   }
-                  matched = [label for label, needles in categories.items() if any(value in detail for value in needles)]
+                  matched = [label for label, needles in categories.items()
+                             if any(value in detail for value in needles)]
                   for label in matched or ['Apple error not yet classified']:
                       print('Apple diagnostic category:', label)
-                  markers = ('usage:', 'error:', 'password', 'credential', 'username', 'apple-id', 'provider', 'bundle', 'keychain', '@env:', 'required', 'requires', 'not found', 'no such file', 'not authorized', 'unauthorized', 'forbidden', 'invalid', 'unsupported', 'unrecognized', 'unable', 'cannot', 'failed', 'json', 'swift', 'exception', 'crash')
-                  for marker in markers:
-                      if marker in detail:
-                          print('Fixed diagnostic marker:', marker)
-                  known_codes = {'-22938', '-20101', '-1011', '-1012', '-19000', '-19209', '-1009', '-1200', '-1001', '-18000', '-1027', '-22421', '-22411'}
-                  for code in sorted(known_codes):
-                      if re.search(r'(?<![0-9])' + re.escape(code) + r'(?![0-9])', detail):
-                          print('Recognized Apple diagnostic code:', code)
                   print('Upload tool exit status:', result.returncode)
                   raise SystemExit('Apple operation failed: ' + operation + '; no automatic retry performed.')
           execute('--validate-app')
@@ -171,10 +209,17 @@ jobs:
           summary = Path(os.environ['GITHUB_STEP_SUMMARY'])
           if action == 'upload':
               execute('--upload-package')
-              print('Apple accepted the upload for processing. TestFlight availability is not yet confirmed.')
-              summary.write_text('HomeAdmin 1.0 (1) upload accepted for Apple processing.\n\nSource: `42755483eeea11581bc2e89530eb9f6974e8ff17`.\n\nNo tester invitations or App Store review submission performed.\n')
+              print('Apple accepted the upload for processing; TestFlight availability is not yet confirmed.')
+              summary.write_text(
+                  'HomeAdmin 1.0 (' + os.environ['BUILD_NUMBER'] +
+                  ') accepted for Apple processing.\n\nSource: ' +
+                  os.environ['SOURCE_COMMIT'] + '.\n\nSigned run: ' +
+                  os.environ['SIGNED_RUN_ID'] +
+                  '. No tester invitations or App Store review submission performed.\n')
           else:
-              summary.write_text('HomeAdmin 1.0 (1) passed Apple validation. No upload performed.\n')
+              summary.write_text(
+                  'HomeAdmin 1.0 (' + os.environ['BUILD_NUMBER'] +
+                  ') passed Apple validation. No upload performed.\n')
           PY
 
       - name: Remove temporary build copies
