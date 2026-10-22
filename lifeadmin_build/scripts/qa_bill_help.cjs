@@ -33,7 +33,7 @@ const assert = require("node:assert/strict");
     console.log("Guided bill-help selectors after continuing", JSON.stringify(await page.locator("label").evaluateAll(labels => labels.map(label => label.textContent?.trim()).filter(Boolean))));
     await page.getByLabel("What outcome do you want?").fill("Explain the estimated meter reading and remaining balance.");
     await page.getByLabel("Provider message to respond to").fill("We used an estimated reading. Please send the actual reading and date.");
-    await page.getByLabel("Response language", { exact: true }).selectOption("French");
+    await page.locator("label").filter({ hasText: /^Response language/ }).locator("select").selectOption("French");
     assert.equal(await page.getByRole("checkbox", { name: /^Customer reference/ }).isChecked(), false);
     await page.getByRole("button", { name: "Review AI request", exact: true }).click();
     const request = await page.getByLabel("Prepared AI request", { exact: true }).inputValue();
