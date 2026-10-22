@@ -622,6 +622,17 @@ final class LifeAdminUITests: XCTestCase {
         app.terminate()
         app.launch()
         assertWorkspaceReady()
+        // Completed bills are intentionally hidden by the default Active
+        // filter. Switch to Completed before reopening the persisted record.
+        let showBills = app.otherElements["Show bills"]
+        reveal(showBills)
+        showBills.tap()
+        let statusPicker = app.pickerWheels.firstMatch
+        XCTAssertTrue(statusPicker.waitForExistence(timeout: 5), "The bill filter should open its native picker")
+        statusPicker.adjust(toPickerWheelValue: "Completed")
+        let pickerDone = app.buttons["Done"]
+        XCTAssertTrue(pickerDone.waitForExistence(timeout: 5), "The bill filter picker should offer Done")
+        pickerDone.tap()
         let reopen = app.buttons["Reopen"]
         reveal(reopen)
         reopen.tap()
