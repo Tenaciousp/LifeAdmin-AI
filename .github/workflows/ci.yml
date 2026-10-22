@@ -90,13 +90,16 @@ jobs:
           UX_SERVER_PID=$!
           trap 'kill "$UX_SERVER_PID" 2>/dev/null || true' EXIT
           NODE_PATH=/tmp/homeadmin-browser-qa/node_modules node scripts/qa_bill_experience.cjs
+          NODE_PATH=/tmp/homeadmin-browser-qa/node_modules node scripts/check_local_layout.cjs artifacts/adminpilot-ai/dist-local/public /tmp/homeadmin-layout-evidence
 
       - name: Save synthetic UX screenshots
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: homeadmin-responsive-ux
-          path: /tmp/homeadmin-*.png
+          path: |
+            /tmp/homeadmin-*.png
+            /tmp/homeadmin-layout-evidence/
           if-no-files-found: ignore
           retention-days: 7
 

@@ -214,8 +214,15 @@ final class LifeAdminUITests: XCTestCase {
         closeKeyboard()
         let moreDetails = app.descendants(matching: .any).matching(
             NSPredicate(format: "label == %@", "More bill details (optional)")).firstMatch
-        reveal(moreDetails)
-        moreDetails.tap()
+        // The pinned upgrade baseline predates the optional-details disclosure.
+        // Current layouts must expose the new section; baseline fields stay open.
+        if checkCurrentLayout {
+            XCTAssertTrue(moreDetails.exists, "Current bill entry needs its optional-details section")
+        }
+        if moreDetails.exists {
+            reveal(moreDetails)
+            moreDetails.tap()
+        }
         if checkCurrentLayout {
             let columnWidth = app.textFields["Provider or organisation"].frame.width
             XCTAssertGreaterThan(columnWidth, 0)
