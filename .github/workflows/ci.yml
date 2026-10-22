@@ -158,8 +158,8 @@ jobs:
     # Standard hosted runners are free for public repositories; skip if that changes.
     if: ${{ github.event.repository.private == false }}
     runs-on: macos-26
-    # Include build time and post-test evidence export, beyond the UI cases.
-    timeout-minutes: 60
+    # Full interactive acceptance plus post-test XCTest and simulator evidence export.
+    timeout-minutes: 90
     strategy:
       fail-fast: false
       matrix:
