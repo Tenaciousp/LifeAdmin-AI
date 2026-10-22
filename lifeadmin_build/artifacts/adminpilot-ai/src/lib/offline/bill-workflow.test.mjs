@@ -73,8 +73,8 @@ test("progress and separately saved results survive close, reopen and backup res
   assert.equal((await store.read()).tasks[0].workflow_draft.incoming, "Provider response");
   await store.importBackup(backup, { replace: true });
   const saved = await store.read();
-  assert.equal(saved.plans.length, 2); assert.equal(saved.plans[0].provider_email.body, "Reviewed result");
-  assert.equal(saved.plans[1].provider_email.body, second.provider_email.body);
+  assert.equal(saved.plans.length, 2); assert.equal(saved.plans.find(note => note.id === first.id).provider_email.body, "Reviewed result");
+  assert.equal(saved.plans.find(note => note.id === second.id).provider_email.body, second.provider_email.body);
   assert.equal(saved.tasks[0].status, "Open"); store.close();
 });
 test("native progress and reviewed results use the same compatible backup contract", async () => {
@@ -102,7 +102,10 @@ for (const native of [false, true]) test(`${native ? "native" : "browser"} resul
   assert.equal(data.tasks[0].workflow_draft, undefined);
   assert.deepEqual(data.tasks[0].details, bill.details);
   assert.equal(data.tasks[0].status, "Open");
-  assert.deepEqual(data.plans, [original, result]);
+  // IndexedDB reads by primary key; native storage retains insertion order.
+  // Compare complete records by identity, not a random UUID's sort position.
+  const byId = values => [...values].sort((a, b) => a.id.localeCompare(b.id));
+  assert.deepEqual(byId(data.plans), byId([original, result]));
   await store.updateTask(bill.id, { workflow_draft: progress });
   const acknowledged = await store.read();
   await assert.rejects(store.saveWorkflowResult(result));
