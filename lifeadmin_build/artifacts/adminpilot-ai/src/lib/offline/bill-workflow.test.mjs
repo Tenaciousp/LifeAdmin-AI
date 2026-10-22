@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { IDBFactory } from "fake-indexeddb";
-import { initialWorkflow, localWorkflowDraft, workflowFields, workflowPrompt, workflowResult } from "./bill-workflow.mjs";
+import { initialWorkflow, localWorkflowDraft, workflowContext, workflowFields, workflowPrompt, workflowResult } from "./bill-workflow.mjs";
 import { openLocalStore } from "./storage.mjs";
 import { openNativeStore } from "./native-store.mjs";
 import { planTextForCopy } from "./plans.mjs";
@@ -19,6 +19,14 @@ test("guided bill choices exclude references and free-text facts unless explicit
   assert.throws(() => workflowPrompt(bill, { ...state, fieldKeys: ["unexpected"] }), /Choose details/);
   const explicit = workflowPrompt(bill, { ...state, fieldKeys: ["account_reference"] });
   assert.match(explicit, /PRIVATE-REFERENCE/); assert.doesNotMatch(explicit, /Example Water|PRIVATE-NOTES/);
+});
+test("AI prompt names the selected bill type as well as its storage category", () => {
+  const specific = { ...bill, category_id: "water", details: { ...bill.details, bill_type: "Sewerage" } };
+  const context = workflowContext(specific);
+  assert.match(context, /Bill type: Sewerage/);
+  assert.match(context, /Bill category: Water and sewerage/);
+  const fallback = workflowContext({ ...bill, details: { ...bill.details, bill_type: "  " } });
+  assert.match(fallback, /Bill type: Water and sewerage/);
 });
 test("reply requests include the exact provider message and requested outcome without accepting offers", () => {
   const state = { ...draft("reply"), incoming: "We offer a credit of CAD 12. Please confirm acceptance.", brief: "Clarify the remaining charges", tone: "Firm and factual", language: "French" };

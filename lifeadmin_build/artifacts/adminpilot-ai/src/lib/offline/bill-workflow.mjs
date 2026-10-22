@@ -8,7 +8,9 @@ export const languages = ["English", "Welsh", "French", "German", "Spanish", "It
 export function workflowFields(task) { return promptFields({ known_details: task.details }); }
 export function workflowContext(task) {
   const category = billCategory(task);
-  return "Bill type: " + (customerCatalog.categories.find(item => item.id === category)?.label || "Household bill") + ". Bill goal: " + (goalsFor(category).find(item => item.id === task.goal_id)?.label || "Check the bill") + ".";
+  const categoryLabel = customerCatalog.categories.find(item => item.id === category)?.label || "Household bill";
+  const billType = typeof task.details?.bill_type === "string" && task.details.bill_type.trim() ? task.details.bill_type.trim() : categoryLabel;
+  return "Bill type: " + billType + ". Bill category: " + categoryLabel + ". Bill goal: " + (goalsFor(category).find(item => item.id === task.goal_id)?.label || "Check the bill") + ".";
 }
 export function initialWorkflow(task) {
   const fields = workflowFields(task), d = task.workflow_draft || {};
