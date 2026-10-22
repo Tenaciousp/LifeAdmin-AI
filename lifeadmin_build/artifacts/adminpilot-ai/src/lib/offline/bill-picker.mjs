@@ -78,6 +78,7 @@ export function billTypeForSuggestion(categoryId, query, details = {}) {
   if (!group) return null;
   const explicit = resolveBillType({ category_id: categoryId, details });
   if (explicit?.group.id === group.id) return explicit;
+  if (categoryId === "water") return { group, type: group.types.find(item => item.id === "water") };
   const match = group.types.find(type => suggestionAliases[type.id]?.test(String(query || "")));
   return match ? { group, type: match } : null;
 }

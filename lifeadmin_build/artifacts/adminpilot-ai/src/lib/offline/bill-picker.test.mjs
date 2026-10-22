@@ -31,5 +31,6 @@ test("provider suggestions preselect a specific type when the query identifies o
   assert.equal(netflix.group.id, "subscriptions");
   const water = billTypeForSuggestion("energy_water", "Review my water bill", {});
   assert.equal(water.type.id, "water");
+  assert.equal(billTypeForSuggestion("water", "Water", {}).type.id, "water");
   assert.equal(billTypeForSuggestion("energy_water", "Review energy", {})?.type, undefined);
 });
