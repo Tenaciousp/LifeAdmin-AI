@@ -100,7 +100,7 @@ const assert = require('node:assert/strict');
       assert(layout.scrollWidth<=layout.width+1,JSON.stringify(layout));
       assert.deepEqual(layout.clippedControls,[],JSON.stringify(layout));
     }
-    for (const name of ['Copy AI prompt','Close AI prompt','Open ChatGPT','Manage backups','App privacy policy']) {
+    for (const name of ['Copy AI prompt','Close AI prompt','Open Copilot','Manage backups','App privacy policy']) {
       assert(tabStops.some(stop=>stop.name===name),`Tab traversal missed ${name}`);
     }
     assert(tabStops.every(stop=>stop.outlineStyle!=='none'&&parseFloat(stop.outlineWidth)>0),'A keyboard focus indicator is missing');
