@@ -1051,7 +1051,14 @@ final class LifeAdminUITests: XCTestCase {
         try audit("initial bill-entry screen")
 
         let open = app.buttons["Open plan"]
-        reveal(open)
+        let webView = app.webViews.firstMatch
+        for _ in 0..<8 {
+            let frame = open.frame
+            let centre = CGPoint(x: frame.midX, y: frame.midY)
+            if webView.frame.contains(centre) && open.isHittable { break }
+            webView.swipeUp()
+        }
+        XCTAssertTrue(open.isHittable, "The saved plan control should be reachable after scrolling the WebView")
         try audit("saved bill and plan controls")
         open.tap()
         let nextSteps = app.staticTexts["Next Steps"]
