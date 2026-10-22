@@ -167,7 +167,8 @@ final class LifeAdminUITests: XCTestCase {
         let closed = XCTNSPredicateExpectation(
             predicate: NSPredicate(format: "exists == false"), object: app.keyboards.firstMatch)
         // Large iPad simulator snapshots can outlast the keyboard animation.
-        XCTAssertEqual(XCTWaiter.wait(for: [closed], timeout: 15), .completed)
+        // Keep the check bounded while allowing its accessibility tree to settle.
+        XCTAssertEqual(XCTWaiter.wait(for: [closed], timeout: 30), .completed)
     }
 
     private func pickerControl(
