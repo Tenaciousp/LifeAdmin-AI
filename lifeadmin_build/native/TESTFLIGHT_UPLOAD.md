@@ -103,3 +103,35 @@ https://developer.apple.com/help/app-store-connect/reference/app-information/exp
 
 The answer must be reviewed again if the app or its dependencies change their
 encryption behavior. No signed build was modified during this review.
+
+
+## Build 2 and later
+
+The earlier upload workflow is pinned to version 1.0 build 1 and must not be used
+for a different IPA. The updated workflow
+`.github/workflows/apple-testflight-upload.yml` accepts a signed-build run ID,
+source commit and build number. It checks the successful manual
+`.github/workflows/apple-signing.yml` run on `main`, locates the matching
+unexpired artifact, and verifies its evidence, app identity, team, entitlements
+and signature before contacting Apple.
+
+After PR #7 is merged and full CI succeeds on the resulting `main` commit:
+
+1. Confirm an unused build number in App Store Connect. Use build 2 for the next
+   upload if still unused.
+2. Manually run **HomeAdmin manual signed build** on `main` with that build
+   number. Keep the protected `apple-signing` approval in place. Review the run
+   source SHA and exported artifact evidence.
+3. Record the successful signing run ID, its `main` source SHA and build number.
+4. Manually run **HomeAdmin verified-build TestFlight upload** on `main`.
+   First select `validate` and supply those three values. Validation performs
+   no upload. Inspect the successful result.
+5. Run the upload workflow again with action `upload` and the same values.
+   GitHub environment review stays enabled. Upload begins only after selecting
+   `upload` and approving the protected job.
+6. Confirm Apple processing in App Store Connect before testing or inviting
+   additional people.
+
+No tester invitation or App Store review submission is performed by this
+workflow. A successful upload means Apple accepted the IPA for processing; it
+does not by itself confirm TestFlight availability.
