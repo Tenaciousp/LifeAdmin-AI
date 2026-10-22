@@ -22,4 +22,5 @@ test("legacy type details are inferred when no new picker ID exists", () => {
   assert.equal(resolved.type.id, "mobile");
   assert.equal(groupForCategory("water").id, "home_utilities");
   assert.equal(resolveBillType({ category_id: "water", details: { water_services: "Sewerage only" } }).type.id, "sewerage");
+  assert.equal(resolveBillType({ category_id: "energy_water", category: "Energy and water", details: { utility_type: "Water", tariff: "Water tariff" } }).type.id, "water");
 });

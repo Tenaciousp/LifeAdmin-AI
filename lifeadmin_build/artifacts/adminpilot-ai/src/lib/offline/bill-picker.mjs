@@ -43,6 +43,10 @@ export function groupForCategory(categoryId) { return billGroups.find(group => g
 export function resolveBillType(task) {
   const details = task?.details || {};
   const categoryId = task?.category_id || task?.category;
+  if ((categoryId === "energy_water" || categoryId === "water" || task?.category === "Energy and water") && /water/i.test(String(details.utility_type || "") + " " + String(details.tariff || ""))) {
+    const group = billGroups[0];
+    return { group, type: group.types.find(item => item.id === "water") };
+  }
   for (const group of billGroups) {
     const type = group.types.find(item => item.id === details.bill_type_id) || group.types.find(item => item.detail_key && details[item.detail_key] === item.detail_value && (group.category_id === categoryId || item.category_id === categoryId));
     if (type && (!categoryId || group.category_id === categoryId || type.category_id === categoryId || group.category_id === task.category)) return { group, type };
