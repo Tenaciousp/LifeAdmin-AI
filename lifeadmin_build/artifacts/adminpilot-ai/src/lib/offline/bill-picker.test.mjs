@@ -20,4 +20,6 @@ test("specific type resolves for display and edit without changing storage categ
 test("legacy type details are inferred when no new picker ID exists", () => {
   const resolved = resolveBillType({ category_id: "tv_broadband_mobile", details: { service_type: "Mobile phone" } });
   assert.equal(resolved.type.id, "mobile");
+  assert.equal(groupForCategory("water").id, "home_utilities");
+  assert.equal(resolveBillType({ category_id: "water", details: { water_services: "Sewerage only" } }).type.id, "sewerage");
 });

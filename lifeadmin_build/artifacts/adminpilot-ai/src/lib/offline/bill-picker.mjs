@@ -38,13 +38,14 @@ const groups = [
   ] },
   { id: "other", label: "Other or not sure", category_id: "other_regular_payment", types: [["other_regular", "Other / unrecognised regular payment", "service_type", "Other regular payment"]] },
 ];
-export const billGroups = groups.map(group => ({ ...group, types: group.types.map(([id, label, detail_key, detail_value]) => ({ id, label, detail_key, detail_value, category_id: ["water", "sewerage", "water_sewerage"].includes(id) ? "water" : group.category_id })) }));
-export function groupForCategory(categoryId) { return billGroups.find(group => group.category_id === categoryId); }
+export const billGroups = groups.map(group => ({ ...group, types: group.types.map(([id, label, detail_key, detail_value]) => ({ id, label, detail_key, detail_value, category_id: ({ water: "water", sewerage: "water", water_sewerage: "water", property_rates: "council_tax_licences", tv_licence: "council_tax_licences", elder_care: "health_care_pets", health_plan: "health_care_pets", prescription_plan: "health_care_pets", vet_plan: "health_care_pets" })[id] || group.category_id })) }));
+export function groupForCategory(categoryId) { return billGroups.find(group => group.category_id === categoryId) || (categoryId === "water" ? billGroups[0] : undefined); }
 export function resolveBillType(task) {
   const details = task?.details || {};
+  const categoryId = task?.category_id || task?.category;
   for (const group of billGroups) {
-    const type = group.types.find(item => item.id === details.bill_type_id) || group.types.find(item => item.detail_key && details[item.detail_key] === item.detail_value && group.category_id === (task.category_id || task.category));
-    if (type && (!task.category_id || group.category_id === task.category_id || group.category_id === task.category)) return { group, type };
+    const type = group.types.find(item => item.id === details.bill_type_id) || group.types.find(item => item.detail_key && details[item.detail_key] === item.detail_value && (group.category_id === categoryId || item.category_id === categoryId));
+    if (type && (!categoryId || group.category_id === categoryId || type.category_id === categoryId || group.category_id === task.category)) return { group, type };
   }
   return null;
 }
