@@ -872,7 +872,7 @@ final class LifeAdminUITests: XCTestCase {
         XCTAssertTrue(reviewed.contains("CI reviewed prompt 7319"))
         let copy = app.buttons["Copy AI prompt"]
         reveal(copy)
-        XCTAssertTrue(app.links["Open ChatGPT"].exists)
+        XCTAssertTrue(app.links["Open Copilot (Microsoft, free option)"].exists)
         XCTAssertFalse(app.links["Open Claude"].exists)
         copy.tap()
         XCTAssertTrue(app.staticTexts[
