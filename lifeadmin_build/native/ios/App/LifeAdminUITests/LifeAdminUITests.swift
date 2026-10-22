@@ -43,7 +43,15 @@ final class LifeAdminUITests: XCTestCase {
             // WebKit can call a clipped button hittable when its tap centre is
             // outside the safe-area viewport. Larger text views can be partly
             // visible and usable, so check the tap centre rather than all edges.
-            let viewport = app.webViews.firstMatch.frame
+            var viewport = app.webViews.firstMatch.frame
+            let keyboard = app.keyboards.firstMatch
+            if keyboard.exists && keyboard.frame.intersects(viewport) &&
+                keyboard.frame.minY > viewport.minY {
+                // WKWebView keeps its full frame while the software keyboard
+                // covers its lower portion. Never tap or scroll through that
+                // covered area when moving between text fields.
+                viewport.size.height = min(viewport.height, keyboard.frame.minY - viewport.minY)
+            }
             if element.exists {
                 let frame = element.frame
                 let centre = CGPoint(x: frame.midX, y: frame.midY)
@@ -68,7 +76,11 @@ final class LifeAdminUITests: XCTestCase {
                     continue
                 }
             }
-            app.swipeUp()
+            let start = app.coordinate(withNormalizedOffset: .zero)
+                .withOffset(CGVector(dx: viewport.midX,
+                                     dy: viewport.minY + viewport.height * 0.8))
+            start.press(forDuration: 0.01,
+                        thenDragTo: start.withOffset(CGVector(dx: 0, dy: -viewport.height * 0.55)))
         }
         print(app.debugDescription)
         XCTFail("Control is not reachable: \(element)", file: file, line: line)
@@ -99,6 +111,11 @@ final class LifeAdminUITests: XCTestCase {
             return
         }
         dismissKeyboardTutorial()
+        // A visible keyboard alone does not prove the intended field owns
+        // focus. Re-reveal and focus the target after keyboard-driven layout
+        // changes, before the single verified typing operation.
+        reveal(field)
+        field.tap()
     }
 
     private func enterText(_ value: String, into field: XCUIElement) {

@@ -104,9 +104,17 @@ const assert = require('node:assert/strict');
       assert(tabStops.some(stop=>stop.name===name),`Tab traversal missed ${name}`);
     }
     assert(tabStops.every(stop=>stop.outlineStyle!=='none'&&parseFloat(stop.outlineWidth)>0),'A keyboard focus indicator is missing');
-    const aiLinks=links.filter(link=>link.name.startsWith('Open '));
+    // The chosen-service UI intentionally displays one launch link at a time.
+    // Verify every provider by selecting each option instead of counting five
+    // simultaneously visible links from the older all-links layout.
+    const aiLinks=[];
+    for (const [id,name,url] of [['chatgpt','ChatGPT','https://chatgpt.com/'],['gemini','Gemini','https://gemini.google.com/'],['copilot','Copilot','https://copilot.microsoft.com/'],['claude','Claude','https://claude.ai/new'],['perplexity','Perplexity','https://www.perplexity.ai/']]) {
+      await page.getByLabel('Your preferred AI',{exact:true}).selectOption(id);
+      const link=await page.getByRole('link',{name:'Open '+name,exact:true}).evaluate(e=>({name:e.textContent,href:e.getAttribute('href'),target:e.target,rel:e.rel}));
+      assert.equal(link.href,url);assert.equal(new URL(link.href).search,'');assert.equal(new URL(link.href).hash,'');assert.equal(link.target,'_blank');assert(link.rel.includes('noopener')&&link.rel.includes('noreferrer'));
+      aiLinks.push(link);
+    }
     assert.equal(aiLinks.length,5);
-    for(const link of aiLinks) {assert.equal(new URL(link.href).search,'');assert.equal(new URL(link.href).hash,'');assert.equal(link.target,'_blank');assert(link.rel.includes('noopener')&&link.rel.includes('noreferrer'));}
     assert.deepEqual(external,[]);
     assert.deepEqual(errors,[]);
     const usabilityReport={scope:'Browser fallback with 100%/200% root font sizes; not native Apple Dynamic Type, VoiceOver, hardware keyboard, actual external navigation or WKWebView acceptance',passed:true,layouts,tabStops,aiLinks,pageErrors:errors};

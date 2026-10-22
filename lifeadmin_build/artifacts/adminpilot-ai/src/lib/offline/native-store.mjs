@@ -60,6 +60,16 @@ export async function openNativeStore(bridge) {
         data.plans.push(value); return value;
       });
     },
+    saveWorkflowResult(plan) {
+      const value = record(plan, "plan");
+      return mutate(data => {
+        const task = data.tasks.find(item => item.id === value.task_id);
+        if (!task) throw new Error("Save the bill before saving its result.");
+        if (data.plans.some(item => item.id === value.id)) throw new Error("Result already exists.");
+        delete task.workflow_draft;
+        data.plans.push(value); return value;
+      });
+    },
     updatePlanMessage(id, draft, expected) {
       const input = structuredClone(draft), original = structuredClone(expected);
       return mutate(data => {

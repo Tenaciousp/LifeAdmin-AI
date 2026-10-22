@@ -6,6 +6,7 @@ export type LocalStore = {
  createTask(task: LocalRecord): Promise<unknown>;
  updateTask(id: string, changes: Record<string, unknown>): Promise<unknown>;
  savePlan(plan: LocalRecord): Promise<unknown>;
+ saveWorkflowResult(plan: LocalRecord): Promise<unknown>;
  updatePlanMessage(id: string, draft: MessageDraft, expected: MessageDraft): Promise<LocalRecord>;
  deleteTask(id: string): Promise<unknown>;
  deletePlan(id: string): Promise<unknown>;

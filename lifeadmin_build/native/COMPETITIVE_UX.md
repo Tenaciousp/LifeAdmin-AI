@@ -56,3 +56,38 @@ CAD monthly forecasts, saved-detail reload persistence, and 390/768/1024px
 layouts. CI installs an isolated Playwright QA dependency and retains synthetic
 screenshots for seven days. This is complementary to native iOS tests, not a
 replacement for a device usability review.
+
+## Guided bill-to-result journey, 22 October follow-up
+
+Official references: [Resolver case-file workflow](https://www.resolver.co.uk/about),
+[CCW's water complaint builder](https://www.ccw.org.uk/advice-and-support/complaint-letter-tool/),
+and [Rocket Money's bill-specific guided submission](https://help.rocketmoney.com/en/articles/9744564-how-to-submit-a-bill-negotiation).
+Resolver's issue-centred questions, replies and progress; CCW's problem, dates and
+desired outcome; and Rocket Money's bill-first preferences inform the flow.
+No provider account access, fees-for-savings service or automatic action is copied.
+
+- Saving a bill opens guided help. Existing bills offer Plan, letter or reply.
+- Four visible stages: choose result, check details, prepare request, review/save.
+- Choose an offline template or a user-controlled external AI handoff. The UI
+  explicitly states automatic in-app AI generation is unavailable in this build.
+- Reply requests accept the relevant provider message and desired outcome.
+  Tone and requested output language apply to the chosen AI, not to local templates.
+- Review selected facts before copying. References and free-text bill notes start
+  unchecked. Explicitly entered request text and provider messages are disclosed
+  separately. Opening an AI link transmits no bill text.
+- Save unfinished progress against the bill, resume after restart and retain the
+  progress in backup schema 1. Review approval always resets on reopening.
+- Paste the returned answer, edit and confirm review before saving. Source labels
+  distinguish local templates from external-service text supplied by the user.
+- Final saving creates a separate result and clears unfinished progress in one
+  transaction. Earlier results, bill facts and bill status are preserved. Failed
+  saves retain the acknowledged work. Nothing is sent or marked paid automatically.
+- `qa_bill_help.cjs` uses synthetic returned text, not a real AI call. It checks
+  reply context, privacy, resume, review gating, separate results and 200% text.
+- The older layout test now selects each of the five AI services and verifies
+  its exact clean launch URL and safe-link attributes, rather than incorrectly
+  expecting five simultaneous links in a chosen-service UI.
+
+Integrated generation, secure backend credentials, usage controls and explicit
+transmission consent remain separate release work. This revision does not claim
+the blocked API integration is complete.

@@ -90,6 +90,7 @@ jobs:
           UX_SERVER_PID=$!
           trap 'kill "$UX_SERVER_PID" 2>/dev/null || true' EXIT
           NODE_PATH=/tmp/homeadmin-browser-qa/node_modules node scripts/qa_bill_experience.cjs
+          NODE_PATH=/tmp/homeadmin-browser-qa/node_modules node scripts/qa_bill_help.cjs
           NODE_PATH=/tmp/homeadmin-browser-qa/node_modules node scripts/check_local_layout.cjs artifacts/adminpilot-ai/dist-local/public /tmp/homeadmin-layout-evidence
 
       - name: Save synthetic UX screenshots
