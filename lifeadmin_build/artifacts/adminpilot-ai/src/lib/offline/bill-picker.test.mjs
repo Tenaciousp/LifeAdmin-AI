@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { billGroups, groupForCategory, resolveBillType } from "./bill-picker.mjs";
+import { billGroups, billTypeForSuggestion, groupForCategory, resolveBillType } from "./bill-picker.mjs";
 
 test("bill picker covers approved groups and specific types", () => {
   assert.equal(billGroups.length, 9);
@@ -23,4 +23,13 @@ test("legacy type details are inferred when no new picker ID exists", () => {
   assert.equal(groupForCategory("water").id, "home_utilities");
   assert.equal(resolveBillType({ category_id: "water", details: { water_services: "Sewerage only" } }).type.id, "sewerage");
   assert.equal(resolveBillType({ category_id: "energy_water", category: "Energy and water", details: { utility_type: "Water", tariff: "Water tariff" } }).type.id, "water");
+});
+
+test("provider suggestions preselect a specific type when the query identifies one", () => {
+  const netflix = billTypeForSuggestion("subscriptions_memberships", "Cancel Netflix", { provider: "Netflix" });
+  assert.equal(netflix.type.id, "video_music");
+  assert.equal(netflix.group.id, "subscriptions");
+  const water = billTypeForSuggestion("energy_water", "Review my water bill", {});
+  assert.equal(water.type.id, "water");
+  assert.equal(billTypeForSuggestion("energy_water", "Review energy", {})?.type, undefined);
 });

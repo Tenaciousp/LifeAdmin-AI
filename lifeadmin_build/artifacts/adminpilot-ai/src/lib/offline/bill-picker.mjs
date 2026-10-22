@@ -40,6 +40,47 @@ const groups = [
 ];
 export const billGroups = groups.map(group => ({ ...group, types: group.types.map(([id, label, detail_key, detail_value]) => ({ id, label, detail_key, detail_value, category_id: ({ water: "water", sewerage: "water", water_sewerage: "water", property_rates: "council_tax_licences", tv_licence: "council_tax_licences", elder_care: "health_care_pets", health_plan: "health_care_pets", prescription_plan: "health_care_pets", vet_plan: "health_care_pets" })[id] || group.category_id })) }));
 export function groupForCategory(categoryId) { return billGroups.find(group => group.category_id === categoryId) || (categoryId === "water" ? billGroups[0] : undefined); }
+
+const suggestionAliases = {
+  electricity: /\b(electricity|electric|power bill)\b/i,
+  gas: /\b(gas bill|gas supplier|gas tariff)\b/i,
+  dual_fuel: /\b(dual fuel|combined gas and electricity)\b/i,
+  water: /\b(water bill|water supplier|water charges?)\b/i,
+  sewerage: /\b(sewerage|sewage)\b/i,
+  water_sewerage: /\b(water and sewerage|water & sewerage)\b/i,
+  broadband: /\b(broadband|internet|wi-?fi)\b/i,
+  mobile: /\b(mobile|cell ?phone)\b/i,
+  landline: /\b(landline|home phone)\b/i,
+  tv_package: /\b(tv package|television package|sky tv|cable tv)\b/i,
+  tv_licence: /\b(tv licence|tv license)\b/i,
+  video_music: /\b(netflix|spotify|disney\+|amazon prime video|streaming|music subscription)\b/i,
+  gaming: /\b(xbox|playstation|nintendo|gaming)\b/i,
+  software_cloud: /\b(software|cloud storage|icloud|microsoft 365|office 365)\b/i,
+  news: /\b(newspaper|magazine|news subscription)\b/i,
+  gym: /\b(gym|fitness membership)\b/i,
+  delivery: /\b(delivery membership|amazon prime|costco membership)\b/i,
+  vehicle_insurance: /\b(car insurance|vehicle insurance|motor insurance)\b/i,
+  buildings_insurance: /\b(buildings insurance|home insurance)\b/i,
+  contents_insurance: /\b(contents insurance|renters insurance)\b/i,
+  life_insurance: /\b(life insurance)\b/i,
+  travel_insurance: /\b(travel insurance)\b/i,
+  pet_insurance: /\b(pet insurance)\b/i,
+  rent: /\b(rent|landlord)\b/i,
+  mortgage: /\b(mortgage)\b/i,
+  property_rates: /\b(council tax|property tax|local rates)\b/i,
+  credit_card: /\b(credit card)\b/i,
+  personal_loan: /\b(personal loan)\b/i,
+  student_loan: /\b(student loan)\b/i,
+  childcare: /\b(childcare|nursery)\b/i,
+};
+export function billTypeForSuggestion(categoryId, query, details = {}) {
+  const group = groupForCategory(categoryId);
+  if (!group) return null;
+  const explicit = resolveBillType({ category_id: categoryId, details });
+  if (explicit?.group.id === group.id) return explicit;
+  const match = group.types.find(type => suggestionAliases[type.id]?.test(String(query || "")));
+  return match ? { group, type: match } : null;
+}
 export function resolveBillType(task) {
   const details = task?.details || {};
   const categoryId = task?.category_id || task?.category;

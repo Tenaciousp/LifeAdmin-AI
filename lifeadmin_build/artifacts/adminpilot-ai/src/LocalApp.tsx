@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { billCategory, fieldsFor, goalsFor } from "./lib/offline/bill-types.mjs";
-import { billGroups, groupForCategory, resolveBillType } from "./lib/offline/bill-picker.mjs";
+import { billGroups, billTypeForSuggestion, groupForCategory, resolveBillType } from "./lib/offline/bill-picker.mjs";
 import { catalog, suggest } from "./lib/offline/domain.mjs";
 import { exportDeviceBackup, chooseDeviceBackup, isNativeDevice, copyDeviceText } from "./lib/offline/device-files.mjs";
 import { openDeviceStore } from "./lib/offline/device-store.mjs";
@@ -244,7 +244,7 @@ export default function LocalApp() {
         <section className="rounded-2xl border border-violet-100 bg-white p-[20px] shadow-sm">
           <h2 className="text-xl font-bold">Find a bill or provider</h2>
           <form className="mt-3 flex flex-wrap gap-2" onSubmit={event => { event.preventDefault(); setMatch(suggest(search)); }}><label className="sr-only" htmlFor="bill-search">Bill or provider</label><input id="bill-search" className={input} value={search} maxLength={500} placeholder="e.g. Cancel Netflix or review energy" onChange={event => setSearch(event.target.value)} /><button className={button}>Search</button></form>
-          {match && <div className="mt-4"><p>{match.category_id ? catalogue.categories.find((item: any) => item.id === match.category_id)?.label : "Choose the closest bill type below."}</p>{match.category_id && <button className={button + " mt-2"} onClick={() => { resetForm(); setCategory(match.category_id); setGoal(match.goal_id || ""); setDetails({ ...(match.prefill_details || {}) }); setMatch(null); document.getElementById("bill-form")?.scrollIntoView({ behavior: "smooth" }); }}>Use suggestion</button>}</div>}
+          {match && <div className="mt-4"><p>{match.category_id ? catalogue.categories.find((item: any) => item.id === match.category_id)?.label : "Choose the closest bill type below."}</p>{match.category_id && <button className={button + " mt-2"} onClick={() => { resetForm(); setCategory(match.category_id); setGoal(match.goal_id || ""); const suggestedDetails = { ...(match.prefill_details || {}) }; const resolved = billTypeForSuggestion(match.category_id, search, suggestedDetails); const suggestedGroup = resolved?.group || groupForCategory(match.category_id); if (suggestedGroup) suggestedDetails.bill_group_id = suggestedGroup.id; if (resolved) Object.assign(suggestedDetails, { bill_type_id: resolved.type.id, bill_type: resolved.type.label, [resolved.type.detail_key]: resolved.type.detail_value }); setDetails(suggestedDetails); setMatch(null); document.getElementById("bill-form")?.scrollIntoView({ behavior: "smooth" }); }}>Use suggestion</button>}</div>}
           <div className="mt-4 flex flex-wrap gap-2" aria-label="Popular bill types">{[["electricity", "Electricity"], ["gas", "Gas"], ["water", "Water"], ["broadband", "Broadband"], ["mobile", "Mobile"], ["rent", "Rent"], ["mortgage", "Mortgage"]].map(([id, label]) => <button key={id} className="min-h-[44px] rounded-xl border border-violet-200 px-4 font-semibold text-violet-800 hover:bg-violet-50" onClick={() => quickAddBill(id)}>{label}</button>)}</div>
         </section>
         <section id="bill-form" className="rounded-2xl border border-violet-100 bg-white p-[20px] shadow-sm">
