@@ -82,6 +82,8 @@ No provider account access, fees-for-savings service or automatic action is copi
 - Final saving creates a separate result and clears unfinished progress in one
   transaction. Earlier results, bill facts and bill status are preserved. Failed
   saves retain the acknowledged work. Nothing is sent or marked paid automatically.
+- Progress writes and final saving reject stale sessions. A second window's newer
+  acknowledged draft is not overwritten or cleared by an older editing session.
 - `qa_bill_help.cjs` uses synthetic returned text, not a real AI call. It checks
   reply context, privacy, resume, review gating, separate results and 200% text.
 - The older layout test now selects each of the five AI services and verifies

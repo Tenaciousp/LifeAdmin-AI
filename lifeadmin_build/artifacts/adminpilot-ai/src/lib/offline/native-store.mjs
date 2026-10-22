@@ -1,4 +1,4 @@
-import { parseBackup, serialise, record, jsonValue, planWithEditedMessage } from "./storage.mjs";
+import { parseBackup, serialise, record, jsonValue, planWithEditedMessage, assertWorkflowCurrent } from "./storage.mjs";
 
 // Native bridge owns the database transaction. No cached snapshot becomes a save.
 export async function openNativeStore(bridge) {
@@ -60,11 +60,24 @@ export async function openNativeStore(bridge) {
         data.plans.push(value); return value;
       });
     },
-    saveWorkflowResult(plan) {
+    saveWorkflowProgress(id, draft, expectedDraft = null) {
+      jsonValue(draft);
+      if (!draft || Array.isArray(draft) || typeof draft !== "object") throw new Error("Invalid bill-help progress.");
+      const input = structuredClone(draft), expected = structuredClone(expectedDraft);
+      return mutate(data => {
+        const task = data.tasks.find(item => item.id === id);
+        if (!task) throw new Error("Bill not found.");
+        assertWorkflowCurrent(task, expected);
+        task.workflow_draft = input; return task;
+      });
+    },
+    saveWorkflowResult(plan, expectedDraft = null) {
       const value = record(plan, "plan");
+      const expected = structuredClone(expectedDraft);
       return mutate(data => {
         const task = data.tasks.find(item => item.id === value.task_id);
         if (!task) throw new Error("Save the bill before saving its result.");
+        assertWorkflowCurrent(task, expected);
         if (data.plans.some(item => item.id === value.id)) throw new Error("Result already exists.");
         delete task.workflow_draft;
         data.plans.push(value); return value;

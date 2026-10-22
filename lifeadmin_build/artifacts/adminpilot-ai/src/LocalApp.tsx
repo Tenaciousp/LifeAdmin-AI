@@ -127,12 +127,12 @@ export default function LocalApp() {
   }
   async function saveHelpProgress(task: RecordData, draft: WorkflowDraft) {
     const safe = initialWorkflow({ ...task, workflow_draft: draft });
-    await store.current.updateTask(task.id, { workflow_draft: safe });
+    await store.current.saveWorkflowProgress(task.id, safe, task.workflow_draft ?? null);
     setSnapshot(await store.current.read());
   }
   async function saveHelpResult(task: RecordData, draft: WorkflowDraft, service: string) {
     const note = workflowResult(task, draft, service);
-    await store.current.saveWorkflowResult(note);
+    await store.current.saveWorkflowResult(note, task.workflow_draft ?? null);
     setSnapshot(await store.current.read());
     helpDirty.current = false; setHelpId(null); setSelected(note);
     setMessage("Reviewed result saved on this device. Nothing was sent. Copy the message for your provider or keep the plan for your next steps.");

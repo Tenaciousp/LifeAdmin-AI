@@ -97,7 +97,7 @@ for (const native of [false, true]) test(`${native ? "native" : "browser"} resul
   const original = workflowResult(bill, draft("letter"), "ChatGPT");
   await store.savePlan(original);
   const result = workflowResult(bill, draft("reply"), "ChatGPT");
-  await store.saveWorkflowResult(result);
+  await store.saveWorkflowResult(result, progress);
   let data = await store.read();
   assert.equal(data.tasks[0].workflow_draft, undefined);
   assert.deepEqual(data.tasks[0].details, bill.details);
@@ -108,12 +108,33 @@ for (const native of [false, true]) test(`${native ? "native" : "browser"} resul
   assert.deepEqual(byId(data.plans), byId([original, result]));
   await store.updateTask(bill.id, { workflow_draft: progress });
   const acknowledged = await store.read();
-  await assert.rejects(store.saveWorkflowResult(result));
+  await assert.rejects(store.saveWorkflowResult(result, progress));
   assert.deepEqual(await store.read(), acknowledged);
   if (native) {
     failWrite = true;
-    await assert.rejects(store.saveWorkflowResult(workflowResult(bill, draft("plan"))), /Synthetic write failure/);
+    await assert.rejects(store.saveWorkflowResult(workflowResult(bill, draft("plan")), progress), /Synthetic write failure/);
     assert.deepEqual(await store.read(), acknowledged);
   }
   store.close();
+});
+
+for (const native of [false, true]) test(`${native ? "native" : "browser"} stale help sessions never overwrite or clear newer acknowledged progress`, async () => {
+  let snapshot = null, revision = "empty";
+  const bridge = { async read() { return { snapshot, revision }; }, async write(input) { assert.equal(input.expectedRevision, revision); snapshot = input.snapshot; revision = String(Number(revision) + 1 || 1); } };
+  const indexedDB = new IDBFactory();
+  const first = native ? await openNativeStore(bridge) : await openLocalStore({ indexedDB });
+  const second = native ? await openNativeStore(bridge) : await openLocalStore({ indexedDB });
+  await first.createTask(bill);
+  const a = { ...draft("reply"), incoming: "First session" };
+  const b = { ...draft("reply"), incoming: "Newer acknowledged session" };
+  await first.saveWorkflowProgress(bill.id, a, null);
+  await second.saveWorkflowProgress(bill.id, b, a);
+  const acknowledged = await first.read();
+  await assert.rejects(first.saveWorkflowProgress(bill.id, a, a), /changed in another window/);
+  await assert.rejects(first.saveWorkflowResult(workflowResult(bill, draft("reply")), a), /changed in another window/);
+  assert.deepEqual(await first.read(), acknowledged);
+  await second.saveWorkflowResult(workflowResult(bill, draft("reply")), b);
+  assert.equal((await first.read()).tasks[0].workflow_draft, undefined);
+  assert.equal((await first.read()).plans.length, 1);
+  first.close(); second.close();
 });
