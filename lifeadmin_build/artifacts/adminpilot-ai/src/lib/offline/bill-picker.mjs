@@ -1,9 +1,11 @@
 // Customer-facing bill choices map onto stable catalogue IDs so existing records remain compatible.
 const groups = [
-  { id: "home_utilities", label: "Home utilities", category_id: "energy_water", types: [
+  { id: "energy", label: "Energy", category_id: "energy_water", types: [
     ["electricity", "Electricity", "utility_type", "Electricity"], ["gas", "Gas", "utility_type", "Gas"], ["dual_fuel", "Combined gas and electricity", "utility_type", "Dual fuel"],
+    ["district_heating", "District heating", "utility_type", "District heating"], ["heating_fuel", "Heating fuel (oil, LPG, solid fuel)", "utility_type", "Heating fuel"],
+  ] },
+  { id: "water_services", label: "Water and sewerage", category_id: "water", types: [
     ["water", "Water", "water_services", "Water only"], ["sewerage", "Sewerage", "water_services", "Sewerage only"], ["water_sewerage", "Water and sewerage", "water_services", "Water and sewerage"],
-    ["district_heating", "District heating", "utility_type", "District heating"], ["heating_fuel", "Heating fuel (oil, LPG, solid fuel)", "utility_type", "Heating fuel"], ["waste_collection", "Waste collection", "service_type", "Waste collection"],
   ] },
   { id: "housing_charges", label: "Housing and local charges", category_id: "rent_mortgage_property", types: [
     ["rent", "Rent", "service_type", "Rent"], ["mortgage", "Mortgage", "service_type", "Mortgage"], ["property_rates", "Property / council / local rates", "service_type", "Property / municipal tax"],
@@ -39,8 +41,7 @@ const groups = [
   { id: "other", label: "Other or not sure", category_id: "other_regular_payment", types: [["other_regular", "Other / unrecognised regular payment", "service_type", "Other regular payment"]] },
 ];
 export const billGroups = groups.map(group => ({ ...group, types: group.types.map(([id, label, detail_key, detail_value]) => ({ id, label, detail_key, detail_value, category_id: ({ water: "water", sewerage: "water", water_sewerage: "water", property_rates: "council_tax_licences", tv_licence: "council_tax_licences", elder_care: "health_care_pets", health_plan: "health_care_pets", prescription_plan: "health_care_pets", vet_plan: "health_care_pets" })[id] || group.category_id })) }));
-export function groupForCategory(categoryId) { return billGroups.find(group => group.category_id === categoryId) || (categoryId === "water" ? billGroups[0] : undefined); }
-
+export function groupForCategory(categoryId) { return billGroups.find(group => group.category_id === categoryId); }
 const suggestionAliases = {
   electricity: /\b(electricity|electric|power bill)\b/i,
   gas: /\b(gas bill|gas supplier|gas tariff)\b/i,
@@ -74,11 +75,15 @@ const suggestionAliases = {
   childcare: /\b(childcare|nursery)\b/i,
 };
 export function billTypeForSuggestion(categoryId, query, details = {}) {
-  const group = groupForCategory(categoryId);
+  const waterQuery = /\b(water|sewerage|sewage)\b/i.test(String(query || ""));
+  const group = categoryId === "energy_water" && waterQuery ? groupForCategory("water") : groupForCategory(categoryId);
   if (!group) return null;
   const explicit = resolveBillType({ category_id: categoryId, details });
   if (explicit?.group.id === group.id) return explicit;
-  if (categoryId === "water") return { group, type: group.types.find(item => item.id === "water") };
+  if (categoryId === "water" || (categoryId === "energy_water" && waterQuery)) {
+    const type = group.types.find(item => suggestionAliases[item.id]?.test(String(query || ""))) || group.types.find(item => item.id === "water");
+    return { group, type };
+  }
   const match = group.types.find(type => suggestionAliases[type.id]?.test(String(query || "")));
   return match ? { group, type: match } : null;
 }
@@ -86,12 +91,12 @@ export function resolveBillType(task) {
   const details = task?.details || {};
   const categoryId = task?.category_id || task?.category;
   if ((categoryId === "energy_water" || categoryId === "water" || task?.category === "Energy and water") && /water/i.test(String(details.utility_type || "") + " " + String(details.tariff || ""))) {
-    const group = billGroups[0];
+    const group = groupForCategory("water");
     return { group, type: group.types.find(item => item.id === "water") };
   }
   for (const group of billGroups) {
     const type = group.types.find(item => item.id === details.bill_type_id) || group.types.find(item => item.detail_key && details[item.detail_key] === item.detail_value && (group.category_id === categoryId || item.category_id === categoryId));
-    if (type && (!categoryId || group.category_id === categoryId || type.category_id === categoryId || group.category_id === task.category)) return { group, type };
+    if (type && (!categoryId || group.category_id === categoryId || type.category_id === categoryId || group.category_id === task.category || (categoryId === "energy_water" && ["water", "sewerage", "water_sewerage"].includes(type.id)))) return { group, type };
   }
   return null;
 }
