@@ -13,15 +13,18 @@ export function waterResult(task) {
     contact_provider: ["Water account enquiry", "Summarise the question and the response you need. Use the company's official contact details on your bill and retain its response.", "Please help with the water-account question below and confirm the next steps."],
   };
   const [subject, action, request] = routes[task.goal_id] || routes.check_bill;
-  const unmetered = ["Unmetered / rateable value", "Assessed charge", "Included in council tax / rates"].includes(d.billing_basis);
+  const unmetered = ["Unmetered / rateable value", "Assessed charge", "Included in council tax / rates", "Flat / assessed charge", "Included in rent / local taxes"].includes(d.billing_basis);
   const facts = [
-    ["Current amount", d.amount], ["Payment frequency", d.billing_frequency], ["Region", d.water_region],
+    ["Current amount", d.amount], ["Currency", d.currency], ["Country", d.country_name || d.country], ["Payment frequency", d.billing_frequency], ["Region", d.water_region],
     ["Charging basis", d.billing_basis], ["Services billed", d.water_services], ["Household", d.household_size],
     ["Bill period", d.bill_period], ["Reading basis", d.reading_basis], ["Meter reading", d.meter_reading],
     ["Water usage", d.water_usage], ["Previous amount", d.previous_amount], ["Customer reference", d.account_reference],
     ["Question or issue", d.what_happened], ["Additional notes", task.notes],
   ].filter(([label, value]) => String(value || "").trim() && !(unmetered && ["Reading basis", "Meter reading", "Water usage"].includes(label))).map(([label, value]) => label + ": " + value);
-  const regional = d.water_region === "Scotland"
+  const overseas = d.country && d.country !== "United Kingdom" || d.water_region === "Outside the UK";
+  const regional = overseas
+    ? "Confirm the local municipality or water authority, country and state or province. Household water supply, metering rights, charges and support differ by location; UK charging rules do not apply automatically."
+    : d.water_region === "Scotland"
     ? "For Scotland, check the water and wastewater charges on your council tax bill and Scottish Water's household guidance before comparing options."
     : d.water_region === "Northern Ireland"
     ? "For Northern Ireland, check NI Water's domestic charging guidance and whether the charge concerns a household, private supply or another service before applying advice about separate water bills."
@@ -31,7 +34,7 @@ export function waterResult(task) {
   const message = "Hello,\n\n" + request + (facts.length ? "\n\n" + facts.join("\n") : "") + "\n\nPlease explain the options before changing my account or payments.\n\nThank you.";
   return {
     next_steps: "1. " + regional + "\n2. " + action + "\n3. Review the response and decide the next action yourself.",
-    things_to_check: (facts.length ? facts.map(line => "- " + line).join("\n") + "\n\n" : "") + "- Confirm the company, region, charging basis and payment frequency.\n- Water and sewerage might appear on separate bills.\n- Estimates and support eligibility need confirmation through the company.\n- Official guidance: https://www.ofwat.gov.uk/households/your-water-bill/ and https://www.ccw.org.uk/.",
+    things_to_check: (facts.length ? facts.map(line => "- " + line).join("\n") + "\n\n" : "") + "- Confirm the company, region, charging basis and payment frequency.\n- Water and sewerage might appear on separate bills.\n- Estimates and support eligibility need confirmation through the company.\n- " + (overseas ? "Use your local water authority or municipal regulator's official guidance; UK Ofwat and CCW routes are not presented as local support." : "Official guidance: https://www.ofwat.gov.uk/households/your-water-bill/ and https://www.ccw.org.uk/."),
     approval_checklist: "- Check every supplied amount, date and reading.\n- Use official contact details from your bill or the company's website.\n- Approve any meter installation, account change or payment arrangement yourself.\n- If payments are unaffordable, contact the company and a qualified debt-advice service before changing payments.",
     provider_message: message,
     provider_email: { subject: Array.from(subject + " - " + provider).slice(0, 140).join(""), body: message, kind: "provider" },

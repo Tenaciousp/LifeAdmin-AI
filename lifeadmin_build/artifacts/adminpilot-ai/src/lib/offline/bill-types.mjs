@@ -1,4 +1,5 @@
 import base from "./catalog.json" with { type: "json" };
+import { countries, currencies, frequencies } from "./bill-overview.mjs";
 
 const field = (id, label, type = "text", extra = {}) => ({ id, label, type, required: false, ...extra });
 const waterGoalLabels = {
@@ -63,8 +64,30 @@ export function fieldsFor(categoryId, goalId, details = {}) {
   const category = customerCatalog.categories.find(item => item.id === categoryId);
   const goal = customerCatalog.goals.find(item => item.id === goalId);
   if (!category || !goalId) return [];
-  const fields = categoryId === "water" ? category.fields : [...new Map([...category.fields, ...(goal?.fields || [])].map(item => [item.id, item])).values()];
-  return fields.filter(item => item.id !== "desired_outcome" && !(categoryId === "water" && ["Unmetered / rateable value", "Assessed charge", "Included in council tax / rates"].includes(details.billing_basis) && ["meter_reading", "reading_basis", "water_usage"].includes(item.id))).map(item => {
+  const fields = categoryId === "water" ? [...category.fields] : [...new Map([...category.fields, ...(goal?.fields || [])].map(item => [item.id, item])).values()];
+  const serviceOptions = {
+    tv_broadband_mobile: ["Broadband / internet", "Mobile phone", "Landline", "TV package", "Combined bundle"],
+    subscriptions_memberships: ["Streaming", "Software / cloud storage", "Gym / fitness", "News / publishing", "Shopping membership", "Other membership"],
+    rent_mortgage_property: ["Rent", "Mortgage", "Service / strata charge", "Ground rent", "Other property cost"],
+    council_tax_licences: ["Council tax", "Property / municipal tax", "TV licence", "Other local charge"],
+    health_care_pets: ["Medical", "Dental", "Care services", "Vet / pet care", "Other health cost"],
+    family_childcare_education: ["Childcare", "School fees", "Clubs / activities", "Tuition", "Other education cost"],
+    transport_vehicle: ["Vehicle tax / registration", "Public transport", "Parking", "Vehicle service", "EV charging", "Other transport cost"],
+    home_security_maintenance: ["Home security", "Heating / appliance cover", "Repairs / maintenance", "Cleaning / gardening", "Other home service"],
+  };
+  if (serviceOptions[categoryId]) fields.unshift(field("service_type", "Which service is this?", "select", { options: serviceOptions[categoryId] }));
+  const common = [field("country", "Country / region of this bill", "select", { options: countries }), field("currency", "Bill currency", "select", { options: currencies }), field("billing_frequency", "Payment frequency", "select", { options: frequencies }), field("next_payment_date", "Next payment date", "date")];
+  for (const item of common) {
+    const index = fields.findIndex(existing => existing.id === item.id);
+    if (index < 0) fields.push(item); else fields[index] = { ...fields[index], ...item };
+  }
+  if (details.country === "Other country / region") fields.push(field("country_name", "Country or territory name"));
+  if (details.country && details.country !== "United Kingdom" && categoryId !== "water") fields.push(field("local_area", "State, province or municipality"));
+  return fields.filter(item => item.id !== "desired_outcome" && !(categoryId === "water" && ["Unmetered / rateable value", "Assessed charge", "Included in council tax / rates", "Flat / assessed charge", "Included in rent / local taxes"].includes(details.billing_basis) && ["meter_reading", "reading_basis", "water_usage"].includes(item.id))).map(item => {
+    if (details.country && details.country !== "United Kingdom" && item.id === "water_region") return { ...item, label: "State, province or municipality", type: "text", options: undefined, placeholder: "Local area served by your water authority" };
+    if (details.country && details.country !== "United Kingdom" && item.id === "billing_basis") return { ...item, options: ["Metered", "Flat / assessed charge", "Included in rent / local taxes", "Not sure"] };
+    if (item.id === "amount") return { ...item, label: "Bill amount", placeholder: "e.g. 45.00 (numbers only for cost summaries)" };
+    if (details.country && details.country !== "United Kingdom" && item.id === "provider") return { ...item, placeholder: "Company or organisation shown on your bill" };
     if (categoryId !== "energy_water") return item;
     if (item.id === "provider") return { ...item, label: "Energy supplier", placeholder: "e.g. Octopus Energy or British Gas" };
     if (item.id === "what_happened") return { ...item, label: "What changed on your energy bill?" };

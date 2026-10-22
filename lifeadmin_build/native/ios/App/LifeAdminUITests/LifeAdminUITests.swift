@@ -194,6 +194,7 @@ final class LifeAdminUITests: XCTestCase {
         checkCurrentLayout: Bool = true
     ) {
         let search = app.textFields.firstMatch
+        reveal(search)
         search.tap()
         dismissKeyboardTutorial()
         enterText("Cancel Netflix", into: search)
@@ -211,6 +212,10 @@ final class LifeAdminUITests: XCTestCase {
         enterText(name, into: billName)
         XCTAssertEqual(billName.value as? String, name)
         closeKeyboard()
+        let moreDetails = app.descendants(matching: .any).matching(
+            NSPredicate(format: "label == %@", "More bill details (optional)")).firstMatch
+        reveal(moreDetails)
+        moreDetails.tap()
         if checkCurrentLayout {
             let columnWidth = app.textFields["Provider or organisation"].frame.width
             XCTAssertGreaterThan(columnWidth, 0)
@@ -326,6 +331,7 @@ final class LifeAdminUITests: XCTestCase {
             app.launch()
             assertWorkspaceReady()
             let search = app.textFields.firstMatch
+            reveal(search)
             search.tap()
             enterText("Cancel Netflix", into: search)
             closeKeyboard()
