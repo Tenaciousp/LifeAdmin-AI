@@ -108,9 +108,10 @@ const assert = require('node:assert/strict');
     // Verify every provider by selecting each option instead of counting five
     // simultaneously visible links from the older all-links layout.
     const aiLinks=[];
+    const aiSelector=page.locator('label').filter({hasText:/^Your preferred AI/}).locator('select');
     for (const [id,name,url] of [['chatgpt','ChatGPT','https://chatgpt.com/'],['gemini','Gemini','https://gemini.google.com/'],['copilot','Copilot','https://copilot.microsoft.com/'],['claude','Claude','https://claude.ai/new'],['perplexity','Perplexity','https://www.perplexity.ai/']]) {
-      await page.getByLabel('Your preferred AI',{exact:true}).selectOption(id);
-      const link=await page.getByRole('link',{name:'Open '+name,exact:true}).evaluate(e=>({name:e.textContent,href:e.getAttribute('href'),target:e.target,rel:e.rel}));
+      await aiSelector.selectOption(id);
+      const link=await page.getByRole('link',{name:new RegExp('^Open '+name)}).evaluate(e=>({name:e.textContent,href:e.getAttribute('href'),target:e.target,rel:e.rel}));
       assert.equal(link.href,url);assert.equal(new URL(link.href).search,'');assert.equal(new URL(link.href).hash,'');assert.equal(link.target,'_blank');assert(link.rel.includes('noopener')&&link.rel.includes('noreferrer'));
       aiLinks.push(link);
     }
