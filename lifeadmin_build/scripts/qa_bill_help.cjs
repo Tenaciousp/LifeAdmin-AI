@@ -26,6 +26,7 @@ const assert = require("node:assert/strict");
     await page.getByRole("button", { name: "Save bill", exact: true }).click();
     await page.getByRole("heading", { name: "Help with Synthetic water case", exact: true }).waitFor();
     await page.getByRole("radio", { name: /^Reply to my provider/ }).check();
+    await page.getByRole("radio", { name: /^Use my chosen AI service/ }).check();
     await page.getByRole("button", { name: "Continue to details", exact: true }).click();
     await page.getByLabel("What outcome do you want?").fill("Explain the estimated meter reading and remaining balance.");
     await page.getByLabel("Provider message to respond to").fill("We used an estimated reading. Please send the actual reading and date.");
