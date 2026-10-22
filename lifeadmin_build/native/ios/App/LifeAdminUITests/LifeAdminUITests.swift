@@ -628,12 +628,9 @@ final class LifeAdminUITests: XCTestCase {
         let showBills = app.otherElements["Show bills"]
         reveal(showBills)
         showBills.tap()
-        let statusPicker = app.pickerWheels.firstMatch
-        XCTAssertTrue(statusPicker.waitForExistence(timeout: 5), "The bill filter should open its native picker")
-        statusPicker.adjust(toPickerWheelValue: "Completed")
-        let pickerDone = app.buttons["Done"]
-        XCTAssertTrue(pickerDone.waitForExistence(timeout: 5), "The bill filter picker should offer Done")
-        pickerDone.tap()
+        let completedFilter = app.buttons["Completed"]
+        XCTAssertTrue(completedFilter.waitForExistence(timeout: 5), "The bill filter should offer Completed")
+        completedFilter.tap()
         let reopen = app.buttons["Reopen"]
         reveal(reopen)
         reopen.tap()
