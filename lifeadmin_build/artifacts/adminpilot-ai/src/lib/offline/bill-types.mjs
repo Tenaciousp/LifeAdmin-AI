@@ -75,6 +75,10 @@ export function fieldsFor(categoryId, goalId, details = {}) {
     transport_vehicle: ["Vehicle tax / registration", "Public transport", "Parking", "Vehicle service", "EV charging", "Other transport cost"],
     home_security_maintenance: ["Home security", "Heating / appliance cover", "Repairs / maintenance", "Cleaning / gardening", "Other home service"],
   };
+  serviceOptions.tv_broadband_mobile = ["Broadband / internet", "Mobile phone", "Landline", "TV package", "TV licence", "Combined bundle"];
+  serviceOptions.transport_vehicle = ["Vehicle tax / registration", "Public transport", "Parking", "Vehicle service", "EV charging", "Fuel", "Tolls / road charge", "Other transport cost"];
+  serviceOptions.home_security_maintenance = ["Home security", "Heating / appliance cover", "Repairs / maintenance", "Cleaning / gardening", "Waste collection", "Other home service"];
+  serviceOptions.subscriptions_memberships = ["Streaming", "Gaming", "Software / cloud storage", "Gym / fitness", "News / publishing", "Shopping membership", "Club", "Regular charity donation", "Other membership"];
   if (serviceOptions[categoryId]) fields.unshift(field("service_type", "Which service is this?", "select", { options: serviceOptions[categoryId] }));
   const common = [field("country", "Country / region of this bill", "select", { options: countries }), field("currency", "Bill currency", "select", { options: currencies }), field("billing_frequency", "Payment frequency", "select", { options: frequencies }), field("next_payment_date", "Next payment date", "date")];
   for (const item of common) {
