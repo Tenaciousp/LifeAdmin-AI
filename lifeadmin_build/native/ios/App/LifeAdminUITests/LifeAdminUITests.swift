@@ -111,9 +111,12 @@ final class LifeAdminUITests: XCTestCase {
             return
         }
         dismissKeyboardTutorial()
-        // Callers reveal and tap the field before opening the keyboard.
-        // Re-scrolling after focus can move a lower field behind the iPhone
-        // keyboard, making XCTest mark the already-focused field unreachable.
+        // Callers reveal and tap before opening the keyboard. Reassert focus
+        // only when the field remains tappable; iPhone keyboards can cover a
+        // focused lower field, while iPad fields can lose focus during layout.
+        if field.isHittable {
+            field.tap()
+        }
     }
 
     private func enterText(_ value: String, into field: XCUIElement) {
