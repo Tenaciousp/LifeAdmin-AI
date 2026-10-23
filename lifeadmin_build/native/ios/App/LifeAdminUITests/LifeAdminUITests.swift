@@ -111,11 +111,9 @@ final class LifeAdminUITests: XCTestCase {
             return
         }
         dismissKeyboardTutorial()
-        // A visible keyboard alone does not prove the intended field owns
-        // focus. Re-reveal and focus the target after keyboard-driven layout
-        // changes, before the single verified typing operation.
-        reveal(field)
-        field.tap()
+        // Callers reveal and tap the field before opening the keyboard.
+        // Re-scrolling after focus can move a lower field behind the iPhone
+        // keyboard, making XCTest mark the already-focused field unreachable.
     }
 
     private func enterText(_ value: String, into field: XCUIElement) {
