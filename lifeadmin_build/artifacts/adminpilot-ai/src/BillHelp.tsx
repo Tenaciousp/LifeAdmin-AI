@@ -27,7 +27,7 @@ export default function BillHelp({ task, onClose, onEdit, onProgress, onSave, on
   const fields = workflowFields(task);
   const selectedService = aiServices.find(item => item.id === service)!;
   useEffect(() => { heading.current?.focus(); heading.current?.scrollIntoView({ behavior: "smooth", block: "start" }); }, [draft.step]);
-  function change(patch: Partial<WorkflowDraft>) { setDraft(value => ({ ...value, ...patch, reviewed: false })); setStatus(""); setError(""); onDirty(true); }
+  function change(patch: Partial<WorkflowDraft>) { setDraft(value => ({ ...value, ...patch, reviewed: false })); setGeminiConsent(false); setStatus(""); setError(""); onDirty(true); }
   async function act(operation: () => Promise<void>) {
     if (pending.current) return;
     pending.current = true; setWorking(true); setError(""); setStatus("");
@@ -60,7 +60,7 @@ export default function BillHelp({ task, onClose, onEdit, onProgress, onSave, on
         <button className={button} onClick={() => change({ step: 2 })}>Continue to details</button>
       </>}
       {draft.step === 2 && <>
-        <h3 className="text-xl font-bold">Check the facts and tell us the outcome</h3><p>{workflowContext(task)} {draft.method === "chosen_ai" ? "This category and goal are included in the AI request alongside the details you choose below." : "These choices provide context for your offline draft."}</p><button className={secondary} onClick={onEdit}>Edit this bill</button>
+        <h3 className="text-xl font-bold">Check the facts and tell us the outcome</h3><p>{workflowContext(task)} {draft.method === "local" ? "These choices provide context for your offline draft." : "This category and goal are included in the AI request alongside the details you choose below."}</p><button className={secondary} onClick={onEdit}>Edit this bill</button>
         <label className="block font-semibold">What outcome do you want?<textarea className={input + " font-normal"} rows={3} maxLength={2000} value={draft.brief} placeholder={draft.output === "reply" ? "e.g. Explain why the reply has not resolved my meter-reading query" : "e.g. Explain the price rise and request an itemised bill"} onChange={event => change({ brief: event.target.value })} /></label>
         <p>Include key dates and the specific question. Avoid passwords, security codes, full payment-card numbers and unnecessary personal information.</p>
         {draft.output === "reply" && <label className="block font-semibold">Provider message to respond to<textarea className={input + " font-normal"} rows={6} maxLength={10000} value={draft.incoming} placeholder="Paste the relevant message. Remove signatures, addresses, account numbers and unrelated conversation first." onChange={event => change({ incoming: event.target.value })} /><span className="mt-2 block font-normal">For the AI route, this text and your requested outcome appear in the request you review before copying. The offline reply is a starting template, not an analysis of the message.</span></label>}
