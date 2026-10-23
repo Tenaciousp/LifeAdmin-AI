@@ -111,10 +111,11 @@ final class LifeAdminUITests: XCTestCase {
             return
         }
         dismissKeyboardTutorial()
-        // Callers reveal and tap before opening the keyboard. Reassert focus
-        // only when the field remains tappable; iPhone keyboards can cover a
-        // focused lower field, while iPad fields can lose focus during layout.
-        if field.isHittable {
+        // iPad layout changes can drop focus, so reveal and retap there.
+        // On iPhone, this scroll can move the focused field under the keyboard;
+        // preserve the focus established by the caller instead.
+        if UIDevice.current.userInterfaceIdiom == .pad {
+            reveal(field)
             field.tap()
         }
     }
