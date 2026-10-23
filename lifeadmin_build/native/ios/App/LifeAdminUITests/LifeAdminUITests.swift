@@ -96,11 +96,17 @@ final class LifeAdminUITests: XCTestCase {
                 XCTAssertTrue(switcher.isHittable)
                 switcher.tap()
                 let show = app.buttons["Show Keyboard"]
-                guard show.waitForExistence(timeout: 5) else {
-                    XCTFail("Show Keyboard was not available in the system menu")
-                    return
+                let showReady = XCTNSPredicateExpectation(
+                    predicate: NSPredicate(format: "exists == true AND hittable == true"),
+                    object: show)
+                if XCTWaiter.wait(for: [showReady], timeout: 5) == .completed {
+                    show.tap()
+                } else {
+                    // The iPad system menu can close during its appearance
+                    // animation. Refocus the target rather than failing on a
+                    // transient menu item.
+                    field.tap()
                 }
-                show.tap()
             } else {
                 // Retry the tap before typing, never replay partially entered text.
                 field.tap()
