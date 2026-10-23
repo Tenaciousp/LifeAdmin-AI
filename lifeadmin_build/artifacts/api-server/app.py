@@ -1755,6 +1755,121 @@ def call_openai(task, mode="full"):
         return fallback_agent(task, mode), "fallback"
 
 
+_AI_DRAFT_RATE = {}
+_AI_DRAFT_RATE_LOCK = threading.Lock()
+_AI_DRAFT_GLOBAL = {"day": None, "count": 0}
+
+
+def ai_draft_rate_limited(handler):
+    """Bound the shared optional AI route by client IP without retaining prompts."""
+    now = time.time()
+    ip = handler.client_address[0] if handler.client_address else "unknown"
+    with _AI_DRAFT_RATE_LOCK:
+        day = datetime.now(timezone.utc).date().isoformat()
+        if _AI_DRAFT_GLOBAL["day"] != day:
+            _AI_DRAFT_GLOBAL.update(day=day, count=0)
+        try:
+            daily_limit = max(1, min(1000, int(os.environ.get("GEMINI_DRAFTS_DAILY_LIMIT", "50"))))
+        except (TypeError, ValueError):
+            daily_limit = 50
+        if _AI_DRAFT_GLOBAL["count"] >= daily_limit:
+            return True
+        recent = [stamp for stamp in _AI_DRAFT_RATE.get(ip, []) if now - stamp < 60]
+        if len(recent) >= 5:
+            _AI_DRAFT_RATE[ip] = recent
+            return True
+        recent.append(now)
+        _AI_DRAFT_RATE[ip] = recent
+        _AI_DRAFT_GLOBAL["count"] += 1
+        return False
+
+
+def call_gemini_draft(prompt, output):
+    """Generate a JSON letter or plan using a server-held Gemini API key."""
+    api_key = os.environ.get("GEMINI_API_KEY", "")
+    if not env_bool("GEMINI_DRAFTS_ENABLED", False) or not api_key:
+        raise RuntimeError("Gemini drafting is not configured")
+    system = (
+        "Prepare household-admin drafts for a person to review. Use only supplied facts. "
+        "Do not invent rights, prices, dates, provider policies or events. Use placeholders "
+        "for missing personal details. Do not accept offers, admit liability, send messages "
+        "or take actions. Return JSON only with subject and body string properties."
+    )
+    payload = {
+        "systemInstruction": {"parts": [{"text": system}]},
+        "contents": [{"role": "user", "parts": [{"text": prompt}]}],
+        "generationConfig": {
+            "temperature": 0.2,
+            "maxOutputTokens": 3000,
+            "responseMimeType": "application/json",
+            "responseSchema": {
+                "type": "OBJECT",
+                "properties": {"subject": {"type": "STRING"}, "body": {"type": "STRING"}},
+                "required": ["subject", "body"],
+            },
+        },
+    }
+    request = urllib.request.Request(
+        "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent",
+        data=json.dumps(payload).encode("utf-8"),
+        headers={"Content-Type": "application/json", "x-goog-api-key": api_key},
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(request, timeout=45) as response:
+            data = json.loads(response.read().decode("utf-8"))
+        candidates = data.get("candidates") if isinstance(data, dict) else None
+        candidate = candidates[0] if isinstance(candidates, list) and candidates else None
+        content = candidate.get("content") if isinstance(candidate, dict) else None
+        parts = content.get("parts") if isinstance(content, dict) else None
+        text = "".join(part.get("text", "") for part in parts if isinstance(part, dict)).strip() if isinstance(parts, list) else ""
+        result = json.loads(text)
+        if not isinstance(result, dict):
+            raise ValueError("Invalid Gemini draft")
+        subject = result.get("subject")
+        body = result.get("body")
+        if not isinstance(subject, str) or not isinstance(body, str) or not body.strip():
+            raise ValueError("Invalid Gemini draft")
+        if len(subject) > 200 or len(body) > 20000:
+            raise ValueError("Gemini draft exceeds limits")
+        return {"subject": subject.strip(), "body": body.strip()}
+    except urllib.error.HTTPError as exc:
+        if exc.code == 429:
+            raise RuntimeError("Gemini usage limit reached") from None
+        raise RuntimeError("Gemini generation failed") from None
+    except (urllib.error.URLError, TimeoutError, json.JSONDecodeError, IndexError, KeyError, TypeError, ValueError):
+        raise RuntimeError("Gemini generation failed") from None
+
+
+def generate_ai_draft(handler, body):
+    """Handle an explicit, consented request without saving or logging its text."""
+    if not env_bool("GEMINI_DRAFTS_ENABLED", False) or not os.environ.get("GEMINI_API_KEY"):
+        return json_response(handler, {"error": "In-app Gemini is not available yet."}, 503)
+    if not isinstance(body, dict):
+        return json_response(handler, {"error": "Review a valid generation request."}, 400)
+    if body.get("consent") is not True:
+        return json_response(handler, {"error": "Confirm the data-sharing notice before generating."}, 400)
+    prompt = body.get("prompt")
+    output = body.get("output")
+    if not isinstance(prompt, str) or not prompt.strip() or len(prompt) > 20000:
+        return json_response(handler, {"error": "Review a request of up to 20,000 characters."}, 400)
+    if not isinstance(output, str) or output not in {"plan", "letter", "reply"}:
+        return json_response(handler, {"error": "Choose a plan, letter or reply."}, 400)
+    if ai_draft_rate_limited(handler):
+        return json_response(handler, {"error": "AI usage limit reached. Try again later."}, 429, {"Retry-After": "60"})
+    try:
+        result = call_gemini_draft(prompt, output)
+        if output == "plan":
+            result["subject"] = ""
+        elif not result["subject"]:
+            result["subject"] = "Draft message"
+        return json_response(handler, result)
+    except RuntimeError as exc:
+        if str(exc) == "Gemini usage limit reached":
+            return json_response(handler, {"error": "AI usage limit reached. Try again later."}, 429, {"Retry-After": "60"})
+        return json_response(handler, {"error": "Gemini could not generate a draft. Try Copilot or retry later."}, 502)
+
+
 _AUTH_RATE = {}
 
 
@@ -1911,6 +2026,8 @@ class AdminPilotHandler(SimpleHTTPRequestHandler):
 
     def do_POST(self):
         # Includes Stripe webhook and account/session writes.
+        if urlparse(self.path).path == "/api/ai/draft":
+            return AdminPilotHandler._do_POST(self)
         return AdminPilotHandler._with_data_lock(self, lambda: AdminPilotHandler._do_POST(self))
 
     def _do_GET(self):
@@ -1985,6 +2102,8 @@ class AdminPilotHandler(SimpleHTTPRequestHandler):
             body = parse_json_body(self)
         except ValueError as exc:
             return json_response(self, {"error": str(exc)}, 413)
+        if path == "/api/ai/draft":
+            return generate_ai_draft(self, body)
         user = current_user(self)
         user_id = user["id"] if user else guest_session(self)
         if path == "/api/auth/forgot-password":
