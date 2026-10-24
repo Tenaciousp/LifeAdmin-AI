@@ -86,6 +86,25 @@ final class LifeAdminUITests: XCTestCase {
         XCTFail("Control is not reachable: \(element)", file: file, line: line)
     }
 
+    private func openBackupControls() {
+        let restore = app.buttons["Restore backup"]
+        let export = app.buttons["Export backup"]
+        if restore.waitForExistence(timeout: 1) && export.exists { return }
+
+        // A WebView tap can occasionally be swallowed while a long page is
+        // settling after relaunch. Confirm the disclosure opened before
+        // targeting its controls, and retry only while it is still collapsed.
+        for _ in 0..<2 {
+            let manage = app.buttons["Manage backups"]
+            guard manage.waitForExistence(timeout: 5) else { break }
+            reveal(manage)
+            manage.tap()
+            if restore.waitForExistence(timeout: 5) && export.exists { return }
+        }
+        XCTAssertTrue(restore.exists && export.exists,
+                      "Backup controls should appear after opening Manage backups")
+    }
+
     private func prepareKeyboard(for field: XCUIElement) {
         let keyboard = app.keyboards.firstMatch
         if !keyboard.waitForExistence(timeout: 5) {
@@ -547,9 +566,7 @@ final class LifeAdminUITests: XCTestCase {
         for exporting in [false, true] {
             app.launch()
             assertWorkspaceReady()
-            let backups = app.buttons["Manage backups"]
-            reveal(backups)
-            backups.tap()
+            openBackupControls()
             let action = app.buttons[exporting ? "Export backup" : "Restore backup"]
             reveal(action)
             action.tap()
