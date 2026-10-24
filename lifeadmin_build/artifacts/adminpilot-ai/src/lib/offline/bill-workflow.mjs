@@ -17,7 +17,7 @@ export function initialWorkflow(task) {
   const text = (key, max) => typeof d[key] === "string" && d[key].length <= max ? d[key] : "";
   return {
     output: outputs.some(x => x.id === d.output) ? d.output : "plan",
-    method: d.method === "local" ? "local" : "chosen_ai",
+    method: ["local", "gemini_api"].includes(d.method) ? d.method : "chosen_ai",
     step: Number.isInteger(d.step) && d.step >= 1 && d.step <= 4 ? d.step : 1,
     fieldKeys: Array.isArray(d.fieldKeys) ? [...new Set(d.fieldKeys.filter(key => fields.some(field => field.key === key)))] : fields.filter(x => x.selected).map(x => x.key),
     tone: tones.includes(d.tone) ? d.tone : tones[0], language: languages.includes(d.language) ? d.language : "English",
@@ -49,7 +49,7 @@ export function localWorkflowDraft(task, output, brief = "") {
   return { subject: result.provider_email?.subject || "Bill query", body: (result.provider_email?.body || result.provider_message || "") + (brief.trim() ? "\n\nMy requested outcome: " + brief.trim() : "") };
 }
 export function workflowResult(task, draft, service = "") {
-  if (!outputs.some(x => x.id === draft.output) || !["local", "chosen_ai"].includes(draft.method)) throw new Error("Choose an output and preparation method.");
+  if (!outputs.some(x => x.id === draft.output) || !["local", "chosen_ai", "gemini_api"].includes(draft.method)) throw new Error("Choose an output and preparation method.");
   if (!draft.reviewed) throw new Error("Review the facts, dates, amounts and placeholders before saving.");
   if (typeof draft.body !== "string" || !draft.body.trim() || draft.body.length > 20000) throw new Error("Enter a result of up to 20,000 characters.");
   if (draft.output !== "plan" && (typeof draft.subject !== "string" || !draft.subject.trim() || draft.subject.length > 200)) throw new Error("Enter a subject of up to 200 characters.");
@@ -58,8 +58,8 @@ export function workflowResult(task, draft, service = "") {
   const safety = "Check the supplied facts and current local provider terms. Remove remaining placeholders. Nothing has been sent or agreed automatically." + (notices.length ? "\n" + notices.join("\n") : "");
   return {
     id: globalThis.crypto.randomUUID(), task_id: task.id, title: (task.title + " · " + ({ plan: "Plan", letter: "Letter", reply: "Reply" }[draft.output])).slice(0, 160),
-    category_id: billCategory(task), created_at: new Date().toISOString(), source: draft.method === "local" ? "local" : "external_ai_manual",
-    workflow_output: draft.output, ai_service: draft.method === "chosen_ai" ? service : "", content: draft.body,
+    category_id: billCategory(task), created_at: new Date().toISOString(), source: draft.method === "local" ? "local" : draft.method === "gemini_api" ? "external_ai_api" : "external_ai_manual",
+    workflow_output: draft.output, ai_service: draft.method === "local" ? "" : draft.method === "gemini_api" ? "Google Gemini API" : service, content: draft.body,
     sections: isPlan ? { next_steps: draft.body, approval_checklist: safety } : { next_steps: "Copy the reviewed message and send through the provider's official contact route yourself. Keep their response with this bill and add a follow-up date if needed.", approval_checklist: safety },
     provider_email: isPlan ? null : { subject: draft.subject, body: draft.body, kind: "provider" },
     known_details: { ...task.details }, missing_details: missingDetails(task),

@@ -37,7 +37,7 @@ The product includes 12 household categories, seven action-based goals, savings-
 - No bank connection required
 - No mailbox access required
 - No automatic provider contact
-- No automatic sharing with another AI service
+- No automatic sharing with another AI service; optional Gemini API generation sends only the request the customer reviews and explicitly approves
 - Guest work is isolated with a signed browser cookie
 - Signed-in data is separated by account
 - Analytics is opt-in and excludes bill text, provider messages, addresses and account details
@@ -95,6 +95,8 @@ Checkout is not live by default. The interface remains in preview until the comp
 ## Manual AI comparison
 
 Customers can edit and copy a privacy-reminded comparison prompt to Gemini, Microsoft Copilot, ChatGPT, Claude or Perplexity. The app opens the selected assistant but does not automatically transmit customer details or require paid AI usage.
+
+For in-app letter, reply or plan drafting, customers can choose optional Gemini generation after reviewing the exact request and confirming a data-sharing notice. The app sends the request through a server-side proxy to Google; no provider key is included in the app or customer device. This route stays disabled until the service and privacy disclosures are configured. Google free-tier limits and data terms apply. Copilot remains the default manual handoff and offline templates remain available without AI.
 
 ## Analytics readiness
 

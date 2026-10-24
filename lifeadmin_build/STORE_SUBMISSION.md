@@ -34,14 +34,19 @@ plans and copy draft messages when you are ready to act.
 
 Household records stay in the app's storage on your device. No HomeAdmin account,
 bank connection or mailbox access is required. Planning uses bundled guidance
-and works offline. HomeAdmin does not automatically contact providers, send
-household details to an AI service or act on your behalf.
+and works offline. HomeAdmin does not contact providers or act on your behalf.
+A separate optional Gemini route sends the request shown on screen through
+HomeAdmin's server to Google only after you review it and confirm the data-sharing
+notice. Google free-tier limits and data terms apply. No provider key is included
+in the app or sent from your device. Offline templates and the Copilot-first
+manual handoff remain available.
 
 For optional help from an external AI service, prepare an editable prompt from
 your saved plan and message. Review and remove private details before copying.
 Open your preferred service and paste the prompt yourself. Pasting shares the
-text with the chosen service. Review its reply before updating your bill or
-message in HomeAdmin. Prompt edits are temporary and do not change saved bills, plans or messages.
+text with the chosen service. Or review the request and consent to Gemini
+generation through HomeAdmin's server. Review any reply
+before updating your bill or message. Prompt edits are temporary and do not change saved bills, plans or messages.
 
 Export a readable JSON backup to a private location of your choice. Restore
 replaces existing records after confirmation. Device and cloud backups depend
@@ -239,9 +244,10 @@ accounts or automatically sending messages. Payment is the store's upfront
 app purchase; no in-app purchase products form part of this offer.
 
 The optional **Prepare AI prompt** action opens an editable local preview.
-Review private details, then use **Copy AI prompt**. External-service links open
-without the prompt or household records in the URL. The customer chooses
-whether to paste the copied text into a separate service. No external-service
-account is required for HomeAdmin's bundled planning, message editing or backups.
-Any account or payment requirements of the chosen external service are separate.
-Replies are not imported automatically.
+Review private details, then use **Copy AI prompt** to share through the chosen
+external service. The customer also has an optional, explicit-consent Gemini
+route for in-app drafts. The provider key remains server-side and is not included
+in the app. No provider receives household information unless
+the customer chooses the direct-generation action or pastes a copied prompt.
+Replies are reviewed before saving and are never sent to a provider
+automatically.

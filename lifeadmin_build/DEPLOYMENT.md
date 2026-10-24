@@ -62,7 +62,7 @@ The UK sandbox product and Price have been verified as active, one-time GBP 1.99
 
 ## AI configuration
 
-The product works without an external model by using deterministic category and goal playbooks. If an AI provider is enabled, output is still normalised into the four fixed result sections before reaching the customer interface.
+The native app keeps bundled planning, offline templates and Copilot handoff available without AI. Optional in-app Gemini drafts require `GEMINI_DRAFTS_ENABLED=true` and a server-only `GEMINI_API_KEY`; default is disabled. `/api/ai/draft` accepts only the reviewed prompt after a consent flag, stores no prompt or response, applies five requests per IP per minute and a 50-request daily process limit, and sends the request to Google Gemini. The native bundle needs `VITE_AI_DRAFT_API_BASE_URL` set to the HTTPS API origin at build time. Do not publish or enable this route before the app privacy policy, data-transfer notice, usage budget and service availability are reviewed. User API keys must never be placed in a production app.
 
 ## Admin access
 

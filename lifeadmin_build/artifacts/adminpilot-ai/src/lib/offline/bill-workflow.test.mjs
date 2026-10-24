@@ -55,6 +55,9 @@ test("reviewed results retain preparation source and never mark the bill paid or
     else assert.equal(note.provider_email, null);
   }
   assert.equal(workflowResult(bill, { ...draft("letter"), method: "local" }).source, "local");
+  const gemini = workflowResult(bill, { ...draft("letter"), method: "gemini_api" }, "Google Gemini");
+  assert.equal(gemini.source, "external_ai_api"); assert.equal(gemini.ai_service, "Google Gemini API");
+  assert.equal(initialWorkflow({ ...bill, workflow_draft: { method: "gemini_api" } }).method, "gemini_api");
   assert.deepEqual(bill, before);
 });
 test("empty, oversized and unreviewed results fail instead of silently truncating", () => {
