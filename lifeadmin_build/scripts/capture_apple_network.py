@@ -13,6 +13,8 @@ import subprocess
 import sys
 import time
 
+PACKET_SNAPSHOT_LENGTH = 384
+
 
 def capture_snapshot(evidence, stage):
     """Record only this recorder's BPF counters, never other process rows.
@@ -64,6 +66,10 @@ def capture_network(segment="acceptance"):
         "attribution_limit": "Loopback traffic except the control, and WebKit traffic without App effective-process attribution, are outside this capture",
         "started_at_unix": time.time(),
         "requested_capture_buffer_kib": 32768,
+        # Keep PKTAP metadata plus network/transport headers for attribution and
+        # endpoint checks. Smaller snapshots reduce BPF-buffer pressure on busy
+        # macOS runners without retaining packet payloads.
+        "requested_snapshot_length_bytes": PACKET_SNAPSHOT_LENGTH,
     }
     ceiling = subprocess.run(["/usr/sbin/sysctl", "-n", "debug.bpf_bufsize_cap"],
                              capture_output=True, text=True, check=False)
@@ -91,7 +97,7 @@ def capture_network(segment="acceptance"):
             "sudo", "-n", "/bin/sh", "-c",
             'echo $$ > "$1"; shift; exec "$@"', "capture", str(pidfile),
             "/usr/sbin/tcpdump", "-i", "pktap,all", "-k", "NPD",
-            "-nn", "-q", "-l", "-tttt", "-s", "512", "-B", "32768",
+            "-nn", "-q", "-l", "-tttt", "-s", str(PACKET_SNAPSHOT_LENGTH), "-B", "32768",
             "-Q", f"proc =App or eproc =App or pid ={os.getpid()}",
             packet_filter,
         ], stdout=output, stderr=errors)

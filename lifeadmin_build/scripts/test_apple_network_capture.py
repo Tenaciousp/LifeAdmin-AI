@@ -50,7 +50,9 @@ class CaptureSnapshotTests(unittest.TestCase):
             with self.subTest(dropped=dropped, customer_failure=customer_failure), tempfile.TemporaryDirectory() as temporary, chdir(temporary):
                 trace = Mock(returncode=0)
                 trace.poll.return_value = None
+                commands = []
                 def start(*args, **kwargs):
+                    commands.append(args[0])
                     port = re.search(r"port (\d+)", args[0][-1]).group(1)
                     kwargs["stdout"].write("127.0.0.1." + port + " control\n")
                     kwargs["stdout"].flush()
@@ -81,6 +83,8 @@ class CaptureSnapshotTests(unittest.TestCase):
                 report = json.loads(Path("apple-launch-evidence/network-capture-preflight.json").read_text())
                 self.assertEqual(report["packets_dropped_by_kernel"], dropped)
                 self.assertEqual(report["test_exit_code"], int(customer_failure))
+                self.assertEqual(report["requested_snapshot_length_bytes"], 384)
+                self.assertEqual(commands[0][commands[0].index("-s") + 1], "384")
                 self.assertTrue(report["control_packet_seen"])
                 self.assertFalse(Path("apple-launch-evidence/network-capture.pid").exists())
 
