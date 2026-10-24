@@ -31,9 +31,12 @@ test('invalid tasks and oversized questions fail without truncating saved record
 });
 test('AI preference persists, rejects unknown services and tolerates unavailable storage on read', () => {
   const values = new Map(), storage = { setItem: (k,v) => values.set(k,v), getItem: k => values.get(k) };
+  assert.equal(preferredAi(storage), 'copilot');
+  assert.match(aiServices.find(service => service.id === 'copilot').name, /Microsoft, free option/);
+  assert.match(aiServices.find(service => service.id === 'gemini').name, /Google, free option/);
   for (const service of aiServices) { savePreferredAi(storage, service.id); assert.equal(preferredAi(storage), service.id); assert.equal(new URL(service.url).search, ''); }
   assert.throws(() => savePreferredAi(storage, 'unknown'), /supported/);
-  assert.equal(preferredAi({ getItem() { throw new Error(); } }), 'chatgpt');
+  assert.equal(preferredAi({ getItem() { throw new Error(); } }), 'copilot');
   assert.throws(() => savePreferredAi(null, 'claude'), /this session/);
   assert.throws(() => savePreferredAi({setItem() {}, getItem() { return null; }}, 'claude'), /this session/);
 });

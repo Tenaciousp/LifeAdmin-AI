@@ -9,9 +9,11 @@ plans.mjs generates every current category, goal and planning mode locally,
 preserving missing-detail prompts and the existing safety notices. Its
 generateAndSaveLocalPlan function writes the complete result through the local
 repository. Static playbooks are exported from the existing Python guidance by
-scripts/export_offline_playbooks.py. Client rendering uses data only, with no
-Python execution, hosted generation or external-AI fallback.
-These generators are not yet connected to customer screens.
+scripts/export_offline_playbooks.py. Bundled planning and local templates remain
+available offline. Optional Gemini draft generation sends only the reviewed
+request directly to Google's API after a separate consent action; it is not an
+offline feature or a hosted HomeAdmin generation fallback. Copilot remains the
+default manual handoff.
 
 storage.mjs supplies the next migration stage: account-free IndexedDB storage for
 bills and plans, with explicit backup export/import. This repository is not yet
@@ -31,13 +33,19 @@ Do not remove account or purchase controls from the hosted flow as a shortcut.
 - Exports contain personal household information as plain JSON. The future UI must
   warn before exporting, use a customer-chosen destination, and never attach an
   export to support correspondence automatically.
-- No network request, account identifier, telemetry or automatic upload is used.
+- No automatic network request, account identifier, telemetry or upload is used.
+- The explicit Gemini action is the sole exception: the user reviews the exact
+  prompt and checks a disclosure before the app sends text to HomeAdmin's server,
+  which forwards the request to Google's Gemini API. No provider key is included
+  in the app or saved in local storage/backups. Google free-tier limits and data
+  terms apply. The API stays disabled until a server key and native API origin
+  are configured and the updated privacy notice is ready.
 
 ## Remaining integration and acceptance
 
-Connect this repository to the separate local customer flow together with local
-plan generation, versioned data migration and backup controls. Explicit deletion
-and import replacement need clear customer confirmation in those controls.
+Continue native runtime, privacy notice and physical-device acceptance for the
+local customer flow. Explicit deletion and import replacement need clear
+customer confirmation in those controls.
 
 The tests use fake-indexeddb to exercise database transactions and fault rollback.
 Reopening a connection in these tests is not proof of physical-device durability,

@@ -98,6 +98,12 @@ export function planWithEditedMessage(plan, draft, expected) {
     subject: draft.subject, body: draft.body } }, "plan");
 }
 
+export function assertWorkflowCurrent(task, expected) {
+  if (JSON.stringify(task.workflow_draft ?? null) !== JSON.stringify(expected ?? null)) {
+    throw new Error("Bill help changed in another window. Keep your text and reopen the saved progress before continuing.");
+  }
+}
+
 export async function openLocalStore({ indexedDB = globalThis.indexedDB, name = "lifeadmin-device-v1" } = {}) {
   if (!indexedDB) throw new Error("Device storage is unavailable. No records were saved.");
   const db = await new Promise((resolve, reject) => {
@@ -181,6 +187,37 @@ export async function openLocalStore({ indexedDB = globalThis.indexedDB, name = 
           tx.objectStore("plans").add(value);
           verifySize(tx, run);
           done(value);
+        });
+      });
+    },
+    async saveWorkflowProgress(id, draft, expectedDraft = null) {
+      jsonValue(draft);
+      if (!draft || Array.isArray(draft) || typeof draft !== "object") throw new Error("Invalid bill-help progress.");
+      const input = structuredClone(draft), expected = structuredClone(expectedDraft);
+      return transaction("readwrite", (tx, done, run) => {
+        const tasks = tx.objectStore("tasks");
+        const request = tasks.get(id);
+        request.onsuccess = () => run(() => {
+          if (!request.result) throw new Error("Bill not found.");
+          assertWorkflowCurrent(request.result, expected);
+          const value = record({ ...request.result, workflow_draft: input }, "task");
+          tasks.put(value); verifySize(tx, run); done(value);
+        });
+      });
+    },
+    async saveWorkflowResult(plan, expectedDraft = null) {
+      const value = record(plan, "plan");
+      const expected = structuredClone(expectedDraft);
+      return transaction("readwrite", (tx, done, run) => {
+        const tasks = tx.objectStore("tasks");
+        const request = tasks.get(value.task_id);
+        request.onsuccess = () => run(() => {
+          if (!request.result) throw new Error("Save the bill before saving its result.");
+          assertWorkflowCurrent(request.result, expected);
+          const task = { ...request.result }; delete task.workflow_draft;
+          tasks.put(record(task, "task"));
+          tx.objectStore("plans").add(value);
+          verifySize(tx, run); done(value);
         });
       });
     },

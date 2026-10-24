@@ -4,3 +4,5 @@ export function promptFields(plan: Record<string, any>): { key: string; label: s
 export function preferredAi(storage?: Storage | null): string;
 export function savePreferredAi(storage: Storage | null, id: string): void;
 export function taskAiPrompt(plan: Record<string, any>, options?: { action?: string; fieldKeys?: string[]; includeDraft?: boolean }): string;
+
+export function actionsFor(plan: Record<string, any>): typeof aiActions;

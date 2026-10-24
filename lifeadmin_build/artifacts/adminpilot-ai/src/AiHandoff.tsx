@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { aiServices, aiActions, promptFields, preferredAi, savePreferredAi, taskAiPrompt } from "./lib/offline/ai-handoff.mjs";
+import { aiServices, actionsFor, promptFields, preferredAi, savePreferredAi, taskAiPrompt } from "./lib/offline/ai-handoff.mjs";
 import { copyDeviceText } from "./lib/offline/device-files.mjs";
 
 const button = "min-h-[44px] max-w-full rounded-xl bg-violet-700 px-4 py-2 font-semibold text-white hover:bg-violet-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-700 disabled:opacity-50";
@@ -40,7 +40,7 @@ export default function AiHandoff({ plan, onClose, onMessage, onError }: {
       catch (error) { onError(error instanceof Error ? error.message : "AI preference was not saved."); }
     }}>{aiServices.map(x => <option key={x.id} value={x.id}>{x.name}</option>)}</select></label>
     <p className="mt-2">Use your own free or paid account. AI access, limits and charges are separate from HomeAdmin. Your preference is device-specific and is not included in bill backups.</p>
-    <label className="mt-4 block">What should AI help with?<select className={input + " mt-1"} value={action} onChange={event => { setAction(event.target.value); setChoicesChanged(true); }}>{aiActions.map(x => <option key={x.id} value={x.id}>{x.label}</option>)}</select></label>
+    <label className="mt-4 block">What should AI help with?<select className={input + " mt-1"} value={action} onChange={event => { setAction(event.target.value); setChoicesChanged(true); }}>{actionsFor(plan).map(x => <option key={x.id} value={x.id}>{x.label}</option>)}</select></label>
     <fieldset className="mt-4 min-w-0"><legend className="font-semibold">Details to include</legend><p className="mt-2">References, free-text notes and the saved message are excluded unless selected. Check every chosen value for private information.</p>
       {fields.map(field => <label key={field.key} className="mt-2 flex min-h-[44px] items-start gap-3 rounded-lg bg-white p-3"><input type="checkbox" className="mt-1 h-5 w-5 shrink-0" checked={keys.includes(field.key)} onChange={event => { setKeys(value => event.target.checked ? [...value, field.key] : value.filter(key => key !== field.key)); setChoicesChanged(true); }} /><span className="min-w-0"><strong>{field.label}</strong><span className="block whitespace-pre-wrap">{field.value}</span></span></label>)}
       {plan.provider_email && <label className="mt-2 flex min-h-[44px] items-center gap-3"><input type="checkbox" className="h-5 w-5" checked={includeDraft} onChange={event => { setIncludeDraft(event.target.checked); setChoicesChanged(true); }} />Include saved message, which might contain personal details</label>}
