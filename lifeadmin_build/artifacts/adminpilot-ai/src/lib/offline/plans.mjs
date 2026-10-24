@@ -1,4 +1,7 @@
 import { catalog } from "./domain.mjs";
+import { billCategory, goalsFor } from "./bill-types.mjs";
+import { waterResult } from "./water.mjs";
+import { internationalResult } from "./international.mjs";
 import { renewalSections } from "./energy-renewal.mjs";
 import { playbookText, structuredResult } from "./playbooks.mjs";
 
@@ -22,17 +25,17 @@ export function normaliseTask(task) {
     const text = typeof value === "boolean" ? (value ? "True" : "False") : String(value);
     return [cut(key, 80), cut(text, 500)];
   }));
-  const requested = task.category_id || task.category || "other_regular_payment";
+  const requested = billCategory(task) || "other_regular_payment";
   const mapped = legacy[requested] || requested;
   const category = categories.has(mapped) ? mapped : "other_regular_payment";
-  const goal = goals.has(task.goal_id) ? task.goal_id : "check_bill";
+  const goal = goalsFor(category).some(item => item.id === task.goal_id) ? task.goal_id : "check_bill";
   return { ...task, details, category_id: category, goal_id: goal, category: categories.get(category).label };
 }
 
 export function missingDetails(task) {
   const canonical = normaliseTask(task);
   const fields = new Map();
-  for (const field of [...categories.get(canonical.category_id).fields, ...goals.get(canonical.goal_id).fields]) {
+  for (const field of [...categories.get(canonical.category_id).fields, ...(canonical.category_id === "water" ? [] : goals.get(canonical.goal_id).fields)]) {
     fields.set(field.id, { ...fields.get(field.id), ...field });
   }
   return [...new Set([...fields.values()].filter(field =>
@@ -81,7 +84,13 @@ export function generateLocalResult(input, mode = "full") {
     ["unknown", "unrecognised", "unrecognized", "mystery", "do not recognise"].some(term => raw.includes(term)));
   let sections;
   let content;
-  if (unknown) {
+  if (task.details.country && task.details.country !== "United Kingdom" && task.category_id !== "water" && !unknown) {
+    sections = internationalResult(task);
+    content = ["# Bill plan: " + (task.title || task.category), ...["next_steps", "things_to_check", "approval_checklist"].map(key => "## " + key.replaceAll("_", " ") + "\n" + sections[key])].join("\n\n");
+  } else if (task.category_id === "water") {
+    sections = waterResult(task);
+    content = ["# Water bill plan: " + (task.title || "Water and sewerage"), ...["next_steps", "things_to_check", "approval_checklist"].map(key => "## " + key.replaceAll("_", " ") + "\n" + sections[key]), "## Provider message\n" + sections.provider_message].join("\n\n");
+  } else if (unknown) {
     sections = unknownPayment(task);
     content = ["# Admin plan: " + (task.title ?? "Unknown payment"), "## Next steps\n" + sections.next_steps,
       "## Things to check\n" + sections.things_to_check, "## Approval checklist\n" + sections.approval_checklist].join("\n\n");
@@ -111,6 +120,7 @@ export function generateLocalResult(input, mode = "full") {
     } : null;
   }
   sections.known_details = { ...task.details };
+  if (task.details.currency || task.details.country) sections.things_to_check += "\n- Bill location: " + (task.details.country || "Not specified; confirm before using regional guidance") + ". Currency: " + (task.details.currency || "Not specified") + ".";
   sections.missing_details = missingDetails(task);
   const notices = safetyNotices(task);
   if (notices.length) sections.things_to_check = (sections.things_to_check.trim() + "\n\n## Safety check\n" + notices.map(x => "- " + x).join("\n")).trim();
@@ -124,7 +134,7 @@ export async function generateAndSaveLocalPlan(store, taskId, mode = "full") {
   const result = generateLocalResult(task, mode);
   const note = {
     id: globalThis.crypto.randomUUID(), task_id: task.id, title: task.title,
-    source: "local", created_at: new Date().toISOString(), content: result.content,
+    category_id: normaliseTask(task).category_id, source: "local", created_at: new Date().toISOString(), content: result.content,
     sections: Object.fromEntries(["next_steps", "provider_message", "things_to_check", "approval_checklist"].map(key => [key, result[key]])),
     provider_email: result.provider_email, known_details: result.known_details, missing_details: result.missing_details,
   };

@@ -43,7 +43,15 @@ final class LifeAdminUITests: XCTestCase {
             // WebKit can call a clipped button hittable when its tap centre is
             // outside the safe-area viewport. Larger text views can be partly
             // visible and usable, so check the tap centre rather than all edges.
-            let viewport = app.webViews.firstMatch.frame
+            var viewport = app.webViews.firstMatch.frame
+            let keyboard = app.keyboards.firstMatch
+            if keyboard.exists && keyboard.frame.intersects(viewport) &&
+                keyboard.frame.minY > viewport.minY {
+                // WKWebView keeps its full frame while the software keyboard
+                // covers its lower portion. Never tap or scroll through that
+                // covered area when moving between text fields.
+                viewport.size.height = min(viewport.height, keyboard.frame.minY - viewport.minY)
+            }
             if element.exists {
                 let frame = element.frame
                 let centre = CGPoint(x: frame.midX, y: frame.midY)
@@ -68,10 +76,33 @@ final class LifeAdminUITests: XCTestCase {
                     continue
                 }
             }
-            app.swipeUp()
+            let start = app.coordinate(withNormalizedOffset: .zero)
+                .withOffset(CGVector(dx: viewport.midX,
+                                     dy: viewport.minY + viewport.height * 0.8))
+            start.press(forDuration: 0.01,
+                        thenDragTo: start.withOffset(CGVector(dx: 0, dy: -viewport.height * 0.55)))
         }
         print(app.debugDescription)
         XCTFail("Control is not reachable: \(element)", file: file, line: line)
+    }
+
+    private func openBackupControls() {
+        let restore = app.buttons["Restore backup"]
+        let export = app.buttons["Export backup"]
+        if restore.waitForExistence(timeout: 1) && export.exists { return }
+
+        // A WebView tap can occasionally be swallowed while a long page is
+        // settling after relaunch. Confirm the disclosure opened before
+        // targeting its controls, and retry only while it is still collapsed.
+        for _ in 0..<2 {
+            let manage = app.buttons["Manage backups"]
+            guard manage.waitForExistence(timeout: 5) else { break }
+            reveal(manage)
+            manage.tap()
+            if restore.waitForExistence(timeout: 5) && export.exists { return }
+        }
+        XCTAssertTrue(restore.exists && export.exists,
+                      "Backup controls should appear after opening Manage backups")
     }
 
     private func prepareKeyboard(for field: XCUIElement) {
@@ -84,11 +115,17 @@ final class LifeAdminUITests: XCTestCase {
                 XCTAssertTrue(switcher.isHittable)
                 switcher.tap()
                 let show = app.buttons["Show Keyboard"]
-                guard show.waitForExistence(timeout: 5) else {
-                    XCTFail("Show Keyboard was not available in the system menu")
-                    return
+                let showReady = XCTNSPredicateExpectation(
+                    predicate: NSPredicate(format: "exists == true AND hittable == true"),
+                    object: show)
+                if XCTWaiter.wait(for: [showReady], timeout: 5) == .completed {
+                    show.tap()
+                } else {
+                    // The iPad system menu can close during its appearance
+                    // animation. Refocus the target rather than failing on a
+                    // transient menu item.
+                    field.tap()
                 }
-                show.tap()
             } else {
                 // Retry the tap before typing, never replay partially entered text.
                 field.tap()
@@ -99,6 +136,13 @@ final class LifeAdminUITests: XCTestCase {
             return
         }
         dismissKeyboardTutorial()
+        // iPad layout changes can drop focus, so reveal and retap there.
+        // On iPhone, this scroll can move the focused field under the keyboard;
+        // preserve the focus established by the caller instead.
+        if UIDevice.current.userInterfaceIdiom == .pad {
+            reveal(field)
+            field.tap()
+        }
     }
 
     private func enterText(_ value: String, into field: XCUIElement) {
@@ -150,7 +194,8 @@ final class LifeAdminUITests: XCTestCase {
         let closed = XCTNSPredicateExpectation(
             predicate: NSPredicate(format: "exists == false"), object: app.keyboards.firstMatch)
         // Large iPad simulator snapshots can outlast the keyboard animation.
-        XCTAssertEqual(XCTWaiter.wait(for: [closed], timeout: 15), .completed)
+        // Keep the check bounded while allowing its accessibility tree to settle.
+        XCTAssertEqual(XCTWaiter.wait(for: [closed], timeout: 30), .completed)
     }
 
     private func pickerControl(
@@ -194,6 +239,7 @@ final class LifeAdminUITests: XCTestCase {
         checkCurrentLayout: Bool = true
     ) {
         let search = app.textFields.firstMatch
+        reveal(search)
         search.tap()
         dismissKeyboardTutorial()
         enterText("Cancel Netflix", into: search)
@@ -211,6 +257,17 @@ final class LifeAdminUITests: XCTestCase {
         enterText(name, into: billName)
         XCTAssertEqual(billName.value as? String, name)
         closeKeyboard()
+        let moreDetails = app.descendants(matching: .any).matching(
+            NSPredicate(format: "label == %@", "More bill details (optional)")).firstMatch
+        // The pinned upgrade baseline predates the optional-details disclosure.
+        // Current layouts must expose the new section; baseline fields stay open.
+        if checkCurrentLayout {
+            XCTAssertTrue(moreDetails.exists, "Current bill entry needs its optional-details section")
+        }
+        if moreDetails.exists {
+            reveal(moreDetails)
+            moreDetails.tap()
+        }
         if checkCurrentLayout {
             let columnWidth = app.textFields["Provider or organisation"].frame.width
             XCTAssertGreaterThan(columnWidth, 0)
@@ -326,6 +383,7 @@ final class LifeAdminUITests: XCTestCase {
             app.launch()
             assertWorkspaceReady()
             let search = app.textFields.firstMatch
+            reveal(search)
             search.tap()
             enterText("Cancel Netflix", into: search)
             closeKeyboard()
@@ -508,9 +566,7 @@ final class LifeAdminUITests: XCTestCase {
         for exporting in [false, true] {
             app.launch()
             assertWorkspaceReady()
-            let backups = app.buttons["Manage backups"]
-            reveal(backups)
-            backups.tap()
+            openBackupControls()
             let action = app.buttons[exporting ? "Export backup" : "Restore backup"]
             reveal(action)
             action.tap()
@@ -592,6 +648,14 @@ final class LifeAdminUITests: XCTestCase {
         app.terminate()
         app.launch()
         assertWorkspaceReady()
+        // Completed bills are intentionally hidden by the default Active
+        // filter. Switch to Completed before reopening the persisted record.
+        let showBills = app.otherElements["Show bills"]
+        reveal(showBills)
+        showBills.tap()
+        let completedFilter = app.buttons["Completed"]
+        XCTAssertTrue(completedFilter.waitForExistence(timeout: 5), "The bill filter should offer Completed")
+        completedFilter.tap()
         let reopen = app.buttons["Reopen"]
         reveal(reopen)
         reopen.tap()
@@ -833,7 +897,7 @@ final class LifeAdminUITests: XCTestCase {
         XCTAssertTrue(reviewed.contains("CI reviewed prompt 7319"))
         let copy = app.buttons["Copy AI prompt"]
         reveal(copy)
-        XCTAssertTrue(app.links["Open ChatGPT"].exists)
+        XCTAssertTrue(app.links["Open Copilot (Microsoft, free option)"].exists)
         XCTAssertFalse(app.links["Open Claude"].exists)
         copy.tap()
         XCTAssertTrue(app.staticTexts[
@@ -1010,7 +1074,14 @@ final class LifeAdminUITests: XCTestCase {
         try audit("initial bill-entry screen")
 
         let open = app.buttons["Open plan"]
-        reveal(open)
+        let webView = app.webViews.firstMatch
+        for _ in 0..<8 {
+            let frame = open.frame
+            let centre = CGPoint(x: frame.midX, y: frame.midY)
+            if webView.frame.contains(centre) && open.isHittable { break }
+            webView.swipeUp()
+        }
+        XCTAssertTrue(open.isHittable, "The saved plan control should be reachable after scrolling the WebView")
         try audit("saved bill and plan controls")
         open.tap()
         let nextSteps = app.staticTexts["Next Steps"]
