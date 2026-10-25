@@ -73,13 +73,27 @@ jobs:
           if not os.environ.get("APPLE_DISTRIBUTION_P12_PASSWORD"):
               raise SystemExit("Missing certificate password secret")
           PY
+          # Validate the stored P12 with OpenSSL, then re-export a temporary
+          # legacy-encrypted copy for macOS Keychain compatibility. This mirrors
+          # the previously verified signing recovery workflow.
+          openssl3="$(brew --prefix openssl@3)/bin/openssl"
+          "$openssl3" pkcs12 -in "$RUNNER_TEMP/homeadmin.p12" \
+            -passin env:APPLE_DISTRIBUTION_P12_PASSWORD -noout
+          "$openssl3" pkcs12 -in "$RUNNER_TEMP/homeadmin.p12" \
+            -passin env:APPLE_DISTRIBUTION_P12_PASSWORD -nodes \
+            -out "$RUNNER_TEMP/homeadmin-import.pem"
+          "$openssl3" pkcs12 -export -in "$RUNNER_TEMP/homeadmin-import.pem" \
+            -passout env:APPLE_DISTRIBUTION_P12_PASSWORD \
+            -keypbe PBE-SHA1-3DES -certpbe PBE-SHA1-3DES -macalg sha1 \
+            -out "$RUNNER_TEMP/homeadmin-import.p12"
           keychain="$RUNNER_TEMP/homeadmin-signing.keychain-db"
           password=$(openssl rand -hex 32)
           security create-keychain -p "$password" "$keychain"
           security set-keychain-settings -lut 7200 "$keychain"
           security unlock-keychain -p "$password" "$keychain"
-          security import "$RUNNER_TEMP/homeadmin.p12" -k "$keychain" \
+          security import "$RUNNER_TEMP/homeadmin-import.p12" -k "$keychain" \
             -P "$APPLE_DISTRIBUTION_P12_PASSWORD" -T /usr/bin/codesign -T /usr/bin/security
+          rm -f "$RUNNER_TEMP/homeadmin-import.pem" "$RUNNER_TEMP/homeadmin-import.p12"
           security set-key-partition-list -S apple-tool:,apple: -k "$password" "$keychain" >/dev/null
           security list-keychains -d user -s "$keychain" "$HOME/Library/Keychains/login.keychain-db"
 
