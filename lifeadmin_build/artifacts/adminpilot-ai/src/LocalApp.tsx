@@ -145,7 +145,7 @@ export default function LocalApp() {
     {fieldErrors[field.id] && <span id={field.id + "-error"} role="alert" className="mt-1 block text-sm font-semibold text-red-800">{fieldErrors[field.id]}</span>}
   </label>;
 
-  function resetForm() { setFieldErrors({}); setEditing(null); setCategory(""); setGoal(""); setDetails({}); setTitle(""); setNotes(""); }
+  function resetForm() { setFieldErrors({}); setError(""); setEditing(null); setCategory(""); setGoal(""); setDetails({}); setTitle(""); setNotes(""); }
   function closeHelp() {
     if (helpDirty.current && !window.confirm("Close unfinished bill help? Save progress first to keep your entered text.")) return false;
     setHelpId(null); helpDirty.current = false; return true;
