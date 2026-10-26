@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { EmptyState, LoadingSpinner } from './Feedback';
 import { diaryEvents } from './lib/offline/diary.mjs';
 import { calendarAvailable, chooseCalendars, syncDiary, removeDiaryEntries } from './lib/offline/device-calendar.mjs';
 const key = 'lifeadmin-calendar-v1';
@@ -54,7 +55,9 @@ export default function DiaryPanel({ tasks }: { tasks: Record<string, any>[] }) 
     <p className="mt-3">Add expiry, renewal, cancellation and follow-up dates when editing a bill. Enable diary entries for each bill, then connect a calendar here. Ordinary payment dates are separate.</p>
     <p className="mt-3">Entries use neutral titles without provider names or account references. Your selected calendar might sync or be shared through its provider. Permission supports maintaining HomeAdmin entries; unrelated events are not uploaded. Setup is device-specific, so connecting two devices to one calendar risks duplicate entries.</p>
     <p className="mt-3">Updates run while HomeAdmin is open and on reopening. Calendar alerts then follow your calendar settings. Existing entries are not guaranteed to be removed when uninstalling the app. Past dates are not added as new events.</p>
-    {status && <p role="status" className="mt-3">{status}</p>}{error && <p role="alert" className="mt-3 text-red-900">{error}</p>}
+    {busy && <p role="status" aria-busy="true" className="mt-3 flex items-center gap-2 font-semibold text-violet-900"><LoadingSpinner />Updating calendar…</p>}
+    {status && !busy && <p role="status" className="mt-3">{status}</p>}{error && <p role="alert" className="mt-3 text-red-900">{error}</p>}
+    {!invalid && events === '[]' && <EmptyState title="No diary dates yet" description="Add a contract or follow-up date to a bill. Connect a calendar only when you want device entries." />}
     {calendarAvailable() ? <div className="mt-4 space-y-3"><button disabled={busy} className={button} onClick={() => void choose()}>{calendarId ? 'Change calendar' : 'Connect calendar'}</button>
       {!!calendars.length && <div><label>Calendar<select className="mt-1 block min-h-[44px] w-full rounded-xl border p-2" value={choice} onChange={event => setChoice(event.target.value)}>{calendars.map(x => <option key={x.id} value={x.id}>{x.title}</option>)}</select></label><button disabled={busy} className={button + ' mt-3'} onClick={connect}>Enable diary updates</button></div>}
       {!!calendarId && <div className="flex flex-wrap gap-3"><button disabled={busy} className={button} onClick={() => setRetry(x => x + 1)}>Retry diary update</button><button disabled={busy} className={button} onClick={() => void disconnect(false)}>Disconnect and keep entries</button></div>}

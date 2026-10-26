@@ -82,6 +82,15 @@ const assert = require('node:assert/strict');
       }
     }
     console.log('Layout checks:',JSON.stringify(layouts));
+    if (layouts.some(layout => layout.scrollWidth > layout.width + 1)) {
+      await page.setViewportSize({width:320,height:1024});
+      await page.evaluate(() => {document.documentElement.style.fontSize='32px';});
+      const overflow = await page.evaluate(() => [...document.querySelectorAll('body *')].map(element => {
+        const rect = element.getBoundingClientRect();
+        return {tag:element.tagName.toLowerCase(),className:typeof element.className === 'string' ? element.className.slice(0,100) : '',text:(element.textContent || '').trim().slice(0,60),left:Math.round(rect.left),right:Math.round(rect.right)};
+      }).filter(item => item.right > innerWidth + 1 || item.left < -1).slice(0,20));
+      console.log('Overflow candidates:',JSON.stringify(overflow));
+    }
     await page.setViewportSize({width:768,height:1024});
     await page.evaluate(() => {document.documentElement.style.fontSize='32px';document.activeElement.blur();window.scrollTo(0,0);});
     // Begin before the first focusable element, then traverse the full document.
