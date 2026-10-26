@@ -69,7 +69,7 @@ const assert = require("node:assert/strict");
     await page.reload();
     await page.getByRole("button", { name: "Open plan", exact: true }).click();
     await page.getByText("Synthetic reviewed reply. Please confirm the revised calculation.", { exact: true }).waitFor();
-    await page.getByRole("button", { name: "Plan, letter or reply", exact: true }).click();
+    await page.getByRole("button", { name: "AI help or offline plan", exact: true }).click();
     await page.getByRole("radio", { name: /^Make a plan/ }).check();
     await page.getByRole("radio", { name: /^Start from an offline draft/ }).check();
     await page.getByRole("button", { name: "Continue to details", exact: true }).click();
