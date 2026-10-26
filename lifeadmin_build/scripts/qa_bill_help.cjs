@@ -15,6 +15,17 @@ const assert = require("node:assert/strict");
     });
     page.on("pageerror", error => errors.push(error.message));
     await page.goto(base);
+    const planSettings = page.locator("details").filter({ has: page.locator("summary", { hasText: "Optional offline plan settings" }) });
+    assert.equal(await planSettings.evaluate(node => node.open), false, "Specialist choices should start collapsed.");
+    await planSettings.locator("summary").click();
+    const focus = planSettings.getByLabel("Plan focus");
+    assert.equal(await focus.inputValue(), "full", "Recommended plan must remain the default.");
+    assert.deepEqual(await focus.locator("option").evaluateAll(nodes => nodes.map(node => node.value)),
+      ["full", "more_options", "renewal_pro", "refund_pro", "document_pro", "travel_pro", "family_board", "small_landlord"]);
+    await focus.selectOption("refund_pro");
+    assert.equal(await focus.inputValue(), "refund_pro");
+    await focus.selectOption("full");
+    await planSettings.locator("summary").click();
     await page.getByRole("button", { name: "Water", exact: true }).click();
     await page.getByLabel("What would you like help with?").selectOption("check_bill");
     await page.getByLabel("Bill name", { exact: true }).fill("Synthetic water case");
