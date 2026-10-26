@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { LoadingSpinner } from "./Feedback";
 import { aiServices, actionsFor, promptFields, preferredAi, savePreferredAi, taskAiPrompt } from "./lib/offline/ai-handoff.mjs";
 import { copyDeviceText } from "./lib/offline/device-files.mjs";
 
@@ -31,7 +32,7 @@ export default function AiHandoff({ plan, onClose, onMessage, onError }: {
     catch (error) { onError(error instanceof Error ? error.message : "Copy failed. Select the question and copy manually."); }
     finally { setCopying(false); }
   }
-  return <section className="mt-5 rounded-xl border border-violet-200 bg-violet-50 p-4" aria-labelledby="local-ai-heading">
+  return <section className="mt-5 rounded-xl border border-violet-200 bg-violet-50 p-4" aria-labelledby="local-ai-heading" aria-busy={copying}>
     <h3 id="local-ai-heading" tabIndex={-1} className="font-bold">Review your AI prompt</h3>
     <p className="mt-3">Choose a task and the details to include. Review the prepared question before copying. Pasting into another service shares the text with that service.</p>
     <label className="mt-4 block">Your preferred AI<select className={input + " mt-1"} value={service} onChange={event => {
@@ -49,7 +50,7 @@ export default function AiHandoff({ plan, onClose, onMessage, onError }: {
     {choicesChanged && <p role="status" className="mt-3 font-semibold">Task or details changed. Prepare the question again before copying.</p>}
     <p className="mt-3">Question edits are temporary. Save any returned letter in the message editor before closing the app.</p>
     <label className="mt-3 block">AI prompt<textarea className={input + " mt-1"} rows={12} maxLength={200000} value={prompt} onChange={event => { setPrompt(event.target.value); setDirty(true); }} /></label>
-    <div className="mt-3 flex flex-wrap gap-3"><button disabled={!prompt.trim() || choicesChanged || copying} className={button} onClick={() => void copy()}>{copying ? "Copying…" : "Copy AI prompt"}</button><a className={button + " inline-flex items-center"} href={selectedService.url} target="_blank" rel="noopener noreferrer">Open {selectedService.name}</a><button className={button} onClick={() => { if (!dirty || window.confirm("Close and discard the edited AI question?")) onClose(); }}>Close AI prompt</button></div>
+    <div className="mt-3 flex flex-wrap gap-3"><button disabled={!prompt.trim() || choicesChanged || copying} className={button} onClick={() => void copy()}>{copying ? <span className="inline-flex items-center gap-2"><LoadingSpinner />Copying…</span> : "Copy AI prompt"}</button><a className={button + " inline-flex items-center"} href={selectedService.url} target="_blank" rel="noopener noreferrer">Open {selectedService.name}</a><button className={button} onClick={() => { if (!dirty || window.confirm("Close and discard the edited AI question?")) onClose(); }}>Close AI prompt</button></div>
     <p className="mt-4">1. Copy the reviewed question. 2. Open your AI and paste. 3. Review the reply, return here and paste your letter into Edit message, then Save message. Opening the service sends no bill details. Replies are not imported automatically.</p>
     {action === "compare" && <p className="mt-3">Ask for dated sources and check offers on provider websites. AI research is not a verified live price comparison.</p>}
   </section>;
