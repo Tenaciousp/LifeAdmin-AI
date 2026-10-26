@@ -105,6 +105,18 @@ final class LifeAdminUITests: XCTestCase {
                       "Backup controls should appear after opening Manage backups")
     }
 
+    private func revealBillAction(_ label: String) {
+        let action = app.buttons[label]
+        if !action.exists {
+            let manage = app.buttons["Manage bill"].firstMatch
+            reveal(manage)
+            manage.tap()
+            XCTAssertTrue(action.waitForExistence(timeout: 5),
+                          "Bill management should reveal \(label)")
+        }
+        reveal(action)
+    }
+
     private func prepareKeyboard(for field: XCUIElement) {
         let keyboard = app.keyboards.firstMatch
         if !keyboard.waitForExistence(timeout: 5) {
@@ -459,7 +471,7 @@ final class LifeAdminUITests: XCTestCase {
         app.launch()
         assertWorkspaceReady()
         let delete = app.buttons["Delete bill"]
-        reveal(delete)
+        revealBillAction("Delete bill")
         delete.tap()
         confirm()
         XCTAssertTrue(app.staticTexts["Bill and associated plans deleted."].waitForExistence(timeout: 10))
@@ -603,7 +615,7 @@ final class LifeAdminUITests: XCTestCase {
         app.launch()
         assertWorkspaceReady()
         let markDone = app.buttons["Mark done"]
-        reveal(markDone)
+        revealBillAction("Mark done")
         markDone.tap()
         XCTAssertTrue(app.staticTexts[
             "The save failed. Existing records were preserved."
@@ -612,7 +624,7 @@ final class LifeAdminUITests: XCTestCase {
         app.terminate()
         app.launch()
         assertWorkspaceReady()
-        reveal(markDone)
+        revealBillAction("Mark done")
         XCTAssertTrue(app.otherElements["Your bills (1)"].exists)
         XCTAssertTrue(app.otherElements["Saved plans (1)"].exists)
         XCTAssertTrue(app.staticTexts["CI sample subscription"].exists)
@@ -638,7 +650,7 @@ final class LifeAdminUITests: XCTestCase {
         app.launch()
         assertWorkspaceReady()
         let markDone = app.buttons["Mark done"]
-        reveal(markDone)
+        revealBillAction("Mark done")
         XCTAssertTrue(app.otherElements["Your bills (1)"].exists)
         XCTAssertTrue(app.otherElements["Saved plans (1)"].exists)
         XCTAssertTrue(app.staticTexts["CI sample subscription"].exists)
@@ -657,13 +669,13 @@ final class LifeAdminUITests: XCTestCase {
         XCTAssertTrue(completedFilter.waitForExistence(timeout: 5), "The bill filter should offer Completed")
         completedFilter.tap()
         let reopen = app.buttons["Reopen"]
-        reveal(reopen)
+        revealBillAction("Reopen")
         reopen.tap()
         XCTAssertTrue(app.staticTexts["Bill status saved."].waitForExistence(timeout: 20))
         app.terminate()
         app.launch()
         assertWorkspaceReady()
-        reveal(markDone)
+        revealBillAction("Mark done")
         XCTAssertTrue(app.otherElements["Your bills (1)"].exists)
         XCTAssertTrue(app.otherElements["Saved plans (1)"].exists)
         let open = app.buttons["Open plan"]
