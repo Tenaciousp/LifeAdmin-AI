@@ -35,8 +35,11 @@ const assert = require("node:assert/strict");
     await page.getByLabel("Search saved bills").fill("no matching bill");
     assert.equal(await page.getByRole("button", { name: "Edit", exact: true }).count(), 0);
     await page.getByLabel("Search saved bills").fill("");
+    const manageBill = page.locator("#saved-bills details").filter({ hasText: "Manage bill" });
+    assert.equal(await manageBill.evaluate(node => node.open), false, "Secondary bill actions start collapsed.");
     for (const width of [390, 768, 1024]) {
       await page.setViewportSize({ width, height: 844 });
+      if (!await manageBill.evaluate(node => node.open)) await manageBill.locator("summary").click();
       await page.getByRole("button", { name: "Edit", exact: true }).click();
       assert.equal(await page.getByLabel("Country / region of this bill").inputValue(), "Canada");
       assert.equal(await page.getByLabel("Bill currency").inputValue(), "CAD");
