@@ -50,7 +50,7 @@ const assert = require('node:assert/strict');
     await page.getByRole('button',{name:'Save bill',exact:true}).click();
     await page.getByRole('heading',{name:'Your bills (1)',exact:true}).waitFor();
     await idle();
-    await page.getByRole('button',{name:'Create plan',exact:true}).click();
+    await page.getByRole('button',{name:'Create offline template',exact:true}).click();
     await page.getByRole('heading',{name:'Saved plans (1)',exact:true}).waitFor();
     await idle();
     await page.getByRole('button',{name:'Prepare AI prompt',exact:true}).click();

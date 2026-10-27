@@ -149,3 +149,17 @@ for (const native of [false, true]) test(`${native ? "native" : "browser"} stale
   assert.equal((await first.read()).plans.length, 1);
   first.close(); second.close();
 });
+
+
+test("beginner plans request an action list, explained plan and sourced alternatives", () => {
+  const broadband = { ...bill, category_id: "telecoms", details: { provider: "Example Broadband", country: "UK", currency: "GBP" } };
+  const prompt = workflowPrompt(broadband, initialWorkflow(broadband));
+  for (const expected of ["My action list", "My plan", "Alternatives to consider", "official source links", "date checked", "label them unverified", "My first next step", "plain language"]) assert.ok(prompt.includes(expected), expected);
+  assert.match(prompt, /missing location, usage or requirements/);
+});
+test("non-switchable bill plans do not promise household supplier switching", () => {
+  const prompt = workflowPrompt(bill, initialWorkflow(bill));
+  assert.match(prompt, /do not assume household supplier switching/);
+  assert.match(prompt, /payment options instead of alternative suppliers/);
+  assert.doesNotMatch(prompt, /PRIVATE-REFERENCE|PRIVATE-NOTES/);
+});
