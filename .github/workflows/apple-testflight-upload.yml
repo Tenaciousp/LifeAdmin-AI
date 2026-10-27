@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       action:
-        description: Validate only, or validate and upload the verified version 1.0 build 1
+        description: Validate only, or validate and upload the verified version 1.0 build 2
         required: true
         type: choice
         default: validate
@@ -61,11 +61,11 @@ jobs:
               print('Offline checks only; no Apple authentication attempted.')
               raise SystemExit(0)
           run = json.loads(subprocess.check_output([
-              'gh', 'api', 'repos/' + os.environ['GITHUB_REPOSITORY'] + '/actions/runs/39619888350'
+              'gh', 'api', 'repos/' + os.environ['GITHUB_REPOSITORY'] + '/actions/runs/40487012427'
           ]))
           assert run['conclusion'] == 'success'
-          assert run['head_sha'] == '34d1f74cb586c9bcbdce6b5a0d1ea384532f5d97'
-          assert run['path'] == '.github/workflows/apple-signing-recovery.yml'
+          assert run['head_sha'] == 'f2afdffda5639b702286e7f5b50b09bd94b7a393'
+          assert run['path'] == '.github/workflows/apple-signing.yml'
           assert run['event'] == 'workflow_dispatch'
           print('Successful signed-build provenance verified.')
           PY
@@ -74,9 +74,9 @@ jobs:
         if: inputs.action != 'diagnose'
         uses: actions/download-artifact@v4
         with:
-          artifact-ids: 12355587018
+          artifact-ids: 12725593361
           merge-multiple: true
-          run-id: 39619888350
+          run-id: 40487012427
           github-token: ${{ github.token }}
           path: ${{ runner.temp }}/signed-build
 
@@ -89,12 +89,12 @@ jobs:
           temporary = Path(os.environ['RUNNER_TEMP'])
           files = temporary / 'signed-build'
           evidence = json.loads((files / 'build-evidence.json').read_text())
-          assert evidence['source_commit'] == '42755483eeea11581bc2e89530eb9f6974e8ff17'
-          assert evidence['build'] == '1' and evidence['version'] == '1.0'
+          assert evidence['source_commit'] == 'f2afdffda5639b702286e7f5b50b09bd94b7a393'
+          assert evidence['build'] == '2' and evidence['version'] == '1.0'
           assert evidence['team'] == 'C8T85FCR6R'
           ipas = list(files.glob('*.ipa'))
           assert len(ipas) == 1
-          assert hashlib.sha256(ipas[0].read_bytes()).hexdigest() == 'a92a7e7792f5244539f4ff81b77036c7dc000fca4bdbc8d27b079d4cc371efc8'
+          assert hashlib.sha256(ipas[0].read_bytes()).hexdigest() == '8aacaa1c5a60c99ec186c49a0e85e6ee6f56fb2cf2a275c6ec36d4010da51e0e'
           extracted = temporary / 'verify-upload'
           with zipfile.ZipFile(ipas[0]) as archive:
               for name in archive.namelist():
@@ -105,7 +105,7 @@ jobs:
           assert len(apps) == 1
           info = plistlib.loads((apps[0] / 'Info.plist').read_bytes())
           assert info['CFBundleIdentifier'] == 'uk.co.tenaciouspl.lifeadmin'
-          assert info['CFBundleVersion'] == '1' and info['CFBundleShortVersionString'] == '1.0'
+          assert info['CFBundleVersion'] == '2' and info['CFBundleShortVersionString'] == '1.0'
           subprocess.run(['codesign', '--verify', '--deep', '--strict', str(apps[0])], check=True)
           signed = plistlib.loads(subprocess.check_output([
               'codesign', '-d', '--entitlements', ':-', str(apps[0])
@@ -113,7 +113,7 @@ jobs:
           assert signed['application-identifier'] == 'C8T85FCR6R.uk.co.tenaciouspl.lifeadmin'
           assert signed['com.apple.developer.team-identifier'] == 'C8T85FCR6R'
           assert signed.get('get-task-allow', False) is False
-          print('Exact signed HomeAdmin version 1.0 build 1 verified.')
+          print('Exact signed HomeAdmin version 1.0 build 2 verified.')
           PY
 
       - name: Validate with Apple and optionally upload for processing
@@ -137,7 +137,7 @@ jobs:
               result = subprocess.run([
                   'xcrun', 'altool', operation, str(ipa), '--platform', 'ios',
                   '--bundle-id', 'uk.co.tenaciouspl.lifeadmin',
-                  '--bundle-version', '1', '--bundle-short-version-string', '1.0',
+                  '--bundle-version', '2', '--bundle-short-version-string', '1.0',
                   '--username', os.environ['APPLE_UPLOAD_APPLE_ID'],
                   '--app-password', '@env:APPLE_UPLOAD_APP_PASSWORD', '--output-format', 'json'
               ], capture_output=True, text=True)
@@ -172,9 +172,9 @@ jobs:
           if action == 'upload':
               execute('--upload-package')
               print('Apple accepted the upload for processing. TestFlight availability is not yet confirmed.')
-              summary.write_text('HomeAdmin 1.0 (1) upload accepted for Apple processing.\n\nSource: `42755483eeea11581bc2e89530eb9f6974e8ff17`.\n\nNo tester invitations or App Store review submission performed.\n')
+              summary.write_text('HomeAdmin 1.0 (2) upload accepted for Apple processing.\n\nSource: `f2afdffda5639b702286e7f5b50b09bd94b7a393`.\n\nNo tester invitations or App Store review submission performed.\n')
           else:
-              summary.write_text('HomeAdmin 1.0 (1) passed Apple validation. No upload performed.\n')
+              summary.write_text('HomeAdmin 1.0 (2) passed Apple validation. No upload performed.\n')
           PY
 
       - name: Remove temporary build copies
