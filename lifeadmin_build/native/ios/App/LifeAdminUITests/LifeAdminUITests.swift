@@ -353,7 +353,8 @@ final class LifeAdminUITests: XCTestCase {
         app.launch()
         XCTAssertTrue(app.buttons["Search"].waitForExistence(timeout: 60))
         addSubscription(named: "CI sample subscription", checkCurrentLayout: false)
-        let create = app.buttons["Create offline template"]
+        // The pinned baseline predates the clearer offline-template label.
+        let create = app.buttons["Create plan"]
         reveal(create)
         create.tap()
         confirm()
