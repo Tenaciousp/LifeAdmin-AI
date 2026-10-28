@@ -8,6 +8,26 @@ export function aiDraftConfigured() {
   return !Capacitor.isNativePlatform() || /^https:\/\//i.test(configuredBase);
 }
 
+/** Availability checks contain no bill details and never generate a draft. */
+export async function aiDraftAvailable(fetchImpl = globalThis.fetch) {
+  if (!aiDraftConfigured()) return false;
+  try {
+    let status, payload;
+    if (Capacitor.isNativePlatform()) {
+      const response = await CapacitorHttp.get({ url: `${configuredBase}/api/health`, connectTimeout: 5000, readTimeout: 5000 });
+      status = response.status; payload = response.data;
+    } else {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 5000);
+      try {
+        const response = await fetchImpl(`${configuredBase}/api/health`, { credentials: "omit", signal: controller.signal });
+        status = response.status; payload = await response.json();
+      } finally { clearTimeout(timeout); }
+    }
+    return status === 200 && payload?.ai_drafts_available === true;
+  } catch { return false; }
+}
+
 function endpoint() {
   if (Capacitor.isNativePlatform() && !/^https:\/\//i.test(configuredBase)) {
     throw new Error("In-app Gemini is not configured for this version. Use Copilot or an offline draft.");
