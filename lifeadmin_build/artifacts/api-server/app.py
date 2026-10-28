@@ -2034,7 +2034,7 @@ class AdminPilotHandler(SimpleHTTPRequestHandler):
         parsed = urlparse(self.path)
         path = parsed.path
         if path in {"/api/health", "/api/healthz"}:
-            return json_response(self, {"status": "ok", "service": "lifeadmin-ai"})
+            return json_response(self, {"status": "ok", "service": "lifeadmin-ai", "ai_drafts_available": bool(env_bool("GEMINI_DRAFTS_ENABLED", False) and os.environ.get("GEMINI_API_KEY"))})
         query = parse_qs(parsed.query)
         user = current_user(self)
         user_id = user["id"] if user else guest_session(self)
