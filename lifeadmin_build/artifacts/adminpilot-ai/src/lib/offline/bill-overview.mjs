@@ -38,3 +38,19 @@ export function billOverview(tasks, today = new Date().toLocaleDateString("en-CA
   }).sort((a, b) => a.date.localeCompare(b.date));
   return { active: active.length, priced, unpriced: active.length - priced, totals: [...totals.values()].sort((a, b) => a.currency.localeCompare(b.currency)), upcoming };
 }
+
+// Sort display copies only; saved records and currency values are never changed.
+export function sortBills(tasks, order = "next_date") {
+  const nextDate = task => ["next_payment_date", "renewal_date", "contract_expiry", "notice_deadline", "follow_up_date"]
+    .map(key => task.details?.[key]).filter(validDiaryDate).sort()[0] || "9999-12-31";
+  const byName = (a, b) => String(a.title || "").localeCompare(String(b.title || "")) || String(a.id).localeCompare(String(b.id));
+  return [...tasks].sort((a, b) => {
+    if (order === "name") return byName(a, b);
+    if (order === "cost") {
+      const left = recurringCost(a), right = recurringCost(b);
+      if (!left || !right) return left ? -1 : right ? 1 : byName(a, b);
+      return left.currency.localeCompare(right.currency) || right.monthly - left.monthly || byName(a, b);
+    }
+    return nextDate(a).localeCompare(nextDate(b)) || byName(a, b);
+  });
+}
