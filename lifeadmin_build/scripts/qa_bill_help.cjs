@@ -149,13 +149,35 @@ const assert = require("node:assert/strict");
     await page.locator('summary').filter({ hasText: 'Follow-up reminder' }).click();
     await page.getByLabel('Follow-up date', { exact: true }).fill('2027-04-20');
     await page.getByRole('button', { name: 'Save bill', exact: true }).click();
-    // Wait for acknowledged persistence before simulating a restart.
     await page.getByRole('heading', { name: 'Help with Synthetic water case', exact: true }).waitFor();
     await page.waitForFunction(() => [...document.querySelectorAll('button')].some(button => button.textContent === 'Save bill' && !button.disabled));
     await page.reload();
     await page.locator('summary').filter({ hasText: 'Manage bill' }).click();
     await page.getByRole('button', { name: 'Edit', exact: true }).click();
     assert.equal(await page.getByLabel('Follow-up date', { exact: true }).inputValue(), '2027-04-20');
+    // A household with more than five dates must reach every date and its guided help.
+    for (let i = 1; i <= 5; i++) {
+      await page.getByRole('button', { name: 'Water', exact: true }).click();
+      await page.getByLabel('What would you like help with?').selectOption('check_bill');
+      await page.getByLabel('Bill name', { exact: true }).fill('Reminder example ' + i);
+      const date = page.getByLabel('Follow-up date', { exact: true });
+      if (!await date.isVisible()) await page.locator('summary').filter({ hasText: 'Follow-up reminder' }).click();
+      await date.fill('2027-05-0' + i);
+      await page.getByRole('button', { name: 'Save bill', exact: true }).click();
+      await page.getByRole('heading', { name: 'Help with Reminder example ' + i, exact: true }).waitFor();
+      await page.waitForFunction(() => [...document.querySelectorAll('button')].some(button => button.textContent === 'Save bill' && !button.disabled));
+      await page.getByRole('button', { name: 'Close bill help', exact: true }).click();
+    }
+    const expandDates = page.getByRole('button', { name: 'Show all 6 dates', exact: true });
+    assert.equal(await expandDates.getAttribute('aria-expanded'), 'false');
+    await expandDates.click();
+    const upcoming = page.locator('#upcoming-bills');
+    assert.equal(await upcoming.locator('li').count(), 6);
+    await upcoming.getByRole('button', { name: 'Create a plan or message for Reminder example 5: Follow-up', exact: true }).click();
+    await page.getByRole('heading', { name: 'Help with Reminder example 5', exact: true }).waitFor();
+    await page.getByRole('button', { name: 'Close bill help', exact: true }).click();
+    await page.getByRole('button', { name: 'Show fewer dates', exact: true }).click();
+    assert.equal(await upcoming.locator('li').count(), 5);
     assert.deepEqual(external, []); assert.deepEqual(errors, []);
     console.log("PASS: chosen-AI reply request, private reference exclusion, saved progress reload, review gate, separate persisted results, offline plan, 200% text at phone/tablet widths, no external requests.");
   } finally { await browser.close(); }
