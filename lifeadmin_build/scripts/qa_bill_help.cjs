@@ -149,6 +149,9 @@ const assert = require("node:assert/strict");
     await page.locator('summary').filter({ hasText: 'Follow-up reminder' }).click();
     await page.getByLabel('Follow-up date', { exact: true }).fill('2027-04-20');
     await page.getByRole('button', { name: 'Save bill', exact: true }).click();
+    // Wait for acknowledged persistence before simulating a restart.
+    await page.getByRole('heading', { name: 'Help with Synthetic water case', exact: true }).waitFor();
+    await page.waitForFunction(() => [...document.querySelectorAll('button')].some(button => button.textContent === 'Save bill' && !button.disabled));
     await page.reload();
     await page.locator('summary').filter({ hasText: 'Manage bill' }).click();
     await page.getByRole('button', { name: 'Edit', exact: true }).click();
