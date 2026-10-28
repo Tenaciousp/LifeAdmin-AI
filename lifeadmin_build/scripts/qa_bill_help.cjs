@@ -178,6 +178,12 @@ const assert = require("node:assert/strict");
     await page.getByRole('button', { name: 'Close bill help', exact: true }).click();
     await page.getByRole('button', { name: 'Show fewer dates', exact: true }).click();
     assert.equal(await upcoming.locator('li').count(), 5);
+    const billSort = page.getByLabel('Sort bills', { exact: true });
+    assert.equal(await billSort.inputValue(), 'next_date');
+    await billSort.selectOption('name');
+    assert.equal(await page.locator('#saved-bills li h3').first().innerText(), 'Reminder example 1');
+    await billSort.selectOption('next_date');
+    assert.equal(await page.locator('#saved-bills li h3').first().innerText(), 'Synthetic water case');
     assert.deepEqual(external, []); assert.deepEqual(errors, []);
     console.log("PASS: chosen-AI reply request, private reference exclusion, saved progress reload, review gate, separate persisted results, offline plan, 200% text at phone/tablet widths, no external requests.");
   } finally { await browser.close(); }
