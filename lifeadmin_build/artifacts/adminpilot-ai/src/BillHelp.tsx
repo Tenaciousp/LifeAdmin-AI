@@ -4,7 +4,7 @@ import { aiServices, preferredAi, savePreferredAi } from "./lib/offline/ai-hando
 import { initialWorkflow, languages, localWorkflowDraft, outputs, tones, workflowContext, workflowFields, workflowPrompt } from "./lib/offline/bill-workflow.mjs";
 import type { WorkflowDraft } from "./lib/offline/bill-workflow.mjs";
 import { copyDeviceText } from "./lib/offline/device-files.mjs";
-import { aiDraftConfigured, generateWithGemini } from "./lib/offline/ai-generation.mjs";
+import { aiDraftAvailable, aiDraftConfigured, generateWithGemini } from "./lib/offline/ai-generation.mjs";
 
 const button = "min-h-[44px] max-w-full rounded-xl bg-violet-700 px-4 py-2 font-semibold text-white hover:bg-violet-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-700 disabled:opacity-50";
 const secondary = "min-h-[44px] max-w-full rounded-xl border border-slate-300 bg-white px-4 py-2 font-semibold text-slate-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-violet-700";
@@ -27,6 +27,13 @@ export default function BillHelp({ task, onClose, onEdit, onProgress, onSave, on
   const [error, setError] = useState("");
   const [working, setWorking] = useState(false);
   const [geminiConsent, setGeminiConsent] = useState(false);
+  const [generationAvailable, setGenerationAvailable] = useState(false);
+  useEffect(() => {
+    let active = true;
+    void aiDraftAvailable().then(available => { if (active) setGenerationAvailable(available); });
+    return () => { active = false; };
+  }, []);
+
   const heading = useRef<HTMLHeadingElement>(null);
   const pending = useRef(false);
   const fields = workflowFields(task);
@@ -67,7 +74,7 @@ export default function BillHelp({ task, onClose, onEdit, onProgress, onSave, on
           <label className="mt-3 flex min-h-[44px] items-center gap-3"><input type="radio" name="bill-help-method" className="h-5 w-5 shrink-0" checked={draft.method === "chosen_ai"} onChange={() => change({ method: "chosen_ai" })} /><strong>Use my chosen AI service</strong></label>
           {draft.method === "chosen_ai" && <label className="mt-3 block">Your AI service<select className={input} value={service} onChange={event => { setService(event.target.value); try { savePreferredAi(preferences(), event.target.value); } catch (failure) { setError(failure instanceof Error ? failure.message : "AI preference was not saved."); } }}>{aiServices.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</select><span className="mt-2 block text-slate-600">We remember your choice. Use your own free or paid AI account.</span></label>}
           <details className="mt-4 rounded-xl border border-slate-200 p-3" open={draft.method !== "chosen_ai" ? true : undefined}><summary className="cursor-pointer font-semibold">Other ways to prepare a draft</summary>
-            {aiDraftConfigured() && <label className="mt-3 flex min-h-[44px] items-start gap-3"><input type="radio" name="bill-help-method" className="mt-1 h-5 w-5 shrink-0" checked={draft.method === "gemini_api"} onChange={() => change({ method: "gemini_api" })} /><span><strong className="block">Generate a draft in HomeAdmin with Google Gemini</strong>Review and approve sharing before generating.</span></label>}
+            {generationAvailable && <label className="mt-3 flex min-h-[44px] items-start gap-3"><input type="radio" name="bill-help-method" className="mt-1 h-5 w-5 shrink-0" checked={draft.method === "gemini_api"} onChange={() => change({ method: "gemini_api" })} /><span><strong className="block">Generate a draft in HomeAdmin with Google Gemini</strong>Review and approve sharing before generating.</span></label>}
             <label className="mt-3 flex min-h-[44px] items-start gap-3"><input type="radio" name="bill-help-method" className="mt-1 h-5 w-5 shrink-0" checked={draft.method === "local"} onChange={() => change({ method: "local" })} /><span><strong className="block">Start from an offline draft</strong>A template for you to personalise.</span></label>
           </details>
         </fieldset>
@@ -99,10 +106,10 @@ export default function BillHelp({ task, onClose, onEdit, onProgress, onSave, on
       {draft.step === 3 && draft.method === "gemini_api" && <>
         <h3 className="text-xl font-bold">Review the request before generating</h3>
         <p>The checked bill details, your requested outcome and any provider message shown below will be sent to HomeAdmin's AI service and then Google Gemini only after you press Generate draft. The service does not save the request. The answer returns here for your review.</p>
-        {!aiDraftConfigured() && <p role="status" className="rounded-xl bg-amber-50 p-4 text-amber-950">In-app Gemini is not configured for this version yet. Use Copilot or an offline draft.</p>}
+        {!generationAvailable && <p role="status" className="rounded-xl bg-amber-50 p-4 text-amber-950">In-app generation is unavailable or still being checked. Use your chosen AI service or an offline draft.</p>}
         <label className="block">Reviewed request<textarea className={input} readOnly rows={10} value={prompt} /></label>
         <label className="flex min-h-[44px] items-start gap-3 rounded-xl border border-amber-300 bg-amber-50 p-4"><input type="checkbox" className="mt-1 h-5 w-5 shrink-0" checked={geminiConsent} onChange={event => setGeminiConsent(event.target.checked)} /><span>I agree to send the request above through HomeAdmin's server to Google Gemini. Google free-tier data terms may allow use of submitted content to improve products. HomeAdmin may enforce usage limits. I removed anything I do not want to share.</span></label>
-        <div className="flex flex-wrap gap-3"><button className={secondary} onClick={() => change({ step: 2 })}>Change request details</button><button className={button} disabled={!aiDraftConfigured() || !geminiConsent || !prompt || working} onClick={() => void act(async () => { const result = await generateWithGemini(prompt, draft.output); change({ ...result, step: 4, reviewed: false }); setStatus("Draft generated. Review every fact and edit the wording before saving."); })}>{working ? <span className="inline-flex items-center gap-2"><LoadingSpinner />Generating draft…</span> : "Generate draft with Gemini"}</button></div>
+        <div className="flex flex-wrap gap-3"><button className={secondary} onClick={() => change({ step: 2 })}>Change request details</button><button className={button} disabled={!generationAvailable || !geminiConsent || !prompt || working} onClick={() => void act(async () => { const result = await generateWithGemini(prompt, draft.output); change({ ...result, step: 4, reviewed: false }); setStatus("Draft generated. Review every fact and edit the wording before saving."); })}>{working ? <span className="inline-flex items-center gap-2"><LoadingSpinner />Generating draft…</span> : "Generate draft with Gemini"}</button></div>
       </>}
       {draft.step === 4 && <>
         <h3 className="text-xl font-bold">{draft.method === "local" ? "Personalise your offline draft" : draft.method === "gemini_api" ? "Review your Gemini draft" : "Paste and review your AI answer"}</h3><p>{draft.method === "local" ? "This is a local template, not an AI-generated response." : draft.method === "gemini_api" ? "Generated by Google Gemini from the request you approved. HomeAdmin has not independently verified the answer." : "Paste the answer from your chosen AI. HomeAdmin does not fetch or verify the answer automatically."} Saving keeps a separate result linked to this bill, without replacing earlier plans.</p>
