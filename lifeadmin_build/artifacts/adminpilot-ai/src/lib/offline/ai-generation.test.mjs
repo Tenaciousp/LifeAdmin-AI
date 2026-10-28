@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { aiDraftConfigured, generateWithGemini } from "./ai-generation.mjs";
+import { aiDraftAvailable, aiDraftConfigured, generateWithGemini } from "./ai-generation.mjs";
 
 const reply = (status, payload) => ({ status, async json() { return payload; } });
 const valid = { subject: "Bill query", body: "Please explain the new charge." };
@@ -33,4 +33,16 @@ test("Gemini service errors provide safe retry and Copilot fallbacks", async () 
   await assert.rejects(generateWithGemini("prompt", "plan", async () => reply(429, {})), /usage limit/);
   await assert.rejects(generateWithGemini("prompt", "plan", async () => { throw new Error("private network detail"); }), /Check your connection/);
   await assert.rejects(generateWithGemini("prompt", "plan", async () => reply(200, { subject: "", body: "" })), /incomplete/);
+});
+
+test("availability requires an explicit server signal and sends no bill data", async () => {
+  let request;
+  assert.equal(await aiDraftAvailable(async (url, init) => { request = {url, init}; return reply(200, {ai_drafts_available: true}); }), true);
+  assert.equal(request.url, '/api/health');
+  assert.equal(request.init.credentials, 'omit');
+  assert.equal(request.init.body, undefined);
+  for (const result of [reply(200, {}), reply(200, {ai_drafts_available: 'true'}), reply(503, {ai_drafts_available: true})]) {
+    assert.equal(await aiDraftAvailable(async () => result), false);
+  }
+  assert.equal(await aiDraftAvailable(async () => { throw Error('offline'); }), false);
 });

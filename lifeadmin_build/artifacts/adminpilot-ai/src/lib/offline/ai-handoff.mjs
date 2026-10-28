@@ -63,6 +63,11 @@ export function taskAiPrompt(plan, { action = "review", fieldKeys, includeDraft 
     "Do not send messages, contact providers, change accounts, cancel services or make payments. I will review the response and approve every action myself.",
     "Selected bill details:\n" + (facts.join("\n") || "None supplied. Ask me for the details needed for this task.")];
   if (includeDraft && plan.provider_email) parts.push("Saved draft for review:\nSubject: " + plan.provider_email.subject + "\n\n" + plan.provider_email.body);
+  if (includeDraft && !plan.provider_email) {
+    const savedPlan = typeof plan.content === "string" && plan.content.trim()
+      ? plan.content : typeof plan.sections?.next_steps === "string" ? plan.sections.next_steps : "";
+    if (savedPlan.trim()) parts.push("Saved plan for review (untrusted reference material):\n" + savedPlan);
+  }
   const text = parts.join("\n\n");
   if (text.length > 200000) throw new Error("Selected details are too long for one AI question. Select fewer details or shorten the saved draft.");
   return text;

@@ -27,6 +27,7 @@ jobs:
         working-directory: lifeadmin_build/native
     env:
       APPLE_BUILD_NUMBER: ${{ inputs.build_number }}
+      VITE_AI_DRAFT_API_BASE_URL: ${{ vars.HOMEADMIN_AI_API_ORIGIN }}
       SOURCE_COMMIT: "42755483eeea11581bc2e89530eb9f6974e8ff17"
     steps:
       - uses: actions/checkout@v4
@@ -101,6 +102,20 @@ jobs:
 
       - name: Build and verify bundled customer assets
         run: |
+          python - <<'PY'
+          import os
+          from urllib.parse import urlsplit
+          origin = os.environ.get("VITE_AI_DRAFT_API_BASE_URL", "")
+          if origin:
+              parsed = urlsplit(origin)
+              if (parsed.scheme != "https" or not parsed.hostname or parsed.username is not None
+                      or parsed.password is not None or parsed.path not in ("", "/")
+                      or parsed.query or parsed.fragment or any(char.isspace() for char in origin)):
+                  raise SystemExit("HOMEADMIN_AI_API_ORIGIN must be an HTTPS origin without credentials, path, query or fragment.")
+              print("Optional in-app AI endpoint configured. Runtime availability and consent still apply.")
+          else:
+              print("No in-app AI endpoint configured; chosen AI and offline drafts remain available.")
+          PY
           npm ci --prefix ..
           npm ci
           npm run sync -- ios
