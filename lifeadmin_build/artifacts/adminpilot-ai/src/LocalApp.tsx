@@ -265,7 +265,7 @@ export default function LocalApp() {
       {busy && <p role="status" aria-busy="true" className="flex items-center gap-2 text-sm font-semibold text-violet-900"><LoadingSpinner />Saving on this device…</p>}
       {ready && <>
       <fieldset disabled={busy} className="min-w-0 space-y-6 border-0 p-0" aria-busy={busy}>
-        <BillOverview tasks={snapshot.tasks} onEdit={edit} onAdd={() => { resetForm(); document.getElementById("bill-form")?.scrollIntoView({ behavior: "smooth" }); }} />
+        <BillOverview tasks={snapshot.tasks} onHelp={showHelp} onEdit={edit} onAdd={() => { resetForm(); document.getElementById("bill-form")?.scrollIntoView({ behavior: "smooth" }); }} />
         <section className="rounded-2xl border border-violet-100 bg-white p-[20px] shadow-sm">
           <h2 className="text-xl font-bold">Find a bill or provider</h2>
           <form className="mt-3 flex flex-wrap gap-2" onSubmit={event => { event.preventDefault(); setMatch(suggest(search)); }}><label className="sr-only" htmlFor="bill-search">Bill or provider</label><input id="bill-search" className={input} value={search} maxLength={500} placeholder="e.g. Cancel Netflix or review energy" onChange={event => setSearch(event.target.value)} /><button className={button}>Search</button></form>
