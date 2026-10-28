@@ -150,6 +150,7 @@ const assert = require("node:assert/strict");
     await page.getByLabel('Follow-up date', { exact: true }).fill('2027-04-20');
     await page.getByRole('button', { name: 'Save bill', exact: true }).click();
     await page.reload();
+    await page.locator('summary').filter({ hasText: 'Manage bill' }).click();
     await page.getByRole('button', { name: 'Edit', exact: true }).click();
     assert.equal(await page.getByLabel('Follow-up date', { exact: true }).inputValue(), '2027-04-20');
     assert.deepEqual(external, []); assert.deepEqual(errors, []);
