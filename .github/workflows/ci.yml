@@ -84,14 +84,15 @@ jobs:
       - name: Check international bill entry and responsive layouts
         shell: bash
         run: |
-          npm install --prefix /tmp/homeadmin-browser-qa --no-package-lock playwright@1.56.1
-          /tmp/homeadmin-browser-qa/node_modules/.bin/playwright install chromium --only-shell --with-deps
+          npm ci --prefix qa-tools
+          qa-tools/node_modules/.bin/playwright install chromium --only-shell --with-deps
           python -m http.server 5174 --bind 127.0.0.1 --directory artifacts/adminpilot-ai/dist-local/public > /tmp/homeadmin-ux-server.log 2>&1 &
           UX_SERVER_PID=$!
           trap 'kill "$UX_SERVER_PID" 2>/dev/null || true' EXIT
-          NODE_PATH=/tmp/homeadmin-browser-qa/node_modules node scripts/qa_bill_experience.cjs
-          NODE_PATH=/tmp/homeadmin-browser-qa/node_modules node scripts/qa_bill_help.cjs
-          NODE_PATH=/tmp/homeadmin-browser-qa/node_modules node scripts/check_local_layout.cjs artifacts/adminpilot-ai/dist-local/public /tmp/homeadmin-layout-evidence
+          NODE_PATH="$PWD/qa-tools/node_modules" node scripts/qa_bill_experience.cjs
+          NODE_PATH="$PWD/qa-tools/node_modules" node scripts/qa_bill_help.cjs
+          NODE_PATH="$PWD/qa-tools/node_modules" node scripts/qa_home_accessibility.cjs
+          NODE_PATH="$PWD/qa-tools/node_modules" node scripts/check_local_layout.cjs artifacts/adminpilot-ai/dist-local/public /tmp/homeadmin-layout-evidence
 
       - name: Save synthetic UX screenshots
         if: always()
