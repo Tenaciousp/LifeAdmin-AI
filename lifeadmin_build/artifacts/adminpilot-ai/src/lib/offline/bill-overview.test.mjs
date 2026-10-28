@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { billOverview, recurringCost, money } from "./bill-overview.mjs";
+import { billOverview, recurringCost, money, sortBills } from "./bill-overview.mjs";
 import { fieldsFor } from "./bill-types.mjs";
 import { generateLocalResult } from "./plans.mjs";
 import { openLocalStore } from "./storage.mjs";
@@ -49,4 +49,16 @@ test("international bill details survive plan generation and backup restore", as
   await store.importBackup(backup, { replace: true });
   assert.deepEqual((await store.read()).tasks[0].details, bill.details);
   store.close();
+});
+
+test("bill sorting uses the earliest valid date, keeps undated bills last and preserves records", () => {
+  const bills = [task('Undated', {}), task('Later', {next_payment_date:'2027-06-01', follow_up_date:'2027-03-01'}), task('Earlier', {renewal_date:'2027-02-01'}), task('Invalid', {follow_up_date:'2027-02-30'})];
+  const before = structuredClone(bills);
+  assert.deepEqual(sortBills(bills).map(b=>b.id), ['Earlier','Later','Invalid','Undated']);
+  assert.deepEqual(bills, before);
+  assert.deepEqual(sortBills(bills, 'name').map(b=>b.id), ['Earlier','Invalid','Later','Undated']);
+});
+test("cost sorting normalises periods but never ranks across currencies", () => {
+  const bills = [task('Missing',{}),task('UK annual',{amount:'120',currency:'GBP',billing_frequency:'Yearly'}),task('US',{amount:'999',currency:'USD',billing_frequency:'Monthly'}),task('UK monthly',{amount:'20',currency:'GBP',billing_frequency:'Monthly'})];
+  assert.deepEqual(sortBills(bills,'cost').map(b=>b.id), ['UK monthly','UK annual','US','Missing']);
 });
