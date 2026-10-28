@@ -40,3 +40,15 @@ test('AI preference persists, rejects unknown services and tolerates unavailable
   assert.throws(() => savePreferredAi(null, 'claude'), /this session/);
   assert.throws(() => savePreferredAi({setItem() {}, getItem() { return null; }}, 'claude'), /this session/);
 });
+
+test('saved plan review requires explicit inclusion and preserves the original result', () => {
+  const saved = { known_details: { provider: 'Example' }, content: 'PRIVATE PLAN: check the final invoice.', sections: { next_steps: 'Older fallback', approval_checklist: 'PRIVATE CHECKS' } };
+  const before = structuredClone(saved);
+  assert.doesNotMatch(taskAiPrompt(saved), /PRIVATE PLAN|Older fallback|PRIVATE CHECKS/);
+  const prompt = taskAiPrompt(saved, { fieldKeys: [], includeDraft: true });
+  assert.match(prompt, /PRIVATE PLAN: check the final invoice/);
+  assert.doesNotMatch(prompt, /Older fallback|PRIVATE CHECKS|provider: Example/);
+  assert.deepEqual(saved, before);
+  assert.match(taskAiPrompt({ sections: { next_steps: 'Legacy next step' } }, { includeDraft: true }), /Legacy next step/);
+  assert.throws(() => taskAiPrompt({ content: 'x'.repeat(200000) }, { includeDraft: true }), /too long/);
+});
