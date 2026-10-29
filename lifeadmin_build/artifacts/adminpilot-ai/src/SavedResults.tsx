@@ -35,12 +35,11 @@ export default function SavedResults({ plans, tasks, query, billId, kind, onQuer
         const type = resultType(plan);
         const label = type === "reply" ? "Reply" : type === "letter" ? "Letter" : "Plan";
         const date = timestamp(plan);
-        return <li key={plan.id} className="rounded-xl border border-slate-200 p-4">
-          <span className="inline-block rounded-lg bg-violet-50 px-3 py-1 font-semibold text-violet-900">{label}</span>
-          <h3 className="mt-2 font-bold">{plan.title}</h3>
+        return <li key={plan.id} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+          <div className="flex flex-wrap items-center gap-2"><span className="inline-block rounded-lg bg-violet-100 px-3 py-1 text-sm font-semibold text-violet-950">{label}</span><span className="inline-block rounded-lg bg-slate-100 px-3 py-1 text-sm font-semibold text-slate-800">{plan.source === "local" ? "Offline template" : plan.source === "external_ai_api" ? "AI-generated, review facts" : plan.source === "external_ai_manual" ? "AI answer reviewed by you" : "Source not recorded"}</span></div>
+          <h3 className="mt-3 text-lg font-bold text-slate-950">{plan.title}</h3>
           <p className="mt-1 text-slate-600">Bill: {bill?.title || "Original bill unavailable"}{bill?.details?.provider ? ` · ${bill.details.provider}` : ""}</p>
           {date > 0 && <p className="mt-1 text-slate-600">Saved <time dateTime={plan.created_at}>{new Date(date).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" })}</time></p>}
-          <p className="mt-1 text-slate-600">{plan.source === "local" ? "Offline template" : plan.source === "external_ai_api" ? "Generated with Google Gemini" : plan.source === "external_ai_manual" ? "AI answer reviewed by you" : "Preparation source not recorded"}</p>
           <div className="mt-3 flex flex-wrap gap-2"><button className={action} onClick={() => onOpen(plan)}>Open {label.toLowerCase()}</button><button className={action} onClick={() => onDelete(plan)}>Delete {label.toLowerCase()}</button></div>
         </li>;
       })}</ul>
