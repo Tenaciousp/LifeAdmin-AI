@@ -12,3 +12,4 @@ feature,area,priority,original,clone,notes
 "Subby Android: personal cloud backup",recovery,should,yes,partial,"Manual export/restore exists; automatic personal-cloud recovery not established"
 "HomeAdmin: direct help from dated bill",assistance,must,no,partial,"Implemented in this change; pending browser checks"
 "HomeAdmin: reviewed AI plans and messages",ai,must,no,partial,"Guided external AI works with samples; live in-app generation unverified"
+"HomeAdmin: resume saved bill help",assistance,must,unassessed,yes,"Browser-tested saved-draft overview, direct resume and expansion; native acceptance and competitor equivalence unassessed"

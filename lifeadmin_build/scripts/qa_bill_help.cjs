@@ -76,7 +76,10 @@ const assert = require("node:assert/strict");
     await page.getByRole("button", { name: "Save progress for later", exact: true }).click();
     await page.getByRole("status").filter({ hasText: "Progress saved on this device." }).waitFor();
     await page.reload();
-    await page.getByRole("button", { name: "Resume bill help", exact: true }).click();
+    const savedHelp = page.getByRole('region', { name: 'Continue your bill help', exact: true });
+    await savedHelp.getByText('Reply · Saved at step 3 of 4: Ask your AI', { exact: true }).waitFor();
+    assert.doesNotMatch(await savedHelp.innerText(), /TEST-REF-SECRET|estimated reading|actual reading and date/);
+    await savedHelp.getByRole('button', { name: 'Continue saved help for Synthetic water case', exact: true }).click();
     assert.equal(await page.getByLabel("Chosen AI service").inputValue(), "gemini", "Provider preference survives reload.");
     assert.equal(await page.locator("label").filter({ hasText: /^Prepared AI request/ }).locator("textarea").inputValue(), request);
     await page.getByRole("button", { name: "I have an answer to review", exact: true }).click();
@@ -104,6 +107,7 @@ const assert = require("node:assert/strict");
     await page.getByRole("button", { name: "Save reviewed result", exact: true }).click();
     await page.getByRole("heading", { name: "Synthetic water case · Reply", level: 2, exact: true }).waitFor();
     await page.getByText("AI-service answer supplied and reviewed by you.", { exact: false }).waitFor();
+    assert.equal(await page.getByRole('region', { name: 'Continue your bill help', exact: true }).count(), 0, 'A saved result must clear its unfinished draft.');
     await page.reload();
     await page.getByRole("button", { name: "Open reply", exact: true }).click();
     await page.getByText("Synthetic reviewed reply. Please confirm the revised calculation.", { exact: true }).waitFor();
@@ -166,8 +170,21 @@ const assert = require("node:assert/strict");
       await page.getByRole('button', { name: 'Save bill', exact: true }).click();
       await page.getByRole('heading', { name: 'Help with Reminder example ' + i, exact: true }).waitFor();
       await page.waitForFunction(() => [...document.querySelectorAll('button')].some(button => button.textContent === 'Save bill' && !button.disabled));
+      if (i <= 4) {
+        await page.getByRole('button', { name: 'Save progress for later', exact: true }).click();
+        await page.getByRole('status').filter({ hasText: 'Progress saved on this device.' }).waitFor();
+      }
       await page.getByRole('button', { name: 'Close bill help', exact: true }).click();
     }
+    const unfinished = page.getByRole('region', { name: 'Continue your bill help', exact: true });
+    assert.equal(await unfinished.locator('li').count(), 3);
+    await unfinished.getByRole('button', { name: 'Show all 4 saved drafts', exact: true }).click();
+    assert.equal(await unfinished.locator('li').count(), 4);
+    await unfinished.getByRole('button', { name: 'Continue saved help for Reminder example 4', exact: true }).click();
+    await page.getByRole('heading', { name: 'Help with Reminder example 4', exact: true }).waitFor();
+    await page.getByRole('button', { name: 'Close bill help', exact: true }).click();
+    await unfinished.getByRole('button', { name: 'Show fewer saved drafts', exact: true }).click();
+    assert.equal(await unfinished.locator('li').count(), 3);
     const expandDates = page.getByRole('button', { name: 'Show all 6 dates', exact: true });
     assert.equal(await expandDates.getAttribute('aria-expanded'), 'false');
     await expandDates.click();
@@ -218,12 +235,16 @@ const assert = require("node:assert/strict");
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), true);
       const violations = await saved.evaluate(async node => (await axe.run(node, { runOnly: { type: 'tag', values: ['wcag2a', 'wcag2aa', 'wcag21aa'] } })).violations.map(item => ({ id: item.id, nodes: item.nodes.map(n => n.target) })));
       assert.deepEqual(violations, [], 'Populated result accessibility at ' + width);
+      const unfinishedViolations = await unfinished.evaluate(async node => (await axe.run(node, { runOnly: { type: 'tag', values: ['wcag2a', 'wcag2aa', 'wcag21aa'] } })).violations.map(item => ({ id: item.id, nodes: item.nodes.map(n => n.target) })));
+      assert.deepEqual(unfinishedViolations, [], 'Saved-help overview accessibility at ' + width);
+      await unfinished.screenshot({ path: '/tmp/homeadmin-resume-help-' + width + '.png' });
       await saved.screenshot({ path: '/tmp/homeadmin-saved-results-' + width + '.png' });
     }
     await page.reload();
     await page.getByRole('heading', { name: 'Saved plans (3)', exact: true }).waitFor();
     assert.equal(await page.locator('#saved-plans li').count(), 3);
     assert.equal(await page.locator('#saved-bills li').count(), 6);
+    await page.getByRole('button', { name: 'Show all 4 saved drafts', exact: true }).waitFor();
     assert.deepEqual(external, []); assert.deepEqual(errors, []);
     console.log("PASS: chosen-AI reply request, private reference exclusion, saved progress reload, review gate, separate persisted results, offline plan, 200% text at phone/tablet widths, no external requests.");
   } finally { await browser.close(); }

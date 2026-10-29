@@ -1,10 +1,13 @@
 import { useState } from "react";
 import { billOverview, money } from "./lib/offline/bill-overview.mjs";
 import { EmptyState } from "./Feedback";
+import { initialWorkflow } from "./lib/offline/bill-workflow.mjs";
 
 export default function BillOverview({ tasks, onEdit, onAdd, onHelp }: { tasks: any[]; onEdit: (task: any) => void; onAdd: () => void; onHelp?: (task: any) => void }) {
   const overview = billOverview(tasks);
   const [showAllDates, setShowAllDates] = useState(false);
+  const [showAllDrafts, setShowAllDrafts] = useState(false);
+  const unfinished = tasks.filter(task => task.workflow_draft && typeof task.workflow_draft === "object" && !Array.isArray(task.workflow_draft));
   const jump = (id: string) => document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
   return <section id="overview" aria-labelledby="overview-title" className="space-y-5 scroll-mt-24">
     <div className="rounded-3xl bg-slate-950 p-6 text-white sm:p-8">
@@ -15,6 +18,22 @@ export default function BillOverview({ tasks, onEdit, onAdd, onHelp }: { tasks: 
         { label: "Cost details complete", value: `${overview.priced} of ${overview.active}`, target: "saved-bills", action: "Review cost details" },
       ].map(card => <button key={card.label} aria-label={`${card.label}: ${card.value}. ${card.action}`} onClick={() => jump(card.target)} className="min-h-[88px] rounded-2xl border border-slate-700 p-4 text-left hover:bg-slate-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-300"><span aria-hidden="true" className="block text-base text-slate-300">{card.label}</span><span aria-hidden="true" className="mt-1 block text-3xl font-bold">{card.value}</span></button>)}</div>
     </div>
+    {onHelp && unfinished.length > 0 && <section aria-labelledby="unfinished-help-title" className="rounded-2xl border border-violet-200 bg-white p-5">
+      <h3 id="unfinished-help-title" className="text-xl font-bold">Continue your bill help</h3>
+      <p className="mt-2 text-slate-600">Pick up saved progress without starting again. These drafts still need checking before becoming saved results.</p>
+      <ul id="unfinished-bill-help" className="mt-3 divide-y divide-slate-100">{unfinished.slice(0, showAllDrafts ? undefined : 3).map(task => {
+        const draft = initialWorkflow(task);
+        const kind = draft.output === "reply" ? "Reply" : draft.output === "letter" ? "Letter or email" : "Plan";
+        const stage = ["Choose result", "Check bill details", "Ask your AI", "Check answer and save"][draft.step - 1];
+        return <li key={task.id} className="py-3">
+          <h4 className="font-bold">{task.title}</h4>
+          <p className="mt-1 text-slate-600">{`${kind} · Saved at step ${draft.step} of 4: ${stage}`}</p>
+          {task.status === "Done" && <p className="mt-1 text-slate-600">This bill's admin task is marked done. Its saved draft is still available.</p>}
+          <button className="mt-3 min-h-[44px] max-w-full rounded-xl bg-violet-700 px-4 py-2 font-semibold text-white hover:bg-violet-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-700" aria-label={`Continue saved help for ${task.title}`} onClick={() => onHelp(task)}>Continue saved help</button>
+        </li>;
+      })}</ul>
+      {unfinished.length > 3 && <button className="mt-3 min-h-[44px] rounded-xl border border-slate-300 px-4 py-2 font-semibold focus-visible:outline focus-visible:outline-2 focus-visible:outline-violet-700" aria-expanded={showAllDrafts} aria-controls="unfinished-bill-help" onClick={() => setShowAllDrafts(value => !value)}>{showAllDrafts ? "Show fewer saved drafts" : `Show all ${unfinished.length} saved drafts`}</button>}
+    </section>}
     <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
       <section className="min-w-0 rounded-2xl border border-slate-200 bg-white p-5"><h3 className="text-xl font-bold">Recurring costs</h3><p className="mt-1 text-base text-slate-600">Monthly and annual estimates from active bills. Separate totals per currency, no exchange-rate conversion.</p>{overview.totals.map(total => <div key={total.currency} className="mt-4 rounded-xl bg-violet-50 p-4"><p className="text-2xl font-bold text-violet-900">{money(total.monthly, total.currency)}<span className="ml-2 text-base font-normal">/ month</span></p><p className="mt-1 text-base text-slate-600">{money(total.yearly, total.currency)} / year</p></div>)}{!overview.totals.length && <EmptyState title="No forecast yet" description="Add an amount, currency and payment frequency to a bill to see monthly and annual estimates." />}{overview.unpriced > 0 && <p className="mt-3 text-base text-amber-900">{`${overview.unpriced} active bill(s) excluded: incomplete cost details, one-off payments or unrecognised amounts.`}</p>}</section>
       <section id="upcoming-bills" className="min-w-0 rounded-2xl border border-slate-200 bg-white p-5"><h3 className="text-xl font-bold">Coming up & needing attention</h3><p className="mt-1 text-base text-slate-600">Your entered dates, not bank-confirmed payments. Review past dates after taking action.</p><ul className="mt-3 divide-y divide-slate-100">{overview.upcoming.slice(0, showAllDates ? undefined : 5).map(entry => <li key={entry.task.id + entry.kind} className="py-3"><button className="min-h-[44px] w-full text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-violet-700" onClick={() => onEdit(entry.task)}><span className="block font-semibold">{entry.task.title}</span><span className={"text-base " + (entry.overdue ? "text-amber-800" : "text-slate-600")}>{entry.kind} · {new Date(entry.date + "T12:00:00").toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" })}{entry.overdue ? " · Review past date" : ""}</span></button>{onHelp && <button className="mt-2 min-h-[44px] rounded-xl border border-violet-200 px-3 py-2 font-semibold text-violet-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-violet-700" aria-label={`Create a plan or message for ${entry.task.title}: ${entry.kind}`} onClick={() => onHelp(entry.task)}>Create a plan or message</button>}</li>)}</ul>{overview.upcoming.length > 5 && <button className="mt-3 min-h-[44px] rounded-xl border border-slate-300 px-4 py-2 font-semibold focus-visible:outline focus-visible:outline-2 focus-visible:outline-violet-700" aria-expanded={showAllDates} onClick={() => setShowAllDates(value => !value)}>{showAllDates ? "Show fewer dates" : `Show all ${overview.upcoming.length} dates`}</button>}{!overview.upcoming.length && <EmptyState title="No dates to review" description="Add a payment, renewal or follow-up date to a bill. Calendar alerts require calendar access." />}</section>

@@ -1,0 +1,15 @@
+# Replica incremental build log
+
+## 2026-10-29: S01 overview, resume saved bill help
+
+Baseline: PR #16 commit 102e0cc07ad1fa8b6ed96a0501818eea99ed2d43. Scope: an incremental returning-user improvement based on the final-draft audit's Home/Continue unfinished work direction. Public competitor research informed concise summaries and actionable organisation; no hands-on competitor resume flow or equivalent feature is claimed.
+
+Implementation: show saved bill-help drafts near the top of the overview, with bill name, output type and saved step. Continue opens the existing guarded workflow. Limit the initial list to three entries, with explicit expand/collapse access to every saved draft. Do not preview provider messages, customer references, draft bodies or prepared AI prompts. Include saved drafts from bills marked done, with an explanation separating admin status from draft progress. Saving a reviewed result clears its draft through the existing storage operation.
+
+Preservation: no new storage fields, migrations, dependencies, branding, AI-service choice or sharing rules. Existing bill, date, saved-result, diary and backup routes stay available. Unsaved-message/workflow guards remain in the existing onHelp handler.
+
+Tests: 80 offline tests and frontend/API type checks pass. Production local build and bundle verification pass. The synthetic browser journey passes, including resume after reload, an unchanged prepared AI request, no private-content preview, draft removal after saving a reviewed result, access to the fourth saved draft, and persistence of four drafts after another reload. Saved-help and saved-result regions have no automated WCAG violations at 390/768/1024px with 200% root text; six empty-home accessibility scans pass. The phone saved-help screenshot was visually inspected. The journey checks overview resume after reload without losing the prepared request, no preview of private content, removal after saving a reviewed result, expansion to a fourth draft and persistence after another reload. The saved-help region is scanned at phone/tablet widths with 200% root text. Live AI and native acceptance are separate.
+
+Delivery: keep this change on a separate branch based on PR #16 while its Apple accessibility/upgrade CI runs. Do not move PR #16's head or interrupt its checks. After #16 is accepted, retarget the follow-on draft to main and run its full CI before merging. No deployment is included.
+
+Remaining: dedicated task views, a consistent AI workspace, live AI quality, beginner usability and installed-device acceptance. Overall 9/10 quality is not established by this increment.
