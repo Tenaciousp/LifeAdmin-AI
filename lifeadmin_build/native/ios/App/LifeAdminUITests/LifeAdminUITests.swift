@@ -1002,11 +1002,13 @@ final class LifeAdminUITests: XCTestCase {
         XCTAssertGreaterThanOrEqual(titles.count, 2)
         for title in titles {
             XCTAssertGreaterThan(title.frame.width, 0)
-            // Font weight changes the natural text width (177pt versus 182pt
-            // on iPad). Detect wrapping against the larger one-line heading,
-            // rather than rejecting valid single-line text below 180pt.
-            XCTAssertLessThanOrEqual(title.frame.height, planHeading.frame.height + 1,
-                "A saved bill or plan title wraps beside its actions")
+            // Narrow iPhone cards legitimately wrap the same heading to two
+            // lines. Check readable height and on-screen geometry instead of
+            // requiring all titles to fit on one line.
+            XCTAssertLessThanOrEqual(title.frame.height, planHeading.frame.height * 2 + 2,
+                "A saved bill or plan title exceeds two readable lines")
+            XCTAssertLessThanOrEqual(title.frame.maxX, app.frame.maxX + 1,
+                "A saved bill or plan title is clipped at the screen edge")
         }
         capture("02 plan", showing: planHeading)
 
