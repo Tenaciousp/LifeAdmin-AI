@@ -27,7 +27,7 @@ export default function SavedResults({ plans, tasks, query, billId, kind, onQuer
         <label>Results for bill<select className={control + " mt-1"} value={billId} onChange={event => onBill(event.target.value)}><option value="">All bills</option>{tasks.map(task => <option key={task.id} value={task.id}>{task.title}</option>)}</select></label>
         <label>Result type<select className={control + " mt-1"} value={kind} onChange={event => onKind(event.target.value)}><option value="">All result types</option><option value="plan">Plans</option><option value="letter">Letters</option><option value="reply">Replies</option></select></label>
       </div>
-      <p role="status" className="mt-3 text-slate-600">Showing {visible.length} of {plans.length} saved results.</p>
+      <p role="status" className="mt-3 text-slate-600">{`Showing ${visible.length} of ${plans.length} saved results.`}</p>
       {(query || billId || kind) && <button className={action + " mt-2"} onClick={reset}>Clear result filters</button>}
       {!visible.length && <p className="mt-4 rounded-xl bg-slate-50 p-4">No results match these filters. Clear the filters or try another bill, result type or search.</p>}
       <ul className="mt-4 space-y-3">{visible.map(plan => {

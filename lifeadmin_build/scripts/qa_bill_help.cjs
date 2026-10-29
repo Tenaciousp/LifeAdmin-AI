@@ -191,6 +191,7 @@ const assert = require("node:assert/strict");
     assert.equal(await saved.locator('li').count(), 3);
     await saved.getByLabel('Result type', { exact: false }).selectOption('reply');
     assert.equal(await saved.locator('li').count(), 1);
+    assert.equal(await saved.getByRole('status').innerText(), 'Showing 1 of 3 saved results.');
     assert.match(await saved.locator('li').innerText(), /Synthetic water case/);
     await saved.getByLabel('Search saved results', { exact: true }).fill('  EXAMPLE WATER  ');
     assert.equal(await saved.locator('li').count(), 1);
@@ -200,6 +201,7 @@ const assert = require("node:assert/strict");
     assert.equal(await saved.locator('li').count(), 3);
     await saved.getByLabel('Results for bill', { exact: false }).selectOption({ label: 'Reminder example 1' });
     assert.equal(await saved.locator('li').count(), 0);
+    assert.equal(await saved.getByRole('status').innerText(), 'Showing 0 of 3 saved results.');
     await saved.getByRole('button', { name: 'Clear result filters', exact: true }).click();
     // Newest first: the latest AI plan precedes the earlier offline plan and reply.
     assert.match(await saved.locator('li').first().innerText(), /AI answer reviewed by you/);
