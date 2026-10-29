@@ -69,7 +69,7 @@ const assert = require('node:assert/strict');
         await page.evaluate(scale => {document.documentElement.style.fontSize = `${16*scale}px`;},scale);
         await page.getByRole('heading',{name:'Review your AI prompt',exact:true}).scrollIntoViewIfNeeded();
         const layout = await page.evaluate(() => ({width:innerWidth,scrollWidth:document.documentElement.scrollWidth,fontSize:getComputedStyle(document.documentElement).fontSize,clippedControls:[...document.querySelectorAll('button,input,select,textarea,a')].filter(e => e.getBoundingClientRect().width && (e.getBoundingClientRect().left < -1 || e.getBoundingClientRect().right > innerWidth+1)).map(e=>({name:e.textContent.trim().slice(0,60),left:e.getBoundingClientRect().left,right:e.getBoundingClientRect().right}))}));
-        const title = await page.locator('li > span').filter({hasText:'Network QA synthetic bill'}).boundingBox();
+        const title = await page.locator('#saved-plans li h3').filter({hasText:'Network QA synthetic bill'}).boundingBox();
         assert(title && title.width >= Math.min(180,width*0.4),`Saved plan title is squeezed at ${width}px / ${scale*100}% text`);
         layouts.push({...layout,scale});
         const controls=await Promise.all(['Copy plan','Copy message','Prepare AI prompt'].map(name=>page.getByRole('button',{name,exact:true}).boundingBox()));
