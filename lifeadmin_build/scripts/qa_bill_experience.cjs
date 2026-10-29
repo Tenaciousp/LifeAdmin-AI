@@ -38,7 +38,7 @@ const assert = require("node:assert/strict");
     await page.screenshot({ path: "/tmp/homeadmin-water-ipad.png", fullPage: false });
     await page.getByRole("button", { name: "Save bill", exact: true }).click();
     await page.getByRole("status").filter({ hasText: "Bill saved on this device." }).waitFor();
-    await page.getByRole("link", { name: "Overview", exact: true }).click();
+    await page.getByRole("navigation", { name: "Household sections" }).getByRole("link", { name: "Home", exact: true }).click();
     await page.getByText("CAD", { exact: false }).first().waitFor();
     assert.match(await page.locator("#overview").innerText(), /45\.00/);
     await page.reload();
