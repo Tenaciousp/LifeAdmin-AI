@@ -39,6 +39,8 @@ final class LifeAdminUITests: XCTestCase {
     }
 
     private func reveal(_ element: XCUIElement, file: StaticString = #filePath, line: UInt = #line) {
+        // Drag through the page gutter. Starting on text or a card can select
+        // content and open the edit menu instead of scrolling the WebView.
         for _ in 0..<14 {
             // WebKit can call a clipped button hittable when its tap centre is
             // outside the safe-area viewport. Larger text views can be partly
@@ -69,7 +71,7 @@ final class LifeAdminUITests: XCTestCase {
                     let distance = min(viewport.height * 0.6,
                                        max(60, viewport.minY - frame.minY + 24))
                     let start = app.coordinate(withNormalizedOffset: .zero)
-                        .withOffset(CGVector(dx: viewport.midX,
+                        .withOffset(CGVector(dx: viewport.minX + 8,
                                              dy: viewport.minY + viewport.height * 0.2))
                     start.press(forDuration: 0.01,
                                 thenDragTo: start.withOffset(CGVector(dx: 0, dy: distance)))
@@ -77,7 +79,7 @@ final class LifeAdminUITests: XCTestCase {
                 }
             }
             let start = app.coordinate(withNormalizedOffset: .zero)
-                .withOffset(CGVector(dx: viewport.midX,
+                .withOffset(CGVector(dx: viewport.minX + 8,
                                      dy: viewport.minY + viewport.height * 0.8))
             start.press(forDuration: 0.01,
                         thenDragTo: start.withOffset(CGVector(dx: 0, dy: -viewport.height * 0.55)))

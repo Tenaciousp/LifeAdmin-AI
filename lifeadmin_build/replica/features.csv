@@ -14,3 +14,4 @@ feature,area,priority,original,clone,notes
 "HomeAdmin: reviewed AI plans and messages",ai,must,no,partial,"Guided external AI works with samples; live in-app generation unverified"
 "HomeAdmin: resume saved bill help",assistance,must,unassessed,yes,"Browser-tested saved-draft overview, direct resume and expansion; native acceptance and competitor equivalence unassessed"
 "HomeAdmin: focused bill entry",entry,must,unassessed,yes,"Browser-tested form disclosure and unsaved-entry protection; new candidate native CI pending"
+"HomeAdmin: direct AI failure recovery",ai,must,unassessed,yes,"Synthetic browser confirms request preservation, explicit consent and chosen-AI/offline recovery; live Gemini still unverified"

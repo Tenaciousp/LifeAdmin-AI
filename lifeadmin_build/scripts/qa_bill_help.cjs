@@ -246,6 +246,68 @@ const assert = require("node:assert/strict");
     assert.equal(await page.locator('#saved-bills li').count(), 6);
     await page.getByRole('button', { name: 'Show all 4 saved drafts', exact: true }).waitFor();
     assert.deepEqual(external, []); assert.deepEqual(errors, []);
-    console.log("PASS: chosen-AI reply request, private reference exclusion, saved progress reload, review gate, separate persisted results, offline plan, 200% text at phone/tablet widths, no external requests.");
+    // A synthetic proxy error must offer recovery without losing the request.
+    const recovery = await browser.newPage({ viewport: { width: 390, height: 844 } });
+    const generations = [], recoveryExternal = [], recoveryErrors = [];
+    recovery.on('pageerror', error => recoveryErrors.push(error.message));
+    await recovery.route('**/*', route => {
+      const url = new URL(route.request().url());
+      if (url.origin !== new URL(base).origin) { recoveryExternal.push(url.href); return route.abort(); }
+      if (url.pathname === '/api/health') return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ai_drafts_available: true }) });
+      if (url.pathname === '/api/ai/draft') {
+        generations.push(route.request().postDataJSON());
+        return route.fulfill({ status: 429, contentType: 'application/json', body: JSON.stringify({ error: 'Synthetic limit' }) });
+      }
+      return route.continue();
+    });
+    await recovery.goto(base);
+    await recovery.getByRole('button', { name: 'Water', exact: true }).click();
+    await recovery.getByLabel('What would you like help with?').selectOption('check_bill');
+    await recovery.getByLabel('Bill name', { exact: true }).fill('Synthetic AI recovery bill');
+    await recovery.getByRole('button', { name: 'Save bill', exact: true }).click();
+    await recovery.getByRole('radio', { name: /^Reply to my provider/ }).check();
+    await recovery.getByText('Other ways to prepare a draft', { exact: true }).click();
+    await recovery.getByRole('radio', { name: /^Generate a draft in HomeAdmin/ }).check();
+    await recovery.getByRole('button', { name: 'Continue to details', exact: true }).click();
+    await recovery.getByLabel('What outcome do you want?').fill('Explain the estimate without agreeing to changes.');
+    await recovery.getByLabel('Provider message to respond to').fill('Please supply a reading for the estimated charge.');
+    await recovery.getByRole('button', { name: 'Review AI request', exact: true }).click();
+    const approvedRequest = await recovery.getByLabel('Reviewed request', { exact: false }).inputValue();
+    const generate = recovery.getByRole('button', { name: 'Generate draft with Gemini', exact: true });
+    assert.equal(await generate.isDisabled(), true, 'Generation requires explicit consent.');
+    assert.equal(generations.length, 0);
+    await recovery.getByRole('checkbox', { name: /^I agree to send the request above/ }).check();
+    await generate.click();
+    await recovery.getByRole('alert').filter({ hasText: 'current usage limit' }).waitFor();
+    assert.deepEqual(generations, [{ prompt: approvedRequest, output: 'reply', consent: true }]);
+    await recovery.addScriptTag({ path: require.resolve('axe-core/axe.min.js') });
+    for (const fontSize of [16, 32]) {
+      await recovery.evaluate(size => { document.documentElement.style.fontSize = size + 'px'; }, fontSize);
+      assert.equal(await recovery.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), true);
+      const recoveryViolations = await recovery.locator('#bill-help').evaluate(async node => (await axe.run(node, { runOnly: { type: 'tag', values: ['wcag2a', 'wcag2aa', 'wcag21aa'] } })).violations.map(item => ({ id: item.id, nodes: item.nodes.map(n => n.target) })));
+      assert.deepEqual(recoveryViolations, [], 'AI recovery accessibility at ' + fontSize);
+    }
+    await recovery.evaluate(() => { document.documentElement.style.fontSize = '16px'; });
+    await recovery.getByRole('button', { name: 'Use my chosen AI instead', exact: true }).click();
+    assert.equal(await recovery.getByLabel('Prepared AI request', { exact: true }).inputValue(), approvedRequest);
+    assert.equal(await recovery.getByLabel('Chosen AI service').inputValue(), 'copilot');
+    assert.equal(generations.length, 1, 'Switching provider must not retry generation.');
+    await recovery.getByRole('button', { name: 'Change request details', exact: true }).click();
+    assert.match(await recovery.getByLabel('What outcome do you want?').inputValue(), /without agreeing/);
+    assert.match(await recovery.getByLabel('Provider message to respond to').inputValue(), /estimated charge/);
+    await recovery.getByRole('button', { name: 'Back to choices', exact: true }).click();
+    await recovery.getByText('Other ways to prepare a draft', { exact: true }).click();
+    await recovery.getByRole('radio', { name: /^Generate a draft in HomeAdmin/ }).check();
+    await recovery.getByRole('button', { name: 'Continue to details', exact: true }).click();
+    await recovery.getByRole('button', { name: 'Review AI request', exact: true }).click();
+    assert.equal(await recovery.getByRole('checkbox', { name: /^I agree to send the request above/ }).isChecked(), false, 'Returning to generation requires fresh consent.');
+    await recovery.getByRole('button', { name: 'Use an offline draft instead', exact: true }).click();
+    await recovery.getByRole('button', { name: 'Prepare offline draft', exact: true }).click();
+    assert.match(await recovery.getByLabel('Message text', { exact: true }).inputValue(), /Explain the estimate without agreeing to changes/);
+    assert.equal(await recovery.getByRole('button', { name: 'Save reviewed result', exact: true }).isDisabled(), true);
+    assert.equal(generations.length, 1);
+    assert.deepEqual(recoveryExternal, []); assert.deepEqual(recoveryErrors, []);
+    await recovery.close();
+    console.log("PASS: chosen-AI reply request, private reference exclusion, saved progress reload, review gate, separate persisted results, offline plan, 200% text at phone/tablet widths, consented synthetic Gemini rate-limit recovery and no external requests.");
   } finally { await browser.close(); }
 })().catch(error => { console.error(error); process.exitCode = 1; });
