@@ -9,7 +9,14 @@ export default function BillOverview({ tasks, onEdit, onAdd, onHelp }: { tasks: 
   const [showAllDrafts, setShowAllDrafts] = useState(false);
   const unfinished = tasks.filter(task => task.workflow_draft && typeof task.workflow_draft === "object" && !Array.isArray(task.workflow_draft));
   const overdueDates = overview.upcoming.filter(entry => entry.overdue).length;
-  const jump = (id: string) => document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
+  const jump = (id: string) => {
+    const destination = document.getElementById(id);
+    if (!destination) return;
+    // A scroll alone leaves keyboard and screen-reader users at the old control.
+    destination.setAttribute("tabindex", "-1");
+    destination.focus({ preventScroll: true });
+    destination.scrollIntoView({ behavior: "smooth" });
+  };
   return <section id="overview" aria-labelledby="overview-title" className="space-y-5 scroll-mt-24">
     <div className="rounded-3xl bg-slate-950 p-6 text-white sm:p-8">
       <div className="flex flex-wrap items-start justify-between gap-5"><div><h2 id="overview-title" className="text-3xl font-bold">A clearer picture. A better next step.</h2><p className="mt-3 max-w-xl text-slate-300">Track recurring costs, prepare for renewals and build a plan for every bill. Your records stay on this device.</p></div><button className="min-h-[44px] rounded-xl bg-violet-700 px-5 py-3 font-semibold text-white hover:bg-violet-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-300" onClick={onAdd}>Add a bill</button></div>
