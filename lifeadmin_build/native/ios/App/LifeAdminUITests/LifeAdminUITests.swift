@@ -924,7 +924,13 @@ final class LifeAdminUITests: XCTestCase {
         app.terminate()
         app.launch()
         assertWorkspaceReady()
+        // The bill-entry form is collapsed after relaunch when a saved bill
+        // exists. Open a fresh, unsaved editor before testing clipboard paste.
+        let addBill = app.buttons["Add a bill"]
+        reveal(addBill)
+        addBill.tap()
         let note = app.textViews["Additional notes"]
+        XCTAssertTrue(note.waitForExistence(timeout: 10))
         reveal(note)
         note.tap()
         note.press(forDuration: 1)
