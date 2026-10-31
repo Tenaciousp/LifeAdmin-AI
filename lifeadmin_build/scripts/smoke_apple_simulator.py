@@ -313,7 +313,8 @@ def main():
     try:
         sim("boot", device)
         sim("bootstatus", device, "-b", timeout=300)
-        sim("install", device, str(app.resolve()), timeout=120)
+        # First boot can still be finishing iOS data migration after bootstatus succeeds.
+        sim("install", device, str(app.resolve()), timeout=300)
         from capture_apple_network import capture_network
         # Capture every app launch, but not simulator boot/install traffic.
         if args.ui_tests:
