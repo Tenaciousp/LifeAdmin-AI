@@ -39,6 +39,12 @@ const assert = require("node:assert/strict");
     await page.getByRole("button", { name: "Save bill", exact: true }).click();
     await page.getByRole("status").filter({ hasText: "Bill saved on this device." }).waitFor();
     await page.getByRole("navigation", { name: "Household sections" }).getByRole("link", { name: "Home", exact: true }).click();
+    await page.getByRole("button", { name: "Review upcoming dates", exact: true }).click();
+    assert.equal(await page.locator("#upcoming-bills").evaluate(node => node === document.activeElement), true,
+      "Home date shortcut must transfer keyboard focus to the destination.");
+    await page.getByRole("button", { name: "Browse saved bills", exact: true }).click();
+    assert.equal(await page.locator("#saved-bills").evaluate(node => node === document.activeElement), true,
+      "Home bills shortcut must transfer keyboard focus to the destination.");
     await page.getByText("CAD", { exact: false }).first().waitFor();
     assert.match(await page.locator("#overview").innerText(), /45\.00/);
     await page.reload();
