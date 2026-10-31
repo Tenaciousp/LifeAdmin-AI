@@ -57,6 +57,36 @@ def run_ui_test(device, evidence, method, log_name, result_path):
                 "-only-testing:LifeAdminUITests/LifeAdminUITests/" + method,
                 "CODE_SIGNING_ALLOWED=NO", "test",
             ], check=True, stdout=log, stderr=subprocess.STDOUT, timeout=1200)
+    except subprocess.CalledProcessError:
+        # A simulator runner sometimes fails before XCTest executes even one
+        # case after a boot. Do not retry genuine test assertions or failures
+        # after any test has run. Preserve the original evidence in all cases.
+        output = (evidence / log_name).read_text(errors="replace")
+        infrastructure_stall = (
+            "Restarting after unexpected exit, crash, or test timeout" in output
+            and "Executed 0 tests" in output
+            and "Executed 1 test" not in output
+            and "error: -[" not in output
+        )
+        if not infrastructure_stall:
+            raise
+        print("XCTest runner exited before executing a test; restarting disposable simulator once.", flush=True)
+        restart_simulator(device)
+        retry_result = str(result_path).removesuffix(".xcresult") + "-runner-retry.xcresult"
+        with (evidence / (log_name + ".runner-retry")).open("w") as log:
+            subprocess.run([
+                "xcodebuild", "-project", "ios/App/App.xcodeproj",
+                "-scheme", "LifeAdminAcceptance", "-configuration", "Debug",
+                "-destination", "platform=iOS Simulator,id=" + device,
+                "-derivedDataPath", "build-ios-simulator",
+                "-resultBundlePath", retry_result,
+                "-parallel-testing-enabled", "NO",
+                "-test-timeouts-enabled", "YES",
+                "-default-test-execution-time-allowance", "900",
+                "-maximum-test-execution-time-allowance", "900",
+                "-only-testing:LifeAdminUITests/LifeAdminUITests/" + method,
+                "CODE_SIGNING_ALLOWED=NO", "test",
+            ], check=True, stdout=log, stderr=subprocess.STDOUT, timeout=1200)
     finally:
         capture_snapshot(evidence, "after:" + method)
 
@@ -313,7 +343,8 @@ def main():
     try:
         sim("boot", device)
         sim("bootstatus", device, "-b", timeout=300)
-        sim("install", device, str(app.resolve()), timeout=120)
+        # First boot can still be finishing iOS data migration after bootstatus succeeds.
+        sim("install", device, str(app.resolve()), timeout=300)
         from capture_apple_network import capture_network
         # Capture every app launch, but not simulator boot/install traffic.
         if args.ui_tests:

@@ -39,6 +39,8 @@ final class LifeAdminUITests: XCTestCase {
     }
 
     private func reveal(_ element: XCUIElement, file: StaticString = #filePath, line: UInt = #line) {
+        // Drag through the page gutter. Starting on text or a card can select
+        // content and open the edit menu instead of scrolling the WebView.
         for _ in 0..<14 {
             // WebKit can call a clipped button hittable when its tap centre is
             // outside the safe-area viewport. Larger text views can be partly
@@ -69,7 +71,7 @@ final class LifeAdminUITests: XCTestCase {
                     let distance = min(viewport.height * 0.6,
                                        max(60, viewport.minY - frame.minY + 24))
                     let start = app.coordinate(withNormalizedOffset: .zero)
-                        .withOffset(CGVector(dx: viewport.midX,
+                        .withOffset(CGVector(dx: viewport.minX + 8,
                                              dy: viewport.minY + viewport.height * 0.2))
                     start.press(forDuration: 0.01,
                                 thenDragTo: start.withOffset(CGVector(dx: 0, dy: distance)))
@@ -77,7 +79,7 @@ final class LifeAdminUITests: XCTestCase {
                 }
             }
             let start = app.coordinate(withNormalizedOffset: .zero)
-                .withOffset(CGVector(dx: viewport.midX,
+                .withOffset(CGVector(dx: viewport.minX + 8,
                                      dy: viewport.minY + viewport.height * 0.8))
             start.press(forDuration: 0.01,
                         thenDragTo: start.withOffset(CGVector(dx: 0, dy: -viewport.height * 0.55)))
@@ -922,7 +924,13 @@ final class LifeAdminUITests: XCTestCase {
         app.terminate()
         app.launch()
         assertWorkspaceReady()
+        // The bill-entry form is collapsed after relaunch when a saved bill
+        // exists. Open a fresh, unsaved editor before testing clipboard paste.
+        let addBill = app.buttons["Add a bill"]
+        reveal(addBill)
+        addBill.tap()
         let note = app.textViews["Additional notes"]
+        XCTAssertTrue(note.waitForExistence(timeout: 10))
         reveal(note)
         note.tap()
         note.press(forDuration: 1)
@@ -1000,11 +1008,13 @@ final class LifeAdminUITests: XCTestCase {
         XCTAssertGreaterThanOrEqual(titles.count, 2)
         for title in titles {
             XCTAssertGreaterThan(title.frame.width, 0)
-            // Font weight changes the natural text width (177pt versus 182pt
-            // on iPad). Detect wrapping against the larger one-line heading,
-            // rather than rejecting valid single-line text below 180pt.
-            XCTAssertLessThanOrEqual(title.frame.height, planHeading.frame.height + 1,
-                "A saved bill or plan title wraps beside its actions")
+            // Narrow iPhone cards legitimately wrap the same heading to two
+            // lines. Check readable height and on-screen geometry instead of
+            // requiring all titles to fit on one line.
+            XCTAssertLessThanOrEqual(title.frame.height, planHeading.frame.height * 2 + 2,
+                "A saved bill or plan title exceeds two readable lines")
+            XCTAssertLessThanOrEqual(title.frame.maxX, app.frame.maxX + 1,
+                "A saved bill or plan title is clipped at the screen edge")
         }
         capture("02 plan", showing: planHeading)
 

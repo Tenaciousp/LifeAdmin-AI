@@ -4,7 +4,7 @@ Date: 2026-10-29. Baseline: PR #16 at 3cebcd1c68b131e00552803d53bc16b3c07d95af. 
 
 ## A11Y-02: fragmented result-count announcement
 
-Severity: S3. Status: fix prepared; Apple validation pending.
+Severity: S3. Status: validated by strict Apple CI at 102e0cc07ad1fa8b6ed96a0501818eea99ed2d43 in run 40846513916.
 
 Reproduce: launch the synthetic accessibility fixture with one saved result, scroll to Saved plans and run Apple's accessibility audit. At the saved bill/plan controls stage, Apple reports two small hit areas, each labelled `1`, measuring approximately 8 by 20 or 21 points. iPad reports the same pair again at the saved-plan content stage. The accessibility-tree attachment shows separate text nodes for `Showing`, `1`, `of`, `1` and `saved results.` inside the status region. The screenshot confirms the affected text is the result count, not the Open/Delete buttons.
 
@@ -18,8 +18,13 @@ The iPhone upgrade job 123171218845 failed during `testPrepareRecordsForAppUpgra
 
 ## Validation
 
-Frontend/API type checks, production local build and bundle verification pass. The guided browser journey passes, including matching and empty result-count announcements, saved reply retrieval and save/reload checks. The populated-result accessibility scans at 390/768/1024px with 200% root text and six empty-home accessibility scans report no violations. No live AI service is contacted by these synthetic tests. Apple audit and upgrade results require a fresh CI run. The overall 9/10 gate stays open until native and live-AI evidence is complete.
+Frontend/API type checks, production local build and bundle verification pass. The guided browser journey passes, including matching and empty result-count announcements, saved reply retrieval and save/reload checks. The populated-result accessibility scans at 390/768/1024px with 200% root text and six empty-home accessibility scans report no violations. No live AI service is contacted by these synthetic tests. Apple audit and upgrade checks passed at 102e0cc in the follow-up run described below. Later UI candidates require their own native checks. The overall 9/10 gate stays open until native and live-AI evidence is complete.
 
 ## Preservation
 
 Existing bills, saved results, backups, local storage format, branding, separate Water/Energy and preferred AI remain unchanged. This iteration addresses a reproduced reliability/accessibility gap identified by Replica's test-first priority, before adding more screens.
+
+
+## Follow-up result, 2026-10-29
+
+All eight jobs passed in CI run 40846513916 at candidate 102e0cc07ad1fa8b6ed96a0501818eea99ed2d43, including the strict iPhone/iPad audits and both upgrade checks. A11Y-02 is validated at that candidate. The earlier baseline keyboard failure did not recur in the fresh run; no keyboard fix, automatic retry or exclusion is claimed. Later UI changes require their own candidate checks. Manual assistive-technology and signed-store acceptance remain separate.

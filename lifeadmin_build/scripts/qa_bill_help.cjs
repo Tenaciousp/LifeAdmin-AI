@@ -76,7 +76,10 @@ const assert = require("node:assert/strict");
     await page.getByRole("button", { name: "Save progress for later", exact: true }).click();
     await page.getByRole("status").filter({ hasText: "Progress saved on this device." }).waitFor();
     await page.reload();
-    await page.getByRole("button", { name: "Resume bill help", exact: true }).click();
+    const savedHelp = page.getByRole('region', { name: 'Continue your bill help', exact: true });
+    await savedHelp.getByText('Reply · Saved at step 3 of 4: Ask your AI', { exact: true }).waitFor();
+    assert.doesNotMatch(await savedHelp.innerText(), /TEST-REF-SECRET|estimated reading|actual reading and date/);
+    await savedHelp.getByRole('button', { name: 'Continue saved help for Synthetic water case', exact: true }).click();
     assert.equal(await page.getByLabel("Chosen AI service").inputValue(), "gemini", "Provider preference survives reload.");
     assert.equal(await page.locator("label").filter({ hasText: /^Prepared AI request/ }).locator("textarea").inputValue(), request);
     await page.getByRole("button", { name: "I have an answer to review", exact: true }).click();
@@ -104,6 +107,7 @@ const assert = require("node:assert/strict");
     await page.getByRole("button", { name: "Save reviewed result", exact: true }).click();
     await page.getByRole("heading", { name: "Synthetic water case · Reply", level: 2, exact: true }).waitFor();
     await page.getByText("AI-service answer supplied and reviewed by you.", { exact: false }).waitFor();
+    assert.equal(await page.getByRole('region', { name: 'Continue your bill help', exact: true }).count(), 0, 'A saved result must clear its unfinished draft.');
     await page.reload();
     await page.getByRole("button", { name: "Open reply", exact: true }).click();
     await page.getByText("Synthetic reviewed reply. Please confirm the revised calculation.", { exact: true }).waitFor();
@@ -166,8 +170,21 @@ const assert = require("node:assert/strict");
       await page.getByRole('button', { name: 'Save bill', exact: true }).click();
       await page.getByRole('heading', { name: 'Help with Reminder example ' + i, exact: true }).waitFor();
       await page.waitForFunction(() => [...document.querySelectorAll('button')].some(button => button.textContent === 'Save bill' && !button.disabled));
+      if (i <= 4) {
+        await page.getByRole('button', { name: 'Save progress for later', exact: true }).click();
+        await page.getByRole('status').filter({ hasText: 'Progress saved on this device.' }).waitFor();
+      }
       await page.getByRole('button', { name: 'Close bill help', exact: true }).click();
     }
+    const unfinished = page.getByRole('region', { name: 'Continue your bill help', exact: true });
+    assert.equal(await unfinished.locator('li').count(), 3);
+    await unfinished.getByRole('button', { name: 'Show all 4 saved drafts', exact: true }).click();
+    assert.equal(await unfinished.locator('li').count(), 4);
+    await unfinished.getByRole('button', { name: 'Continue saved help for Reminder example 4', exact: true }).click();
+    await page.getByRole('heading', { name: 'Help with Reminder example 4', exact: true }).waitFor();
+    await page.getByRole('button', { name: 'Close bill help', exact: true }).click();
+    await unfinished.getByRole('button', { name: 'Show fewer saved drafts', exact: true }).click();
+    assert.equal(await unfinished.locator('li').count(), 3);
     const expandDates = page.getByRole('button', { name: 'Show all 6 dates', exact: true });
     assert.equal(await expandDates.getAttribute('aria-expanded'), 'false');
     await expandDates.click();
@@ -218,13 +235,79 @@ const assert = require("node:assert/strict");
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), true);
       const violations = await saved.evaluate(async node => (await axe.run(node, { runOnly: { type: 'tag', values: ['wcag2a', 'wcag2aa', 'wcag21aa'] } })).violations.map(item => ({ id: item.id, nodes: item.nodes.map(n => n.target) })));
       assert.deepEqual(violations, [], 'Populated result accessibility at ' + width);
+      const unfinishedViolations = await unfinished.evaluate(async node => (await axe.run(node, { runOnly: { type: 'tag', values: ['wcag2a', 'wcag2aa', 'wcag21aa'] } })).violations.map(item => ({ id: item.id, nodes: item.nodes.map(n => n.target) })));
+      assert.deepEqual(unfinishedViolations, [], 'Saved-help overview accessibility at ' + width);
+      await unfinished.screenshot({ path: '/tmp/homeadmin-resume-help-' + width + '.png' });
       await saved.screenshot({ path: '/tmp/homeadmin-saved-results-' + width + '.png' });
     }
     await page.reload();
     await page.getByRole('heading', { name: 'Saved plans (3)', exact: true }).waitFor();
     assert.equal(await page.locator('#saved-plans li').count(), 3);
     assert.equal(await page.locator('#saved-bills li').count(), 6);
+    await page.getByRole('button', { name: 'Show all 4 saved drafts', exact: true }).waitFor();
     assert.deepEqual(external, []); assert.deepEqual(errors, []);
-    console.log("PASS: chosen-AI reply request, private reference exclusion, saved progress reload, review gate, separate persisted results, offline plan, 200% text at phone/tablet widths, no external requests.");
+    // A synthetic proxy error must offer recovery without losing the request.
+    const recovery = await browser.newPage({ viewport: { width: 390, height: 844 } });
+    const generations = [], recoveryExternal = [], recoveryErrors = [];
+    recovery.on('pageerror', error => recoveryErrors.push(error.message));
+    await recovery.route('**/*', route => {
+      const url = new URL(route.request().url());
+      if (url.origin !== new URL(base).origin) { recoveryExternal.push(url.href); return route.abort(); }
+      if (url.pathname === '/api/health') return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ai_drafts_available: true }) });
+      if (url.pathname === '/api/ai/draft') {
+        generations.push(route.request().postDataJSON());
+        return route.fulfill({ status: 429, contentType: 'application/json', body: JSON.stringify({ error: 'Synthetic limit' }) });
+      }
+      return route.continue();
+    });
+    await recovery.goto(base);
+    await recovery.getByRole('button', { name: 'Water', exact: true }).click();
+    await recovery.getByLabel('What would you like help with?').selectOption('check_bill');
+    await recovery.getByLabel('Bill name', { exact: true }).fill('Synthetic AI recovery bill');
+    await recovery.getByRole('button', { name: 'Save bill', exact: true }).click();
+    await recovery.getByRole('radio', { name: /^Reply to my provider/ }).check();
+    await recovery.getByText('Other ways to prepare a draft', { exact: true }).click();
+    await recovery.getByRole('radio', { name: /^Generate a draft in HomeAdmin/ }).check();
+    await recovery.getByRole('button', { name: 'Continue to details', exact: true }).click();
+    await recovery.getByLabel('What outcome do you want?').fill('Explain the estimate without agreeing to changes.');
+    await recovery.getByLabel('Provider message to respond to').fill('Please supply a reading for the estimated charge.');
+    await recovery.getByRole('button', { name: 'Review AI request', exact: true }).click();
+    const approvedRequest = await recovery.getByLabel('Reviewed request', { exact: false }).inputValue();
+    const generate = recovery.getByRole('button', { name: 'Generate draft with Gemini', exact: true });
+    assert.equal(await generate.isDisabled(), true, 'Generation requires explicit consent.');
+    assert.equal(generations.length, 0);
+    await recovery.getByRole('checkbox', { name: /^I agree to send the request above/ }).check();
+    await generate.click();
+    await recovery.getByRole('alert').filter({ hasText: 'current usage limit' }).waitFor();
+    assert.deepEqual(generations, [{ prompt: approvedRequest, output: 'reply', consent: true }]);
+    await recovery.addScriptTag({ path: require.resolve('axe-core/axe.min.js') });
+    for (const fontSize of [16, 32]) {
+      await recovery.evaluate(size => { document.documentElement.style.fontSize = size + 'px'; }, fontSize);
+      assert.equal(await recovery.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), true);
+      const recoveryViolations = await recovery.locator('#bill-help').evaluate(async node => (await axe.run(node, { runOnly: { type: 'tag', values: ['wcag2a', 'wcag2aa', 'wcag21aa'] } })).violations.map(item => ({ id: item.id, nodes: item.nodes.map(n => n.target) })));
+      assert.deepEqual(recoveryViolations, [], 'AI recovery accessibility at ' + fontSize);
+    }
+    await recovery.evaluate(() => { document.documentElement.style.fontSize = '16px'; });
+    await recovery.getByRole('button', { name: 'Use my chosen AI instead', exact: true }).click();
+    assert.equal(await recovery.getByLabel('Prepared AI request', { exact: true }).inputValue(), approvedRequest);
+    assert.equal(await recovery.getByLabel('Chosen AI service').inputValue(), 'copilot');
+    assert.equal(generations.length, 1, 'Switching provider must not retry generation.');
+    await recovery.getByRole('button', { name: 'Change request details', exact: true }).click();
+    assert.match(await recovery.getByLabel('What outcome do you want?').inputValue(), /without agreeing/);
+    assert.match(await recovery.getByLabel('Provider message to respond to').inputValue(), /estimated charge/);
+    await recovery.getByRole('button', { name: 'Back to choices', exact: true }).click();
+    await recovery.getByText('Other ways to prepare a draft', { exact: true }).click();
+    await recovery.getByRole('radio', { name: /^Generate a draft in HomeAdmin/ }).check();
+    await recovery.getByRole('button', { name: 'Continue to details', exact: true }).click();
+    await recovery.getByRole('button', { name: 'Review AI request', exact: true }).click();
+    assert.equal(await recovery.getByRole('checkbox', { name: /^I agree to send the request above/ }).isChecked(), false, 'Returning to generation requires fresh consent.');
+    await recovery.getByRole('button', { name: 'Use an offline draft instead', exact: true }).click();
+    await recovery.getByRole('button', { name: 'Prepare offline draft', exact: true }).click();
+    assert.match(await recovery.getByLabel('Message text', { exact: true }).inputValue(), /Explain the estimate without agreeing to changes/);
+    assert.equal(await recovery.getByRole('button', { name: 'Save reviewed result', exact: true }).isDisabled(), true);
+    assert.equal(generations.length, 1);
+    assert.deepEqual(recoveryExternal, []); assert.deepEqual(recoveryErrors, []);
+    await recovery.close();
+    console.log("PASS: chosen-AI reply request, private reference exclusion, saved progress reload, review gate, separate persisted results, offline plan, 200% text at phone/tablet widths, consented synthetic Gemini rate-limit recovery and no external requests.");
   } finally { await browser.close(); }
 })().catch(error => { console.error(error); process.exitCode = 1; });
