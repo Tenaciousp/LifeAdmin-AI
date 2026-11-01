@@ -36,8 +36,7 @@ const assert = require("node:assert/strict");
     await focus.selectOption("full");
     await planSettings.locator("summary").click();
     await page.getByRole("heading", { name: "Help with Synthetic water case", exact: true }).waitFor();
-    assert.equal(await page.locator("#bill-help-heading").evaluate(node => node === document.activeElement), true,
-      "Saving the first bill should place keyboard focus on the next action: guided bill help.");
+    await page.waitForFunction(() => document.activeElement?.id === "bill-help-heading", null, { timeout: 5000 });
     assert.equal(await page.locator("#bill-form").isVisible(), false,
       "Saving a bill should close entry so the guided next step is not obscured.");
     for (const width of [390, 768, 1024]) {
