@@ -25,15 +25,15 @@ const assert = require("node:assert/strict");
     await page.getByLabel("Customer reference (optional)", { exact: true }).fill("TEST-REF-SECRET");
     await page.getByRole("button", { name: "Save bill", exact: true }).click();
     await page.getByRole("heading", { name: "Help with Synthetic water case", exact: true }).waitFor();
+    await page.waitForFunction(() => document.activeElement?.id === "bill-help-heading", null, { timeout: 5000 });
+    assert.equal(await page.locator("#bill-form").isVisible(), false,
+      "Saving a bill should close entry so the guided next step is not obscured.");
     await page.getByText("What do you want to achieve?", { exact: true }).waitFor();
     for (const objective of ["Renew or negotiate a better deal", "Compare providers and save money", "Switch or cancel a service", "Query a charge or complain", "Write a price negotiation email", "Reply to a provider message"]) {
       await page.getByRole("button", { name: objective, exact: true }).waitFor();
     }
     await page.getByRole("button", { name: "Renew or negotiate a better deal", exact: true }).click();
     await page.getByRole("button", { name: "Continue to details", exact: true }).waitFor();
-    await page.waitForFunction(() => document.activeElement?.id === "bill-help-heading", null, { timeout: 5000 });
-    assert.equal(await page.locator("#bill-form").isVisible(), false,
-      "Saving a bill should close entry so the guided next step is not obscured.");
     const planSettings = page.locator("details").filter({ has: page.locator("summary", { hasText: "Optional offline plan settings" }) });
     assert.equal(await planSettings.evaluate(node => node.open), false, "Specialist choices should start collapsed.");
     await planSettings.locator("summary").click();
