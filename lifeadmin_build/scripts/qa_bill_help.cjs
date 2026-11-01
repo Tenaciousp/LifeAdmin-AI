@@ -53,6 +53,14 @@ const assert = require("node:assert/strict");
     await provider.selectOption("gemini");
     assert.equal(await provider.inputValue(), "gemini", "User chooses the provider before entering the request.");
     assert.equal(await chosenAi.isChecked(), true, "The AI-assisted route must be selected before preparing a request.");
+    // The common renewal journey must deliver a verifiable comparison and a provider negotiation draft.
+    const { workflowPrompt } = await import("../artifacts/adminpilot-ai/src/lib/offline/bill-workflow.mjs");
+    const renewalTask = { category_id: "tv_broadband_mobile", goal_id: "renew", details: { provider: "Sky", service_type: "Combined bundle", amount: "89", currency: "GBP", billing_frequency: "Monthly" } };
+    const renewalDraft = { output: "plan", method: "chosen_ai", step: 2, fieldKeys: [], tone: "Polite and clear", language: "English", brief: "Help me renew for less", incoming: "" };
+    const renewalRequest = workflowPrompt(renewalTask, renewalDraft);
+    assert.match(renewalRequest, /retention email/i);
+    assert.match(renewalRequest, /12- and 24-month totals/i);
+    assert.match(renewalRequest, /Never imply live research occurred/i);
     await page.getByRole("button", { name: "Continue to details", exact: true }).click();
     console.log("Guided bill-help selectors after continuing", JSON.stringify(await page.locator("label").evaluateAll(labels => labels.map(label => label.textContent?.trim()).filter(Boolean))));
     await page.getByLabel("Choose a starting point").selectOption("Explain the provider message and ask about anything unclear.");
