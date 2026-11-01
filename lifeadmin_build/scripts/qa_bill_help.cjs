@@ -24,6 +24,10 @@ const assert = require("node:assert/strict");
     await page.locator("summary").filter({ hasText: "More bill details (optional)" }).click();
     await page.getByLabel("Customer reference (optional)", { exact: true }).fill("TEST-REF-SECRET");
     await page.getByRole("button", { name: "Save bill", exact: true }).click();
+    await page.getByRole("heading", { name: "Help with Synthetic water case", exact: true }).waitFor();
+    await page.waitForFunction(() => document.activeElement?.id === "bill-help-heading", null, { timeout: 5000 });
+    assert.equal(await page.locator("#bill-form").isVisible(), false,
+      "Saving a bill should close entry so the guided next step is not obscured.");
     const planSettings = page.locator("details").filter({ has: page.locator("summary", { hasText: "Optional offline plan settings" }) });
     assert.equal(await planSettings.evaluate(node => node.open), false, "Specialist choices should start collapsed.");
     await planSettings.locator("summary").click();
@@ -35,10 +39,6 @@ const assert = require("node:assert/strict");
     assert.equal(await focus.inputValue(), "refund_pro");
     await focus.selectOption("full");
     await planSettings.locator("summary").click();
-    await page.getByRole("heading", { name: "Help with Synthetic water case", exact: true }).waitFor();
-    await page.waitForFunction(() => document.activeElement?.id === "bill-help-heading", null, { timeout: 5000 });
-    assert.equal(await page.locator("#bill-form").isVisible(), false,
-      "Saving a bill should close entry so the guided next step is not obscured.");
     for (const width of [390, 768, 1024]) {
       await page.setViewportSize({ width, height: 844 });
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), true, "Choice screen overflow at " + width);
