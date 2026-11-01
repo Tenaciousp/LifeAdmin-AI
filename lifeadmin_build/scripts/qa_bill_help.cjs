@@ -36,6 +36,10 @@ const assert = require("node:assert/strict");
     await focus.selectOption("full");
     await planSettings.locator("summary").click();
     await page.getByRole("heading", { name: "Help with Synthetic water case", exact: true }).waitFor();
+    assert.equal(await page.locator("#bill-help-heading").evaluate(node => node === document.activeElement), true,
+      "Saving the first bill should place keyboard focus on the next action: guided bill help.");
+    assert.equal(await page.locator("#bill-form").isVisible(), false,
+      "Saving a bill should close entry so the guided next step is not obscured.");
     for (const width of [390, 768, 1024]) {
       await page.setViewportSize({ width, height: 844 });
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), true, "Choice screen overflow at " + width);
