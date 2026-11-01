@@ -25,6 +25,9 @@ const assert = require("node:assert/strict");
     await page.getByLabel("Customer reference (optional)", { exact: true }).fill("TEST-REF-SECRET");
     await page.getByRole("button", { name: "Save bill", exact: true }).click();
     await page.getByRole("heading", { name: "Help with Synthetic water case", exact: true }).waitFor();
+    await page.getByRole("heading", { name: "Your next steps", exact: true }).waitFor();
+    await page.getByText("Nothing is sent to an AI automatically.", { exact: true }).waitFor();
+    assert.match(await page.locator("#bill-help").innerText(), /Return with the answer, check it and save your result/);
     await page.waitForFunction(() => document.activeElement?.id === "bill-help-heading", null, { timeout: 5000 });
     assert.equal(await page.locator("#bill-form").isVisible(), false,
       "Saving a bill should close entry so the guided next step is not obscured.");
