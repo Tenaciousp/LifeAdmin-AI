@@ -228,6 +228,8 @@ export default function LocalApp() {
       else await store.current.createTask({ ...task, id, created_at: new Date().toISOString() });
       resetForm(); setEntryOpen(false); setBillFilter("active"); setBillSearch(""); setMessage("Bill saved on this device.");
       helpDirty.current = false; setHelpSession(value => value + 1); setHelpId(id);
+      // The guided next step becomes visible after saving; focus the new heading.
+      requestAnimationFrame(() => document.getElementById("bill-help-heading")?.focus());
     });
   }
   async function generate(task: RecordData) {
