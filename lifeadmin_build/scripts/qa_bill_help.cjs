@@ -63,6 +63,11 @@ const assert = require("node:assert/strict");
     const { workflowPrompt } = await import("../artifacts/adminpilot-ai/src/lib/offline/bill-workflow.mjs");
     const renewalTask = { category_id: "tv_broadband_mobile", goal_id: "renew", details: { provider: "Sky", service_type: "Combined bundle", amount: "89", currency: "GBP", billing_frequency: "Monthly" } };
     const renewalDraft = { output: "plan", method: "chosen_ai", step: 2, fieldKeys: [], tone: "Polite and clear", language: "English", brief: "Help me renew for less", incoming: "" };
+    const { fieldsFor } = await import("../artifacts/adminpilot-ai/src/lib/offline/bill-types.mjs");
+    const dualFuelFields = fieldsFor("energy_water", "reduce_price", { utility_type: "Dual fuel" });
+    for (const label of ["Annual electricity use (kWh)", "Annual gas use (kWh)", "Electricity unit rate (p/kWh)", "Gas unit rate (p/kWh)", "Electricity standing charge (p/day)", "Gas standing charge (p/day)"]) {
+      assert.equal(dualFuelFields.some(field => field.label === label), true, "Missing dual-fuel detail: " + label);
+    }
     const renewalRequest = workflowPrompt(renewalTask, renewalDraft);
     assert.match(renewalRequest, /retention email/i);
     assert.match(renewalRequest, /12- and 24-month totals/i);
