@@ -69,6 +69,10 @@ const assert = require("node:assert/strict");
       assert.equal(dualFuelFields.some(field => field.label === label), true, "Missing dual-fuel detail: " + label);
     }
     const renewalRequest = workflowPrompt(renewalTask, renewalDraft);
+    const energyTask = { category_id: "energy_water", goal_id: "reduce_price", details: { utility_type: "Dual fuel", provider: "Example Energy", currency: "GBP", electricity_usage: "2700", gas_usage: "11500" } };
+    const energyPrompt = workflowPrompt(energyTask, renewalDraft);
+    assert.match(energyPrompt, /each fuel from its own annual kWh consumption/i);
+    assert.match(energyPrompt, /do not invent missing rates/i);
     assert.match(renewalRequest, /retention email/i);
     assert.match(renewalRequest, /12- and 24-month totals/i);
     assert.match(renewalRequest, /Never imply live research occurred/i);
