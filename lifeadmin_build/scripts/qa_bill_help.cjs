@@ -33,6 +33,8 @@ const assert = require("node:assert/strict");
       await page.getByRole("button", { name: objective, exact: true }).waitFor();
     }
     await page.getByRole("button", { name: "Renew or negotiate a better deal", exact: true }).click();
+    assert.equal(await page.getByRole("button", { name: "Renew or negotiate a better deal", exact: true }).getAttribute("aria-pressed"), "true", "Chosen objective should be announced to screen readers.");
+    assert.equal(await page.getByRole("button", { name: "Compare providers and save money", exact: true }).getAttribute("aria-pressed"), "false", "Unchosen objectives must not be announced as selected.");
     await page.getByRole("button", { name: "Continue to details", exact: true }).waitFor();
     const planSettings = page.locator("details").filter({ has: page.locator("summary", { hasText: "Optional offline plan settings" }) });
     assert.equal(await planSettings.evaluate(node => node.open), false, "Specialist choices should start collapsed.");
