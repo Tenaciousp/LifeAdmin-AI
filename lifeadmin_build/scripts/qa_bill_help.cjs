@@ -146,6 +146,7 @@ const assert = require("node:assert/strict");
     await page.getByRole("button", { name: "Continue to details", exact: true }).click();
     await page.getByRole("button", { name: "Prepare offline draft", exact: true }).click();
     await page.getByRole("heading", { name: "Personalise your offline draft", exact: true }).waitFor();
+    await page.getByRole("region", { name: "Savings comparison worksheet" }).waitFor();
     const offlinePlan = page.locator("label").filter({ hasText: /^Plan text/ }).locator("textarea");
     const planText = await offlinePlan.inputValue();
     assert.ok(planText.length > 100, "The generated offline plan should contain actionable content.");
