@@ -337,7 +337,7 @@ export default function LocalApp() {
 }
 
 function PlanText({ text }: { text: string }) {
-  return <div className="mt-2 leading-relaxed">{text.replace(/^##\s+(Next steps|Provider message|Things to check|Approval checklist)\s*\n/i, "").split(/\r?\n/).map((line, index) => {
+  return <div role="group" aria-label="Saved plan text" className="mt-2 leading-relaxed">{text.replace(/^##\s+(Next steps|Provider message|Things to check|Approval checklist)\s*\n/i, "").split(/\r?\n/).map((line, index) => {
     const heading = line.match(/^#{1,3}\s+(.+)$/);
     if (heading) return <h4 key={index} className="mt-4 mb-2 font-semibold">{heading[1]}</h4>;
     return line.trim() ? <p key={index} className="my-2 whitespace-pre-wrap break-words">{line.split(/(\[[^\]\n]+\]\(https?:\/\/[^\s)]+\)|https?:\/\/[^\s<>]+)/g).map((part, partIndex) => {
