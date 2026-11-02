@@ -15,8 +15,8 @@ export const customerCatalog = structuredClone(base);
 const energy = customerCatalog.categories.find(item => item.id === "energy_water");
 energy.label = "Energy: gas and electricity";
 energy.synonyms = energy.synonyms.filter(value => !/water|utilities|severn trent/.test(value));
-energy.examples = "Electricity tariff review; gas bill query; energy renewal";
-energy.fields = energy.fields.map(item => item.id === "utility_type" ? { ...item, options: ["Electricity", "Gas", "Dual fuel", "Not sure"] } : item.id === "tariff" ? { ...item, options: item.options.filter(value => value !== "Water tariff") } : item);
+energy.examples = "Combined gas and electricity (dual fuel); electricity-only or gas-only tariff; energy renewal";
+energy.fields = energy.fields.map(item => item.id === "utility_type" ? { ...item, options: ["Dual fuel", "Electricity", "Gas", "Not sure"] } : item.id === "tariff" ? { ...item, options: item.options.filter(value => value !== "Water tariff") } : item);
 const water = {
   id: "water", label: "Water and sewerage", popular: true,
   synonyms: ["water", "sewerage", "wastewater", "water meter", "water bill", "united utilities", "thames water", "yorkshire water", "severn trent", "anglian water", "welsh water", "dwr cymru", "south west water", "southern water", "scottish water", "northumbrian water", "affinity water", "portsmouth water", "ses water", "bournemouth water", "bristol water", "south east water", "wessex water", "ni water"],
@@ -80,6 +80,14 @@ export function fieldsFor(categoryId, goalId, details = {}) {
   serviceOptions.home_security_maintenance = ["Home security", "Heating / appliance cover", "Repairs / maintenance", "Cleaning / gardening", "Waste collection", "Other home service"];
   serviceOptions.subscriptions_memberships = ["Streaming", "Gaming", "Software / cloud storage", "Gym / fitness", "News / publishing", "Shopping membership", "Club", "Regular charity donation", "Other membership"];
   if (serviceOptions[categoryId]) fields.unshift(field("service_type", "Which service is this?", "select", { options: serviceOptions[categoryId] }));
+  if (categoryId === "energy_water" && details.utility_type === "Dual fuel") fields.push(
+    field("electricity_usage", "Annual electricity use (kWh)", "text", { placeholder: "e.g. 2700", recommended: true }),
+    field("gas_usage", "Annual gas use (kWh)", "text", { placeholder: "e.g. 11500", recommended: true }),
+    field("electricity_unit_rate", "Electricity unit rate (p/kWh)", "text"),
+    field("gas_unit_rate", "Gas unit rate (p/kWh)", "text"),
+    field("electricity_standing_charge", "Electricity standing charge (p/day)", "text"),
+    field("gas_standing_charge", "Gas standing charge (p/day)", "text"),
+  );
   const common = [field("country", "Country / region of this bill", "select", { options: countries }), field("currency", "Bill currency", "select", { options: currencies }), field("billing_frequency", "Payment frequency", "select", { options: frequencies }), field("next_payment_date", "Next payment date", "date")];
   for (const item of common) {
     const index = fields.findIndex(existing => existing.id === item.id);
