@@ -5,7 +5,7 @@ const field = "mt-1 w-full min-h-[44px] rounded-xl border border-slate-300 bg-wh
 const button = "min-h-[44px] rounded-xl bg-violet-700 px-4 py-2 font-semibold text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-violet-700";
 
 function money(value: string): number | null {
-  if (!/^\\d+(?:\\.\\d{1,2})?$/.test(value.trim())) return null;
+  if (!/^\d+(?:\.\d{1,2})?$/.test(value.trim())) return null;
   const amount = Number(value);
   return Number.isFinite(amount) && amount >= 0 ? amount : null;
 }
@@ -21,7 +21,7 @@ export default function ComparisonWorksheet({ provider, onApply }: { provider: s
   const annual = before !== null && after !== null && fee !== null ? Math.round(((before - after) * 12 - fee) * 100) / 100 : null;
   const source = officialLink(offer.url);
   const evidenceReady = Boolean(source && offer.checked && offer.provider.trim());
-  const letter = message || `Hello ${provider || "Customer services"},\\n\\nI am reviewing my current service and would appreciate your best like-for-like renewal price. I have seen an alternative from ${offer.provider || "[provider]"} at ${after === null ? "[monthly amount]" : "£" + after.toFixed(2) + " per month"}. Please confirm your best monthly price, full contract cost, any setup or exit fees, and which services are included.\\n\\nI have not accepted a new contract. Please reply in writing.\\n\\nKind regards`;
+  const letter = message || `Hello ${provider || "Customer services"},\n\nI am reviewing my current service and would appreciate your best like-for-like renewal price. I have seen an alternative from ${offer.provider || "[provider]"} at ${after === null ? "[monthly amount]" : "£" + after.toFixed(2) + " per month"}. Please confirm your best monthly price, full contract cost, any setup or exit fees, and which services are included.\n\nI have not accepted a new contract. Please reply in writing.\n\nKind regards`;
   return <section aria-label="Savings comparison worksheet" className="mt-5 rounded-2xl border border-violet-200 bg-violet-50 p-4">
     <h4 className="text-lg font-bold text-violet-950">Compare an offer and prepare your next action</h4>
     <p className="mt-2 text-slate-700">Enter only figures you have checked. HomeAdmin does not search or independently verify live prices here. The calculation compares 12 monthly payments plus one-off switching fees, not changing tariffs or other charges.</p>
@@ -41,7 +41,7 @@ export default function ComparisonWorksheet({ provider, onApply }: { provider: s
     </div>
     <label className="mt-3 block font-semibold">Recommended next action<textarea className={field} rows={2} value={action} onChange={e => setAction(e.target.value)} /></label>
     <label className="mt-3 block font-semibold">Editable negotiation letter<textarea className={field} rows={8} value={letter} onChange={e => setMessage(e.target.value)} /></label>
-    <button className={button + " mt-4"} type="button" disabled={annual === null || !evidenceReady || !action.trim() || !letter.trim()} onClick={() => onApply(`Savings comparison (customer-checked source, not independently verified by HomeAdmin)\\nCurrent monthly cost: £${before!.toFixed(2)}\\nAlternative provider: ${offer.provider.trim()}\\nAlternative monthly cost: £${after!.toFixed(2)}\\nOne-off fees: £${fee!.toFixed(2)}\\n12-month difference: £${annual!.toFixed(2)} (${annual! >= 0 ? "saving" : "additional cost"})\\nOfficial source: ${source}\\nNext action: ${action.trim()}\\n\\nEditable provider message:\\n${letter}`)}>Add checked comparison and letter to plan</button>
+    <button className={button + " mt-4"} type="button" disabled={annual === null || !evidenceReady || !action.trim() || !letter.trim()} onClick={() => onApply(`Savings comparison (customer-checked source, not independently verified by HomeAdmin)\nCurrent monthly cost: £${before!.toFixed(2)}\nAlternative provider: ${offer.provider.trim()}\nAlternative monthly cost: £${after!.toFixed(2)}\nOne-off fees: £${fee!.toFixed(2)}\n12-month difference: £${annual!.toFixed(2)} (${annual! >= 0 ? "saving" : "additional cost"})\nOfficial source: ${source}\nNext action: ${action.trim()}\n\nEditable provider message:\n${letter}`)}>Add checked comparison and letter to plan</button>
     <p className="mt-2 text-sm text-slate-600">The comparison is added to your editable plan. Review the combined text and tick the final fact-check before saving. Nothing is sent automatically.</p>
   </section>;
 }
