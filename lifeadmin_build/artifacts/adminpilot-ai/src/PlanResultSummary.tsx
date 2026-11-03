@@ -20,6 +20,7 @@ export default function PlanResultSummary({ plan, savedCost }: { plan: string; s
   const alternatives = section(plan, /^(?:Alternatives to consider|Comparison of alternatives|Provider comparison)$/i);
   const actionList = section(plan, /^(?:My action list|Action list|Next steps)$/i);
   const customerChecked = /Savings comparison \(customer-checked source, not independently verified by HomeAdmin\)/i.test(plan);
+  const reviewedDifferences = customerChecked ? [...plan.matchAll(/(\d{1,2})-month difference: ([^\n]{1,100}) \((saving|additional cost)\)/gi)].slice(0, 3).map((match) => ({ months: match[1], value: match[2], direction: match[3] })) : [];
   const hasSourceEvidence = /https:\/\/[^\s)\]]+/i.test(alternatives) && /(?:checked|verified|as of|accessed)\s*(?:on\s*)?\d{1,4}[\/-]\d{1,2}[\/-]\d{1,4}/i.test(alternatives);
   if (!recommendation && !alternatives) {
     return <section aria-label="AI result overview" className="rounded-xl border border-amber-200 bg-amber-50 p-4">
@@ -37,7 +38,7 @@ export default function PlanResultSummary({ plan, savedCost }: { plan: string; s
       <p className="mt-2 whitespace-pre-wrap break-words">{recommendation}</p>
     </div> : <p className="mt-3 text-amber-900">No separate recommendation was found. Review the full response below.</p>}
     {actionList && <div className="mt-3 rounded-xl border border-slate-200 p-3"><h5 className="font-bold">Your action list</h5><p className="mt-2 whitespace-pre-wrap break-words">{actionList}</p></div>}
-    <div className="mt-3 rounded-xl border border-slate-200 p-3" aria-label="Savings evidence status"><h5 className="font-bold">Potential savings</h5><p className="mt-2 text-sm text-slate-700">{customerChecked ? "Your plan contains a customer-checked comparison and estimated cost difference. Review the source, fees and dates in the full plan before acting. HomeAdmin has not independently verified the offer." : "No independently verified savings figure is available. Compare total costs, contract terms and any fees before treating an offer as cheaper."}</p></div>
+    <div className="mt-3 rounded-xl border border-slate-200 p-3" aria-label="Savings evidence status"><h5 className="font-bold">Potential savings</h5>{reviewedDifferences.length > 0 && <ul className="mt-2 space-y-1">{reviewedDifferences.map((difference, index) => <li key={index} className="font-semibold">{difference.direction === "saving" ? "Indicative saving: " : "Indicative extra cost: "}{difference.value} over {difference.months} months</li>)}</ul>}<p className="mt-2 text-sm text-slate-700">{customerChecked ? "Your plan contains a customer-checked comparison and estimated cost difference. Review the source, fees and dates in the full plan before acting. HomeAdmin has not independently verified the offer." : "No independently verified savings figure is available. Compare total costs, contract terms and any fees before treating an offer as cheaper."}</p></div>
     {alternatives ? <div className="mt-3 rounded-xl border border-slate-200 p-3">
       <h5 className="font-bold">Alternatives from the AI response</h5>
       <p className="mt-2 whitespace-pre-wrap break-words">{alternatives}</p>
