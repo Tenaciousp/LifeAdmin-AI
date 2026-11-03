@@ -30,7 +30,8 @@ def extract_screenshots(attachments, output, size):
                    if entry.get("suggestedHumanReadableName", "").startswith("Store " + scene + "_")
                    and entry.get("exportedFileName", "").endswith(".png")]
         if len(matches) != 1:
-            raise RuntimeError("Expected one native screenshot for " + scene)
+            names = sorted({str(item.get("suggestedHumanReadableName", "")) for item in entries if "Store " in str(item.get("suggestedHumanReadableName", ""))})
+            raise RuntimeError(f"Expected one native screenshot for {scene}; found {len(matches)}. Exported Store attachment names: {names}. Check XCTest capture log and screenshot attachments.")
         data = (attachments / matches[0]["exportedFileName"]).read_bytes()
         if data[:8] != b"\x89PNG\r\n\x1a\n" or len(data) < 24:
             raise RuntimeError("Invalid screenshot PNG for " + scene)
