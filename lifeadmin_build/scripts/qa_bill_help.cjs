@@ -348,6 +348,47 @@ const assert = require("node:assert/strict");
     assert.equal(generations.length, 1);
     assert.deepEqual(recoveryExternal, []); assert.deepEqual(recoveryErrors, []);
     await recovery.close();
+    // An in-app AI success response should present the outcome, options and editable correspondence.
+    // All offer text here is synthetic and no provider prices or availability are asserted.
+    const success = await browser.newPage({ viewport: { width: 390, height: 844 } });
+    const successErrors = [], successfulGenerations = [];
+    success.on('pageerror', error => successErrors.push(error.message));
+    await success.route('**/*', route => {
+      const url = new URL(route.request().url());
+      if (url.origin !== new URL(base).origin) return route.abort();
+      if (url.pathname === '/api/health') return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ai_drafts_available: true }) });
+      if (url.pathname === '/api/ai/draft') {
+        successfulGenerations.push(route.request().postDataJSON());
+        return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({
+          subject: '',
+          body: '## Best next action\nRequest a written renewal quote before switching.\n\n## Alternatives to consider\nOption A: Keep the existing supplier. Price not verified.\nOption B: Compare an equivalent package. Live pricing unavailable.\n\n## 6. Editable provider email\nSubject: Request a written renewal offer\nMessage:\nHello, please provide an itemised renewal quotation.',
+        }) });
+      }
+      return route.continue();
+    });
+    await success.goto(base);
+    await success.getByRole('button', { name: 'Phone, internet and TV', exact: true }).click();
+    await success.getByLabel('Bill name', { exact: true }).fill('Synthetic Sky renewal');
+    await success.getByRole('button', { name: 'Save bill', exact: true }).click();
+    await success.getByRole('button', { name: 'Renew or negotiate a better deal', exact: true }).click();
+    await success.getByRole('radio', { name: /^Get an AI answer directly in HomeAdmin/ }).check();
+    await success.getByRole('button', { name: 'Continue to details', exact: true }).click();
+    await success.getByRole('button', { name: 'Continue to AI answer', exact: true }).click();
+    await success.getByRole('checkbox', { name: /^I agree to send the request above/ }).check();
+    await success.getByRole('button', { name: 'Generate draft with Gemini', exact: true }).click();
+    await success.getByRole('heading', { name: 'Review your Gemini draft', exact: true }).waitFor();
+    const resultOverview = success.getByRole('region', { name: 'AI result overview' });
+    assert.match(await resultOverview.innerText(), /Request a written renewal quote/);
+    assert.match(await resultOverview.innerText(), /Option B: Compare an equivalent package/);
+    const resultEmail = success.getByRole('region', { name: 'Provider email editor' });
+    assert.equal(await resultEmail.getByLabel('Email subject').inputValue(), 'Request a written renewal offer');
+    await resultEmail.getByLabel('Email message').fill('Please send your best equivalent renewal price in writing.');
+    assert.match(await success.getByLabel('Plan text', { exact: true }).inputValue(), /best equivalent renewal price in writing/);
+    assert.equal(successfulGenerations.length, 1);
+    assert.equal(successfulGenerations[0].output, 'plan');
+    assert.deepEqual(successErrors, []);
+    await success.close();
+
     console.log("PASS: chosen-AI reply request, private reference exclusion, saved progress reload, review gate, separate persisted results, offline plan, 200% text at phone/tablet widths, consented synthetic Gemini rate-limit recovery and no external requests.");
   } finally { await browser.close(); }
 })().catch(error => { console.error(error); process.exitCode = 1; });
