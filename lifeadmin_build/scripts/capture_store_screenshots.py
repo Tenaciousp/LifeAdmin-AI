@@ -18,7 +18,8 @@ TARGETS = {
     "iphone": ("iPhone 16 Pro", (1206, 2622)),
     "ipad": ("iPad Pro (12.9-inch) (6th generation)", (2048, 2732)),
 }
-SCENES = ("01 home", "02 plan", "03 message", "04 ai-review", "05 backups")
+SCENES = ("01 home", "01b bills", "02 plan", "03 message",
+          "04 ai-review", "04b ai-prompt", "05 backups")
 
 
 def extract_screenshots(attachments, output, size):
@@ -110,4 +111,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
