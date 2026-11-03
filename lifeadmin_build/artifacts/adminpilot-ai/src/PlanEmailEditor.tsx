@@ -36,10 +36,10 @@ export default function PlanEmailEditor({ plan, provider, onChange, onStatus, on
   const detected = locateEmail(plan);
   const safeProvider = provider.trim().slice(0, 120);
   const section = detected || {
-    start: plan.split("\\n").length, end: plan.split("\\n").length,
+    start: plan.split("\n").length, end: plan.split("\n").length,
     header: "## Editable provider email",
     subject: "Request to review my bill and available options",
-    message: "Hello " + (safeProvider || "Customer Services") + " team,\\n\\nI am reviewing my current bill and would appreciate details of your best available price and any suitable alternatives. Please confirm the monthly cost, total contract cost, duration, any price increases or charges, and the steps needed to proceed. I would prefer a written, itemised offer before making a decision.\\n\\nThank you.",
+    message: "Hello " + (safeProvider || "Customer Services") + " team,\n\nI am reviewing my current bill and would appreciate details of your best available price and any suitable alternatives. Please confirm the monthly cost, total contract cost, duration, any price increases or charges, and the steps needed to proceed. I would prefer a written, itemised offer before making a decision.\n\nThank you.",
   };
   return <section aria-label="Provider email editor" className="rounded-xl border border-violet-200 bg-violet-50 p-4">
     <h4 className="font-bold text-violet-950">Your editable provider email</h4>
