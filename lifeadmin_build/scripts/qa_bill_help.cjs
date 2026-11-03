@@ -382,6 +382,7 @@ const assert = require("node:assert/strict");
     const resultOverview = success.getByRole('region', { name: 'AI result overview' });
     assert.match(await resultOverview.innerText(), /Request a written renewal quote/);
     assert.match(await resultOverview.innerText(), /Option B: Compare an equivalent package/);
+    assert.match(await resultOverview.innerText(), /No independently verified, dated provider offers/);
     const resultEmail = success.getByRole('region', { name: 'Provider email editor' });
     assert.equal(await resultEmail.getByLabel('Email subject').inputValue(), 'Request a written renewal offer');
     await resultEmail.getByLabel('Email message').fill('Please send your best equivalent renewal price in writing.');
