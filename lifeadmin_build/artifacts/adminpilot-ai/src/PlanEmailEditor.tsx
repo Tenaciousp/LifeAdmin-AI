@@ -52,6 +52,7 @@ export default function PlanEmailEditor({ plan, provider, onChange, onStatus, on
     </label>
     <button type="button" className={button + " mt-3"} onClick={() => {
       if (!section.subject.trim() || !section.message.trim()) { onError("Add an email subject and message before copying."); return; }
+      if (!detected) onChange(replaceEmail(plan, section, section.subject, section.message));
       void copyDeviceText("Subject: " + section.subject + "\n\n" + section.message)
         .then(() => onStatus("Edited email copied. Review before sending."))
         .catch(() => onError("Unable to copy the email. Select the text and copy manually."));
