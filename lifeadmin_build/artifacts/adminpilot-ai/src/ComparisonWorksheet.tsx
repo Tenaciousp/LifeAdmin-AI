@@ -12,11 +12,11 @@ function money(value: string): number | null {
 function officialLink(value: string): string | null {
   try { const url = new URL(value); return url.protocol === "https:" && !url.username && !url.password ? url.href : null; } catch { return null; }
 }
-export default function ComparisonWorksheet({ provider, currency = "GBP", onApply }: { provider: string; currency?: string; onApply: (summary: string) => void }) {
+export default function ComparisonWorksheet({ provider, currency = "GBP", currentMonthly, onApply }: { provider: string; currency?: string; currentMonthly?: number | null; onApply: (summary: string) => void }) {
   const selectedCurrency = /^[A-Z]{3}$/.test(currency) ? currency : "GBP";
   const format = (amount: number) => new Intl.NumberFormat("en-GB", { style: "currency", currency: selectedCurrency }).format(amount);
   const [savedOffers, setSavedOffers] = useState<{ provider: string; difference: number }[]>([]);
-  const [current, setCurrent] = useState("");
+  const [current, setCurrent] = useState(() => typeof currentMonthly === "number" && Number.isFinite(currentMonthly) && currentMonthly >= 0 ? currentMonthly.toFixed(2) : "");
   const [offer, setOffer] = useState<Offer>({ provider: "", monthly: "", fee: "0", url: "", checked: false });
   const [checkedDate, setCheckedDate] = useState("");
   const [terms, setTerms] = useState("");
@@ -34,6 +34,7 @@ export default function ComparisonWorksheet({ provider, currency = "GBP", onAppl
     <h4 className="text-lg font-bold text-violet-950">Compare up to three offers and prepare your next action</h4>
     {savedOffers.length > 0 && <div aria-label="Offers added to plan" className="mt-3 rounded-xl bg-white p-3"><p className="font-bold">Added to your plan ({savedOffers.length} of 3)</p><ul className="mt-2 list-disc pl-5">{savedOffers.map((item, index) => <li key={index}>{item.provider}: {item.difference >= 0 ? format(item.difference) + " indicative saving" : format(Math.abs(item.difference)) + " extra cost"} over the selected comparison period</li>)}</ul><p className="mt-2 text-sm">All entries remain editable in your plan below.</p></div>}
     <p className="mt-2 text-slate-700">Enter only figures you have checked. HomeAdmin does not search or independently verify live prices here. The estimate compares equal numbers of monthly payments over your chosen period, plus one-off fees. It assumes monthly prices stay unchanged and excludes any unentered charges.</p>
+    {typeof currentMonthly === "number" && Number.isFinite(currentMonthly) && <p className="mt-2 text-sm font-semibold text-violet-950">Current monthly cost is prefilled from your saved bill. Check the amount before comparing offers.</p>}
     <div className="mt-3 grid gap-3 sm:grid-cols-2">
       <label className="font-semibold">Current monthly cost ({selectedCurrency})<input className={field} inputMode="decimal" value={current} onChange={e => { setCurrent(e.target.value); setOffer(v => ({ ...v, checked: false })); }} placeholder="e.g. 95.00" /></label>
       <label className="font-semibold">Alternative provider<input className={field} value={offer.provider} onChange={e => setOffer(v => ({ ...v, provider: e.target.value, checked: false }))} placeholder="Provider name" /></label>
