@@ -1,3 +1,5 @@
+import { money } from "./lib/offline/bill-overview.mjs";
+
 function section(text: string, names: RegExp): string {
   const lines = text.split("\n");
   const first = lines.findIndex(line => {
@@ -12,7 +14,7 @@ function section(text: string, names: RegExp): string {
   return lines.slice(first + 1, end).join("\n").trim();
 }
 
-export default function PlanResultSummary({ plan }: { plan: string }) {
+export default function PlanResultSummary({ plan, savedCost }: { plan: string; savedCost?: { monthly: number; yearly: number; currency: string } | null }) {
   const bill = section(plan, /^(?:My bill at a glance|Current bill|Current cost)$/i);
   const recommendation = section(plan, /^(?:Best next action|My first next step|Recommended action)$/i);
   const alternatives = section(plan, /^(?:Alternatives to consider|Comparison of alternatives|Provider comparison)$/i);
@@ -25,7 +27,8 @@ export default function PlanResultSummary({ plan }: { plan: string }) {
   }
   return <section aria-label="AI result overview" className="rounded-xl border border-violet-200 bg-white p-4">
     <h4 className="text-lg font-bold text-violet-950">Your AI results at a glance</h4>
-    {bill ? <div className="mt-3 rounded-xl border border-slate-200 p-3"><h5 className="font-bold">Your current bill</h5><p className="mt-2 whitespace-pre-wrap break-words">{bill}</p></div> : <p className="mt-3 text-sm text-slate-700">Current cost details are in the full plan below. Check the amount and billing period.</p>}
+    {savedCost && <div className="mt-3 rounded-xl border border-slate-200 p-3"><h5 className="font-bold">Your saved current cost</h5><p className="mt-1 text-sm text-slate-700">Calculated from the amount, currency and billing frequency you entered. Not a provider-verified charge.</p><p className="mt-2 font-semibold">{money(savedCost.monthly, savedCost.currency)} per month · {money(savedCost.yearly, savedCost.currency)} per year</p></div>}
+    {bill ? <div className="mt-3 rounded-xl border border-slate-200 p-3"><h5 className="font-bold">AI summary of your bill</h5><p className="mt-2 whitespace-pre-wrap break-words">{bill}</p></div> : !savedCost && <p className="mt-3 text-sm text-slate-700">No complete current-cost information was provided. Check the amount, currency and billing period before comparing.</p>}
     {recommendation ? <div className="mt-3 rounded-xl bg-violet-50 p-3">
       <h5 className="font-bold text-violet-950">Recommended next action</h5>
       <p className="mt-2 whitespace-pre-wrap break-words">{recommendation}</p>
