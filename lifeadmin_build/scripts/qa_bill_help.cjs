@@ -162,7 +162,7 @@ const assert = require("node:assert/strict");
     assert.match(planRequest, /My action list/);
     assert.match(planRequest, /payment options instead of alternative suppliers/);
     await page.getByRole("button", { name: "I have an answer to review", exact: true }).click();
-    await page.getByLabel("Plan text", { exact: true }).fill("## My action list\\n1. Check the reading.\\n## My plan\\nReview [Example source](https://example.invalid/bill) before acting.\\n[Unsafe](javascript:alert(1))\\n## 6. Editable provider email\\nSubject: Ask for a better price\\nMessage:\\nHello, please review my bill.");
+    await page.getByLabel("Plan text", { exact: true }).fill("## My action list\n1. Check the reading.\n## My plan\nReview [Example source](https://example.invalid/bill) before acting.\n[Unsafe](javascript:alert(1))\n## 6. Editable provider email\nSubject: Ask for a better price\nMessage:\nHello, please review my bill.");
     const emailEditor = page.getByRole("region", { name: "Provider email editor" });
     await emailEditor.getByLabel("Email subject").fill("Request a clearer quote");
     await emailEditor.getByLabel("Email message").fill("Hello, please send an itemised offer.");
