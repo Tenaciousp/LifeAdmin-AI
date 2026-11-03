@@ -168,6 +168,8 @@ const assert = require("node:assert/strict");
     await emailEditor.getByLabel("Email message").fill("Hello, please send an itemised offer.");
     assert.match(await page.getByLabel("Plan text", { exact: true }).inputValue(), /Subject: Request a clearer quote/);
     assert.match(await page.getByLabel("Plan text", { exact: true }).inputValue(), /please send an itemised offer/);
+    await page.getByRole("region", { name: "AI result overview" }).waitFor();
+    await page.getByText("Recommendation needs review", { exact: true }).waitFor();
     await page.getByRole("checkbox", { name: /^I have checked the answer/ }).check();
     await page.getByRole("button", { name: "Save reviewed result", exact: true }).click();
     assert.equal(await page.getByRole("link", { name: "Example source", exact: true }).getAttribute("href"), "https://example.invalid/bill");
