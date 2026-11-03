@@ -26,6 +26,7 @@ export default function PlanResultSummary({ plan, savedCost }: { plan: string; s
     return <section aria-label="AI result overview" className="rounded-xl border border-amber-200 bg-amber-50 p-4">
       <h4 className="font-bold text-amber-950">Recommendation needs review</h4>
       {savedCost && <p className="mt-2 font-semibold">Your saved cost: {money(savedCost.monthly, savedCost.currency)} per month · {money(savedCost.yearly, savedCost.currency)} per year. Entered by you, not provider-verified.</p>}
+      {actionList && <div className="mt-3 rounded-lg border border-amber-200 bg-white p-3"><h5 className="font-bold">Actions included in the answer</h5><p className="mt-2 whitespace-pre-wrap break-words">{actionList}</p></div>}
       <p className="mt-2 text-sm text-amber-950">The AI answer has no clearly labelled recommendation or comparison. Read the full plan below and request a clearer answer before relying on savings claims.</p>
     </section>;
   }
