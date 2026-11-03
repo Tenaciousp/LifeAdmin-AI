@@ -815,6 +815,7 @@ final class LifeAdminUITests: XCTestCase {
     }
 
     func testMessageEditingCancelSaveAndRestart() throws {
+        print("HOMEADMIN_MESSAGE_EDIT_STAGE: initial launch")
         app.launch()
         assertWorkspaceReady()
         let open = app.buttons["Open plan"]
@@ -826,6 +827,7 @@ final class LifeAdminUITests: XCTestCase {
         let subject = app.textFields["Message subject"]
         let body = app.textViews["Message body"]
         reveal(subject)
+        print("HOMEADMIN_MESSAGE_EDIT_STAGE: initial edit form")
         let originalSubject = try XCTUnwrap(subject.value as? String)
         let originalBody = try XCTUnwrap(body.value as? String)
         XCTAssertFalse(originalSubject.isEmpty)
@@ -838,6 +840,7 @@ final class LifeAdminUITests: XCTestCase {
         let cancel = app.buttons["Cancel message edit"]
         reveal(cancel)
         cancel.tap()
+        print("HOMEADMIN_MESSAGE_EDIT_STAGE: cancel original edit")
         reveal(edit)
         edit.tap()
         XCTAssertEqual(subject.value as? String, originalSubject)
@@ -852,6 +855,7 @@ final class LifeAdminUITests: XCTestCase {
         prepareKeyboard(for: body)
         body.typeText(" CI reviewed body 7319")
         closeKeyboard()
+        print("HOMEADMIN_MESSAGE_EDIT_STAGE: edited subject and body")
         let savedSubject = try XCTUnwrap(subject.value as? String)
         let savedBody = try XCTUnwrap(body.value as? String)
         XCTAssertTrue(savedSubject.contains("CI reviewed 7319"))
@@ -859,6 +863,7 @@ final class LifeAdminUITests: XCTestCase {
         let save = app.buttons["Save message"]
         reveal(save)
         save.tap()
+        print("HOMEADMIN_MESSAGE_EDIT_STAGE: saved message")
         XCTAssertTrue(app.staticTexts["Message saved on this device. Nothing was sent."].waitForExistence(timeout: 20))
         app.terminate()
         app.launch()
@@ -872,8 +877,10 @@ final class LifeAdminUITests: XCTestCase {
         reveal(cancel)
         cancel.tap()
 
+        print("HOMEADMIN_MESSAGE_EDIT_STAGE: verified edits after restart")
         // Restore the earlier synthetic backup, then compare all original
         // fields on the host. Unit tests separately check edit isolation.
+        print("HOMEADMIN_MESSAGE_EDIT_STAGE: start backup restore")
         selectExportedBackup()
         confirm(timeout: 30)
         XCTAssertTrue(app.staticTexts["Backup restored on this device."].waitForExistence(timeout: 20))
@@ -886,6 +893,7 @@ final class LifeAdminUITests: XCTestCase {
         edit.tap()
         XCTAssertEqual(subject.value as? String, originalSubject)
         XCTAssertEqual(body.value as? String, originalBody)
+        print("HOMEADMIN_MESSAGE_EDIT_STAGE: backup restored values verified")
         reveal(cancel)
         cancel.tap()
     }
