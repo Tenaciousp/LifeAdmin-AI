@@ -13,8 +13,10 @@ function section(text: string, names: RegExp): string {
 }
 
 export default function PlanResultSummary({ plan }: { plan: string }) {
+  const bill = section(plan, /^(?:My bill at a glance|Current bill|Current cost)$/i);
   const recommendation = section(plan, /^(?:Best next action|My first next step|Recommended action)$/i);
   const alternatives = section(plan, /^(?:Alternatives to consider|Comparison of alternatives|Provider comparison)$/i);
+  const hasSourceEvidence = /https:\/\/[^\s)\]]+/i.test(alternatives) && /(?:checked|verified|as of|accessed)\s*(?:on\s*)?\d{1,4}[\/-]\d{1,2}[\/-]\d{1,4}/i.test(alternatives);
   if (!recommendation && !alternatives) {
     return <section aria-label="AI result overview" className="rounded-xl border border-amber-200 bg-amber-50 p-4">
       <h4 className="font-bold text-amber-950">Recommendation needs review</h4>
@@ -23,6 +25,7 @@ export default function PlanResultSummary({ plan }: { plan: string }) {
   }
   return <section aria-label="AI result overview" className="rounded-xl border border-violet-200 bg-white p-4">
     <h4 className="text-lg font-bold text-violet-950">Your AI results at a glance</h4>
+    {bill ? <div className="mt-3 rounded-xl border border-slate-200 p-3"><h5 className="font-bold">Your current bill</h5><p className="mt-2 whitespace-pre-wrap break-words">{bill}</p></div> : <p className="mt-3 text-sm text-slate-700">Current cost details are in the full plan below. Check the amount and billing period.</p>}
     {recommendation ? <div className="mt-3 rounded-xl bg-violet-50 p-3">
       <h5 className="font-bold text-violet-950">Recommended next action</h5>
       <p className="mt-2 whitespace-pre-wrap break-words">{recommendation}</p>
@@ -31,6 +34,6 @@ export default function PlanResultSummary({ plan }: { plan: string }) {
       <h5 className="font-bold">Alternatives from the AI response</h5>
       <p className="mt-2 whitespace-pre-wrap break-words">{alternatives}</p>
     </div> : <p className="mt-3 text-sm text-slate-700">No separate alternatives section was found.</p>}
-    <p className="mt-3 text-sm font-semibold text-amber-950">AI suggestions are not independently verified offers. Check provider websites, eligibility, all fees and contract terms before acting. Do not treat quoted savings as guaranteed.</p>
+    <p className="mt-3 text-sm font-semibold text-amber-950">{hasSourceEvidence ? "The AI response includes a link and date, but HomeAdmin has not checked either source or price independently." : "No independently verified, dated provider offers are available in this result."} Check provider websites, eligibility, total costs and terms before acting. Savings are not guaranteed.</p>
   </section>;
 }
