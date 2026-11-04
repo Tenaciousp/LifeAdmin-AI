@@ -396,6 +396,18 @@ const assert = require("node:assert/strict");
     assert.equal(await resultEmail.getByLabel('Email subject').inputValue(), 'Request a written renewal offer');
     await resultEmail.getByLabel('Email message').fill('Please send your best equivalent renewal price in writing.');
     assert.match(await success.getByLabel('Plan text', { exact: true }).inputValue(), /best equivalent renewal price in writing/);
+    // Switching-eligible synthetic renewal retains the comparison worksheet.
+    // The prior water-only scenario deliberately excludes this worksheet.
+    const savings = success.getByRole('region', { name: 'Savings comparison worksheet' });
+    await savings.waitFor();
+    const tomorrowLocal = await success.evaluate(() => {
+      const date = new Date();
+      date.setDate(date.getDate() + 1);
+      return [date.getFullYear(), String(date.getMonth() + 1).padStart(2, '0'), String(date.getDate()).padStart(2, '0')].join('-');
+    });
+    await savings.getByLabel('Date you checked the offer').fill(tomorrowLocal);
+    await savings.getByText('Future dates do not count as checked offers.', { exact: false }).waitFor();
+    await savings.getByLabel('Date you checked the offer').fill('');
     assert.equal(successfulGenerations.length, 1);
     assert.equal(successfulGenerations[0].output, 'plan');
     assert.deepEqual(successErrors, []);
