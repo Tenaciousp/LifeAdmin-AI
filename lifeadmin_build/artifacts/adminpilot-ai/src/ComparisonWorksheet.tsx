@@ -33,6 +33,18 @@ export default function ComparisonWorksheet({ provider, currency = "GBP", curren
   const localToday = [today.getFullYear(), String(today.getMonth() + 1).padStart(2, "0"), String(today.getDate()).padStart(2, "0")].join("-");
   const validCheckedDate = /^\d{4}-\d{2}-\d{2}$/.test(checkedDate) && checkedDate <= localToday && !Number.isNaN(Date.parse(checkedDate));
   const evidenceReady = Boolean(source && offer.checked && validCheckedDate && terms.trim() && offer.provider.trim());
+  const missingChecks = [
+    before === null || after === null || fee === null ? "valid current and alternative costs, including one-off fees" : "",
+    !validTerm ? "a comparison period from 1 to 60 months" : "",
+    !offer.provider.trim() ? "the alternative provider's name" : "",
+    !source ? "a valid HTTPS source link" : "",
+    !validCheckedDate ? "the date you checked the offer" : "",
+    !terms.trim() ? "contract terms and length" : "",
+    !offer.checked ? "your confirmation of the source, equivalence and fees" : "",
+    !action.trim() ? "a recommended next action" : "",
+    !letter.trim() ? "the provider message" : "",
+  ].filter(Boolean);
+
   const letter = message || `Hello ${provider || "Customer services"},\n\nI am reviewing my current service and would appreciate your best like-for-like renewal price. I have seen an alternative from ${offer.provider || "[provider]"} at ${after === null ? "[monthly amount]" : format(after) + " per month"}. Please confirm your best monthly price, full contract cost, any setup or exit fees, and which services are included.\n\nI have not accepted a new contract. Please reply in writing.\n\nKind regards`;
   return <section aria-label="Savings comparison worksheet" className="mt-5 rounded-2xl border border-violet-200 bg-violet-50 p-4">
     <h4 className="text-lg font-bold text-violet-950">Compare up to three offers and prepare your next action</h4>
@@ -58,6 +70,7 @@ export default function ComparisonWorksheet({ provider, currency = "GBP", curren
     </div>
     <label className="mt-3 block font-semibold">Recommended next action<textarea className={field} rows={2} value={action} onChange={e => setAction(e.target.value)} /></label>
     <label className="mt-3 block font-semibold">Editable negotiation letter<textarea className={field} rows={8} value={letter} onChange={e => setMessage(e.target.value)} /></label>
+    {savedOffers.length < 3 && <p aria-live="polite" className="mt-3 text-sm text-violet-950">{missingChecks.length ? "Before adding this offer, complete: " + missingChecks.join("; ") + "." : "Ready to add this customer-checked offer to your plan."}</p>}
     <button className={button + " mt-4"} type="button" disabled={savedOffers.length >= 3 || annual === null || !evidenceReady || !action.trim() || !letter.trim()} onClick={() => { onApply(`Savings comparison (customer-checked source, not independently verified by HomeAdmin)\nCurrent monthly cost: ${format(before!)}\nAlternative provider: ${offer.provider.trim()}\nAlternative monthly cost: ${format(after!)}\nOne-off fees: ${format(fee!)}\n${months}-month difference: ${format(Math.abs(annual!))} (${annual! >= 0 ? "saving" : "additional cost"})\nCustomer-reviewed source URL: ${source}\nChecked on: ${checkedDate}\nContract terms: ${terms.trim()}\nNext action: ${action.trim()}\n\nEditable provider message:\n${letter}`); setSavedOffers(items => [...items, { provider: offer.provider.trim(), difference: annual!, months }]); setOffer({ provider: "", monthly: "", fee: "0", url: "", checked: false }); setCheckedDate(""); setTerms(""); setMessage(""); }}>{savedOffers.length >= 3 ? "Three offers added" : "Add checked offer and letter to plan"}</button>
     <p className="mt-2 text-sm text-slate-600">The comparison is added to your editable plan. Review the combined text and tick the final fact-check before saving. Nothing is sent automatically.</p>
   </section>;
