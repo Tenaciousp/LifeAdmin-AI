@@ -33,6 +33,7 @@ export default function ComparisonWorksheet({ provider, currency = "GBP", curren
   const localToday = [today.getFullYear(), String(today.getMonth() + 1).padStart(2, "0"), String(today.getDate()).padStart(2, "0")].join("-");
   const validCheckedDate = /^\d{4}-\d{2}-\d{2}$/.test(checkedDate) && checkedDate <= localToday && !Number.isNaN(Date.parse(checkedDate));
   const evidenceReady = Boolean(source && offer.checked && validCheckedDate && terms.trim() && offer.provider.trim());
+  const letter = message || `Hello ${provider || "Customer services"},\n\nI am reviewing my current service and would appreciate your best like-for-like renewal price. I have seen an alternative from ${offer.provider || "[provider]"} at ${after === null ? "[monthly amount]" : format(after) + " per month"}. Please confirm your best monthly price, full contract cost, any setup or exit fees, and which services are included.\n\nI have not accepted a new contract. Please reply in writing.\n\nKind regards`;
   const missingChecks = [
     before === null || after === null || fee === null ? "valid current and alternative costs, including one-off fees" : "",
     !validTerm ? "a comparison period from 1 to 60 months" : "",
@@ -45,7 +46,6 @@ export default function ComparisonWorksheet({ provider, currency = "GBP", curren
     !letter.trim() ? "the provider message" : "",
   ].filter(Boolean);
 
-  const letter = message || `Hello ${provider || "Customer services"},\n\nI am reviewing my current service and would appreciate your best like-for-like renewal price. I have seen an alternative from ${offer.provider || "[provider]"} at ${after === null ? "[monthly amount]" : format(after) + " per month"}. Please confirm your best monthly price, full contract cost, any setup or exit fees, and which services are included.\n\nI have not accepted a new contract. Please reply in writing.\n\nKind regards`;
   return <section aria-label="Savings comparison worksheet" className="mt-5 rounded-2xl border border-violet-200 bg-violet-50 p-4">
     <h4 className="text-lg font-bold text-violet-950">Compare up to three offers and prepare your next action</h4>
     {savedOffers.length > 0 && <div aria-label="Offers added to plan" className="mt-3 rounded-xl bg-white p-3"><p className="font-bold">Added to your plan ({savedOffers.length} of 3)</p><ul className="mt-2 list-disc pl-5">{savedOffers.map((item, index) => <li key={index}>{item.provider}: {item.difference >= 0 ? format(item.difference) + " indicative saving" : format(Math.abs(item.difference)) + " extra cost"} over {item.months} months</li>)}</ul><p className="mt-2 text-sm">All entries remain editable in your plan below.</p></div>}
