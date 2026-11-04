@@ -4,6 +4,7 @@ import ComparisonWorksheet from "./ComparisonWorksheet";
 import PlanEmailEditor from "./PlanEmailEditor";
 import PlanResultSummary from "./PlanResultSummary";
 import { recurringCost } from "./lib/offline/bill-overview.mjs";
+import { billCategory } from "./lib/offline/bill-types.mjs";
 import { aiServices, preferredAi, savePreferredAi } from "./lib/offline/ai-handoff.mjs";
 import { initialWorkflow, languages, localWorkflowDraft, outputs, tones, workflowContext, workflowFields, workflowPrompt } from "./lib/offline/bill-workflow.mjs";
 import type { WorkflowDraft } from "./lib/offline/bill-workflow.mjs";
@@ -142,7 +143,7 @@ export default function BillHelp({ task, onClose, onEdit, onProgress, onSave, on
         {draft.output === "plan" && draft.body.trim() && <PlanEmailEditor plan={draft.body} provider={String(task.details?.provider || task.title || "")} onChange={body => change({ body })} onStatus={setStatus} onError={setError} />}
         {draft.output !== "plan" && <label className="block">Result subject<input aria-label="Result subject" className={input} maxLength={200} aria-invalid={!draft.subject.trim()} value={draft.subject} onChange={event => change({ subject: event.target.value })} />{!draft.subject.trim() && <span className="mt-1 block text-sm text-amber-900">Add a subject before saving.</span>}</label>}
         <label className="block">{draft.output === "plan" ? "Plan text" : "Message text"}<textarea aria-label={draft.output === "plan" ? "Plan text" : "Message text"} className={input} rows={12} maxLength={20000} aria-invalid={!draft.body.trim()} value={draft.body} onChange={event => change({ body: event.target.value })} />{!draft.body.trim() && <span className="mt-1 block text-sm text-amber-900">Add a {draft.output === "plan" ? "plan" : "message"} before saving.</span>}</label>
-        {draft.output === "plan" && <ComparisonWorksheet provider={String(task.details?.provider || task.title || "")} currency={String(task.details?.currency || "GBP")} currentMonthly={recurringCost(task)?.monthly ?? null} onApply={summary => change({ body: [draft.body.trim(), summary].filter(Boolean).join("\n\n") })} />}
+        {draft.output === "plan" && !["water", "council_tax_licences"].includes(billCategory(task)) && <ComparisonWorksheet provider={String(task.details?.provider || task.title || "")} currency={String(task.details?.currency || "GBP")} currentMonthly={recurringCost(task)?.monthly ?? null} onApply={summary => change({ body: [draft.body.trim(), summary].filter(Boolean).join("\n\n") })} />}
         <fieldset className="min-w-0 rounded-xl border border-violet-200 bg-violet-50 p-4"><legend className="px-1 font-bold">Check the answer against your bill</legend>
           <p>Compare the answer above with these details. Correct any wrong amounts, dates or provider information in the answer. Missing facts should stay as questions or placeholders.</p>
           <p className="mt-3">{workflowContext(task)}</p>
