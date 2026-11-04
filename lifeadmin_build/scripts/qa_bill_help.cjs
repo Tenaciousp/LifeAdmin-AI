@@ -146,17 +146,7 @@ const assert = require("node:assert/strict");
     await page.getByRole("button", { name: "Continue to details", exact: true }).click();
     await page.getByRole("button", { name: "Prepare offline draft", exact: true }).click();
     await page.getByRole("heading", { name: "Personalise your offline draft", exact: true }).waitFor();
-    await page.getByRole("region", { name: "Savings comparison worksheet" }).waitFor();
-    const worksheet = page.getByRole("region", { name: "Savings comparison worksheet" });
-    const tomorrowLocal = await page.evaluate(() => {
-      const date = new Date();
-      date.setDate(date.getDate() + 1);
-      return [date.getFullYear(), String(date.getMonth() + 1).padStart(2, "0"), String(date.getDate()).padStart(2, "0")].join("-");
-    });
-    await worksheet.getByLabel("Date you checked the offer").fill(tomorrowLocal);
-    await worksheet.getByText("Future dates do not count as checked offers.", { exact: false }).waitFor();
-    await worksheet.getByLabel("Date you checked the offer").fill("");
-
+    assert.equal(await page.getByRole("region", { name: "Savings comparison worksheet" }).count(), 0, "A water bill must not offer household supplier-switching comparisons.");
     const offlinePlan = page.locator("label").filter({ hasText: /^Plan text/ }).locator("textarea");
     const planText = await offlinePlan.inputValue();
     assert.ok(planText.length > 100, "The generated offline plan should contain actionable content.");
