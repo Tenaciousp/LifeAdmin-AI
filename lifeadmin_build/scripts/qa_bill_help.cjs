@@ -400,6 +400,13 @@ const assert = require("node:assert/strict");
     // The prior water-only scenario deliberately excludes this worksheet.
     const savings = success.getByRole('region', { name: 'Savings comparison worksheet' });
     await savings.waitFor();
+    const addCheckedOffer = savings.getByRole('button', { name: 'Add checked offer and letter to plan' });
+    assert.equal(await addCheckedOffer.isDisabled(), true, 'Unverified offers must not be added.');
+    const missingOfferChecks = savings.getByText('Before adding this offer, complete:', { exact: false });
+    await missingOfferChecks.waitFor();
+    assert.match(await missingOfferChecks.innerText(), /valid current and alternative costs/);
+    assert.match(await missingOfferChecks.innerText(), /a valid HTTPS source link/);
+    assert.match(await missingOfferChecks.innerText(), /your confirmation of the source/);
     const tomorrowLocal = await success.evaluate(() => {
       const date = new Date();
       date.setDate(date.getDate() + 1);
