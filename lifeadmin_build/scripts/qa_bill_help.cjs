@@ -15,11 +15,8 @@ const assert = require("node:assert/strict");
     });
     page.on("pageerror", error => errors.push(error.message));
     await page.goto(base);
-    // Public landing content must match the current guided AI journey without promising verified live deals.
-    await page.getByRole("heading", { name: "Your household bills, with a plan for what to do next." }).waitFor();
-    await page.getByRole("heading", { name: "From one household bill to a clear decision and a ready-to-edit message." }).waitFor();
-    assert.match(await page.locator("#your-result").innerText(), /estimated difference|Estimated difference/i);
-    assert.match(await page.locator("#your-result").innerText(), /No live offer, saving, supplier switch or provider response is guaranteed/i);
+    // This browser runs the offline LocalApp build (VITE_LIFEADMIN_LOCAL=true).
+    // Public landing-page assertions belong to the separate web build, not this local flow.
     await page.getByRole("button", { name: "Water", exact: true }).click();
     await page.getByLabel("What would you like help with?").selectOption("check_bill");
     await page.getByLabel("Bill name", { exact: true }).fill("Synthetic water case");
