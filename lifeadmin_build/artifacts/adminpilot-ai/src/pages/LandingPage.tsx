@@ -18,17 +18,21 @@ const examples = [
   "Cancel Netflix",
   "Check my mobile bill",
   "Review car insurance",
-  "Energy tariff ending",
+  "Compare dual-fuel energy offers",
+  "Check my water bill",
   "Council tax query",
   "Cancel gym membership",
   "Identify a card charge",
 ];
 
 const faqs = [
-  ["Does HomeAdmin contact providers for me?", "No. It prepares plans, provider messages and checklists. You review and send anything yourself."],
+  ["Does HomeAdmin contact providers for me?", "No. HomeAdmin prepares editable plans and provider messages. You review and send messages yourself. No provider is contacted automatically."],
   ["Does it connect to my bank or email?", "No bank connection or mailbox access is required for the core workflow. You enter only the details you choose to use."],
-  ["What happens if I do not know all the details?", "Leave them blank. HomeAdmin highlights useful missing information before it generates a plan, without blocking you."],
-  ["How do I access my plans?", "Sign in with your purchasing account. Your purchase gives access to the planning tools and saved work."],
+  ["What happens if I do not know all the details?", "Start with what you know. Missing figures and contract details stay clearly marked for review. Verified offer comparisons need a valid source, check date and equivalent terms."],
+  ["Does the app find live deals for me?", "HomeAdmin prepares an AI-assisted comparison and a customer-checkable worksheet. It does not independently verify live tariffs or guarantee savings. Open provider source links and check price, eligibility, fees and dates before acting."],
+  ["Which AI service do I need?", "Microsoft Copilot is the default external AI choice. You may use another preferred AI service. Where an in-app Gemini draft is available, HomeAdmin requests explicit consent before sharing your chosen bill details."],
+  ["What about gas, electricity and water?", "Combined gas and electricity (dual fuel) and separate energy bills are supported. Water bills have their own review and query journey rather than suggesting an inappropriate supplier switch."],
+  ["How do I access my plans?", "Sign in with your purchasing account on this web version. Your purchase provides access to planning tools and saved work."],
   ["Is this legal or financial advice?", "No. HomeAdmin provides general admin guidance and draft wording. For regulated or high-stakes issues, check official information or seek qualified advice."],
 ];
 
@@ -78,6 +82,7 @@ export function LandingPage() {
           <div className="hidden md:flex items-center gap-6 text-sm font-semibold text-blue-100/80">
             <a href="#examples" className="hover:text-white transition-colors">Examples</a>
             <a href="#how-it-works" className="hover:text-white transition-colors">How it works</a>
+            <a href="#your-result" className="hover:text-white transition-colors">Your result</a>
             <a href="#support" className="hover:text-white transition-colors">Examples & support</a>
             <a href="#faq" className="hover:text-white transition-colors">FAQ</a>
           </div>
@@ -111,14 +116,38 @@ export function LandingPage() {
             <div className="max-w-2xl mb-10">
               <p className="text-sm font-bold text-primary tracking-wider uppercase mb-2">How it works</p>
               <h2 className="text-3xl md:text-4xl font-extrabold text-slate-900 mb-4">From messy bill to a clear next move.</h2>
-              <p className="text-lg text-slate-600">No generic chat prompt needed. The guided flow asks only for information that improves the result.</p>
+              <p className="text-lg text-slate-600">Start with your saved bill, choose the outcome you want, and follow guided steps. Use your preferred AI or an offline draft, then review the result before saving.</p>
             </div>
             <div className="grid md:grid-cols-4 gap-5">
               <HowCard icon={<MousePointerClick />} number="1" title="Choose the bill" text="Search a provider, payment or household category." />
-              <HowCard icon={<Sparkles />} number="2" title="Choose your goal" text="Check, reduce, renew, cancel, challenge or contact." />
-              <HowCard icon={<FileCheck2 />} number="3" title="Add what you know" text="Useful details are optional. Missing information is highlighted." />
-              <HowCard icon={<MailCheck />} number="4" title="Use the plan" text="Review next steps, provider message and approval checklist." />
+              <HowCard icon={<Sparkles />} number="2" title="Choose your goal" text="Reduce, renew, check a charge, cancel or prepare a provider reply." />
+              <HowCard icon={<FileCheck2 />} number="3" title="Add bill details" text="Include cost, provider, dates and terms when known. Choose your AI route." />
+              <HowCard icon={<MailCheck />} number="4" title="Review and act" text="Check the options, estimated difference, next action and editable letter." />
             </div>
+          </div>
+        </section>
+
+        <section id="your-result" aria-labelledby="result-heading" className="bg-slate-950 text-white">
+          <div className="max-w-6xl mx-auto px-5 sm:px-6 py-16 md:py-20">
+            <p className="text-sm font-bold text-cyan-300 tracking-wider uppercase mb-2">The main HomeAdmin benefit</p>
+            <h2 id="result-heading" className="text-3xl md:text-4xl font-extrabold max-w-3xl">From one household bill to a clear decision and a ready-to-edit message.</h2>
+            <p className="mt-4 max-w-3xl text-lg text-slate-300">Your saved details inform the AI request. HomeAdmin organises the response for review; you remain responsible for checking any prices and terms before acting.</p>
+            <div className="mt-10 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+              {[
+                ["01", "Your current cost", "See your entered monthly and annual bill estimate where enough information is available."],
+                ["02", "Alternatives and evidence", "Review suitable options, dated provider links and any missing information. Prices are not independently verified."],
+                ["03", "Estimated difference", "Compare monthly totals and one-off fees over a chosen period, using offers you have checked."],
+                ["04", "Your next action", "Read the recommended steps, edit the provider email or letter, and approve the final text yourself."],
+              ].map(([number, title, description]) => (
+                <div key={number} className="rounded-2xl border border-slate-700 bg-slate-900 p-5">
+                  <span className="text-sm font-black text-cyan-300">{number}</span>
+                  <h3 className="mt-3 text-lg font-bold text-white">{title}</h3>
+                  <p className="mt-2 text-sm leading-relaxed text-slate-300">{description}</p>
+                </div>
+              ))}
+            </div>
+            <p className="mt-6 text-sm text-slate-300">Example workflow only. No live offer, saving, supplier switch or provider response is guaranteed.</p>
+            <a href="#app" className="mt-6 inline-flex min-h-[48px] items-center rounded-xl bg-white px-6 py-3 font-bold text-slate-900 hover:bg-cyan-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300">Start with your bill</a>
           </div>
         </section>
 
@@ -188,8 +217,8 @@ export function LandingPage() {
             {[
               ["Privacy-light by design", "No bank connection or mailbox access is required for the core workflow."],
               ["Approval before action", "The app prepares drafts and checklists. It does not send, cancel or purchase for you."],
-              ["Household-bill specific", "Twelve categories and seven goals guide the questions and output."],
-              ["Help when you need support", "Visit the TenaciousPL website for examples, product information and support."],
+              ["Built around real bills", "Separate water and energy routes, including combined gas and electricity, with questions matched to your goal."],
+              ["Choice of AI", "Copilot is the default external AI option. Where available, in-app Gemini drafting requires your consent."],
             ].map(([title, text]) => (
               <div key={title} className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm">
                 <ShieldCheck className="w-8 h-8 text-primary mb-5" />
@@ -230,7 +259,7 @@ export function LandingPage() {
             <ul className="space-y-3">
               <TrustItem text="You decide whether to send, cancel, switch, dispute or purchase." />
               <TrustItem text="High-stakes issues should be checked with the relevant provider or qualified support." />
-              <TrustItem text="Nothing is sent to another AI service automatically." />
+              <TrustItem text="Using an external AI requires your own review and handoff. In-app Gemini requests require explicit consent." />
             </ul>
           </div>
         </section>
@@ -262,8 +291,8 @@ export function LandingPage() {
 
       <AnalyticsConsent />
 
-      <footer className="bg-slate-900 text-slate-400 py-10 text-center text-sm border-t border-slate-800">
-        <div className="max-w-4xl mx-auto px-6">
+      <footer className="bg-slate-900 text-slate-400 py-10 text-sm border-t border-slate-800">
+        <div className="max-w-5xl mx-auto px-6 text-center">
           <p className="mb-2 text-slate-300">Publisher: {publisherName}</p>
           <p className="mb-2 text-slate-300">Legal publisher: {legalPublisherName}</p>
           <p className="mb-4">
@@ -273,12 +302,13 @@ export function LandingPage() {
             </a>
           </p>
           <p className="mb-4">HomeAdmin prepares plans and drafts only. You approve all messages, purchases, cancellations and official decisions.</p>
-          <p className="flex flex-wrap justify-center gap-4 font-semibold text-slate-300">
+          <nav aria-label="Footer links" className="flex flex-wrap items-center justify-center gap-x-6 gap-y-3 font-semibold text-slate-300">
             <a href="#privacy" className="hover:text-white transition-colors">Privacy</a>
             <a href="#terms" className="hover:text-white transition-colors">Terms</a>
             <a href="#account" className="hover:text-white transition-colors">Account & deletion</a>
             <button type="button" onClick={resetAnalyticsConsent} className="hover:text-white transition-colors">Analytics choices</button>
-          </p>
+          </nav>
+          <p className="mt-6 text-xs text-slate-500">HomeAdmin by TenaciousPL. Compare carefully; your final decisions stay yours.</p>
         </div>
       </footer>
     </div>
