@@ -320,10 +320,14 @@ final class LifeAdminUITests: XCTestCase {
         let legacyPrefix = prefix == "homeadmin-backup" ? "lifeadmin-backup" : prefix
         let document = app.cells.matching(
             NSPredicate(format: "label BEGINSWITH[c] %@ OR label BEGINSWITH[c] %@", prefix, legacyPrefix)).firstMatch
-        // The picker can open at Recents on either device family.
-        // Browse is a navigation control on iPhone and sometimes on iPad.
-        let browse = app.buttons["Browse"].firstMatch
-        if browse.exists && browse.isHittable { browse.tap() }
+        // On iPhone, enter Browse before looking for local files.
+        // On iPad, Browse is sometimes already visible in the sidebar.
+        if UIDevice.current.userInterfaceIdiom == .phone {
+            pickerControl("Browse").tap()
+        } else {
+            let browse = app.buttons["Browse"].firstMatch
+            if browse.exists && browse.isHittable { browse.tap() }
+        }
         if !document.waitForExistence(timeout: 5) {
             let local = app.descendants(matching: .any).matching(
                 NSPredicate(format: "label IN %@", ["On My iPhone", "On My iPad"])).firstMatch
