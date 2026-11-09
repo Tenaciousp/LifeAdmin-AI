@@ -381,6 +381,7 @@ const assert = require("node:assert/strict");
     await success.getByLabel('Which bill is it?').selectOption('tv_package');
     await success.getByLabel('What would you like help with?').selectOption('prepare_renewal');
     await success.getByLabel('Bill name', { exact: true }).fill('Synthetic Sky renewal');
+    await success.getByLabel('Bill currency').selectOption('GBP');
     await success.locator('#amount').fill('89.00');
     await success.locator('#billing_frequency').selectOption('Monthly');
     await success.getByRole('button', { name: 'Save bill', exact: true }).click();
