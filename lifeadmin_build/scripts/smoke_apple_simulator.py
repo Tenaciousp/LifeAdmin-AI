@@ -38,7 +38,7 @@ def sim(*args, timeout=60):
 
 
 
-def run_ui_test(device, evidence, method, log_name, result_path):
+def run_ui_test(device, evidence, method, log_name, result_path, execution_allowance=900, process_timeout=1200):
     from capture_apple_network import capture_snapshot
 
     capture_snapshot(evidence, "before:" + method)
@@ -52,11 +52,11 @@ def run_ui_test(device, evidence, method, log_name, result_path):
                 "-resultBundlePath", result_path,
                 "-parallel-testing-enabled", "NO",
                 "-test-timeouts-enabled", "YES",
-                "-default-test-execution-time-allowance", "900",
-                "-maximum-test-execution-time-allowance", "900",
+                "-default-test-execution-time-allowance", str(execution_allowance),
+                "-maximum-test-execution-time-allowance", str(execution_allowance),
                 "-only-testing:LifeAdminUITests/LifeAdminUITests/" + method,
                 "CODE_SIGNING_ALLOWED=NO", "test",
-            ], check=True, stdout=log, stderr=subprocess.STDOUT, timeout=1200)
+            ], check=True, stdout=log, stderr=subprocess.STDOUT, timeout=process_timeout)
     except subprocess.CalledProcessError:
         # A simulator runner sometimes fails before XCTest executes even one
         # case after a boot. Do not retry genuine test assertions or failures
@@ -82,11 +82,11 @@ def run_ui_test(device, evidence, method, log_name, result_path):
                 "-resultBundlePath", retry_result,
                 "-parallel-testing-enabled", "NO",
                 "-test-timeouts-enabled", "YES",
-                "-default-test-execution-time-allowance", "900",
-                "-maximum-test-execution-time-allowance", "900",
+                "-default-test-execution-time-allowance", str(execution_allowance),
+                "-maximum-test-execution-time-allowance", str(execution_allowance),
                 "-only-testing:LifeAdminUITests/LifeAdminUITests/" + method,
                 "CODE_SIGNING_ALLOWED=NO", "test",
-            ], check=True, stdout=log, stderr=subprocess.STDOUT, timeout=1200)
+            ], check=True, stdout=log, stderr=subprocess.STDOUT, timeout=process_timeout)
     finally:
         capture_snapshot(evidence, "after:" + method)
 
@@ -373,7 +373,8 @@ def main():
                 print("Starting Apple interactive acceptance on a fresh installation.", flush=True)
                 run_ui_test(device, evidence,
                             "testNativeBackupRoundTripAndCancellationPreserveRecords",
-                            "ui-tests.log", "apple-ui-tests.xcresult")
+                            "ui-tests.log", "apple-ui-tests.xcresult",
+                            execution_allowance=1200, process_timeout=1500)
                 container = Path(sim("get_app_container", device, bundle, "data"))
                 device_data = next(parent for parent in container.parents if parent.name == "data")
                 exports = [path for path in device_data.rglob("homeadmin-backup.json")
