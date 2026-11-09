@@ -228,6 +228,19 @@ final class LifeAdminUITests: XCTestCase {
         return control
     }
 
+    private func pasteWithNativeMenu(into field: XCUIElement) {
+        // The iOS edit menu sometimes needs a second gesture after WKWebView relaunch.
+        let menu = app.menuItems["Paste"]
+        let button = app.buttons["Paste"]
+        for _ in 0..<2 {
+            field.tap()
+            field.press(forDuration: 1)
+            if menu.waitForExistence(timeout: 3) { menu.tap(); return }
+            if button.waitForExistence(timeout: 3) { button.tap(); return }
+        }
+        XCTFail("Native Paste action did not appear after two edit-menu gestures")
+    }
+
     private func cancelFilePicker(exporting: Bool = false) {
         if exporting {
             _ = pickerControl("Save")
@@ -791,12 +804,7 @@ final class LifeAdminUITests: XCTestCase {
         assertWorkspaceReady()
         let field = app.textFields["Bill or provider"]
         XCTAssertTrue(field.exists)
-        field.tap()
-        field.press(forDuration: 1)
-        let menuPaste = app.menuItems["Paste"]
-        let paste = menuPaste.waitForExistence(timeout: 3) ? menuPaste : app.buttons["Paste"]
-        XCTAssertTrue(paste.waitForExistence(timeout: 10))
-        paste.tap()
+        pasteWithNativeMenu(into: field)
         let pasted = XCTNSPredicateExpectation(
             predicate: NSPredicate(
                 format: "value CONTAINS %@ AND value CONTAINS %@ AND value CONTAINS %@ AND value CONTAINS %@",
@@ -943,12 +951,7 @@ final class LifeAdminUITests: XCTestCase {
         let note = app.textViews["Additional notes"]
         XCTAssertTrue(note.waitForExistence(timeout: 10))
         reveal(note)
-        note.tap()
-        note.press(forDuration: 1)
-        let menuPaste = app.menuItems["Paste"]
-        let paste = menuPaste.waitForExistence(timeout: 3) ? menuPaste : app.buttons["Paste"]
-        XCTAssertTrue(paste.waitForExistence(timeout: 10))
-        paste.tap()
+        pasteWithNativeMenu(into: note)
         let pasted = XCTNSPredicateExpectation(
             predicate: NSPredicate(format: "value == %@", reviewed), object: note)
         XCTAssertEqual(XCTWaiter.wait(for: [pasted], timeout: 10), .completed)
