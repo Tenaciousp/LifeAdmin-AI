@@ -71,7 +71,7 @@ def main():
         sim("bootstatus", device, "-b", timeout=300)
         # Capture the real status bar. Cosmetic clock overrides have stalled
         # simctl before app launch and are not required for native previews.
-        sim("install", device, str(app.resolve()), timeout=120)
+        sim("install", device, str(app.resolve()), timeout=300)
         run_ui_test(device, evidence, "testStoreScreenshots",
                     "store-screenshots.log", str(result))
     except Exception:
