@@ -382,7 +382,7 @@ const assert = require("node:assert/strict");
     await success.getByLabel('What would you like help with?').selectOption('prepare_renewal');
     await success.getByLabel('Bill name', { exact: true }).fill('Synthetic Sky renewal');
     await success.locator('#amount').fill('89.00');
-    await success.getByLabel('Payment frequency', { exact: true }).selectOption('Monthly');
+    await success.locator('#billing_frequency').selectOption('Monthly');
     await success.getByRole('button', { name: 'Save bill', exact: true }).click();
     await success.getByRole('button', { name: 'Renew or negotiate a better deal', exact: true }).click();
     await success.getByRole('radio', { name: /^Get an AI answer directly in HomeAdmin/ }).check();
