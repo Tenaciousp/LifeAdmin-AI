@@ -285,7 +285,7 @@ final class LifeAdminUITests: XCTestCase {
         if checkCurrentLayout {
             let columnWidth = app.textFields["Provider or organisation"].frame.width
             XCTAssertGreaterThan(columnWidth, 0)
-            for label in ["Relevant date", "Next payment date (useful)", "Minimum term ends (useful)"] {
+            for label in ["Relevant date", "Next payment date", "Minimum term ends"] {
                 let date = app.otherElements[label].firstMatch
                 XCTAssertTrue(date.exists)
                 XCTAssertGreaterThan(date.frame.width, 0)
