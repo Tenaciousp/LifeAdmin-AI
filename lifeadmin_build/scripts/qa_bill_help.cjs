@@ -394,7 +394,7 @@ const assert = require("node:assert/strict");
     const resultOverview = success.getByRole('region', { name: 'AI result overview' });
     assert.match(await resultOverview.innerText(), /Request a written renewal quote/);
     assert.match(await resultOverview.innerText(), /Option B: Compare an equivalent package/);
-    assert.match(await resultOverview.innerText(), /No independently verified, dated provider offers/);
+    assert.match(await resultOverview.innerText(), /does not include both a web link and a check date/);
     assert.match(await resultOverview.innerText(), /89\.00/);
     assert.doesNotMatch(await resultOverview.innerText(), /No complete current-cost information was provided/);
     const resultEmail = success.getByRole('region', { name: 'Provider email editor' });
@@ -403,6 +403,9 @@ const assert = require("node:assert/strict");
     assert.match(await success.getByLabel('Plan text', { exact: true }).inputValue(), /best equivalent renewal price in writing/);
     // Switching-eligible synthetic renewal retains the comparison worksheet.
     // The prior water-only scenario deliberately excludes this worksheet.
+    const optionalOffer = success.locator('details').filter({ has: success.getByText('Add a provider offer I have checked (optional)', { exact: true }) });
+    assert.equal(await optionalOffer.evaluate(node => node.open), false, 'Manual comparison should stay optional and initially closed.');
+    await optionalOffer.locator('summary').click();
     const savings = success.getByRole('region', { name: 'Savings comparison worksheet' });
     await savings.waitFor();
     assert.equal(await savings.getByLabel('Current monthly cost (GBP)').inputValue(), '89.00', 'Saved bill amount should prefill the comparison without retyping.');
