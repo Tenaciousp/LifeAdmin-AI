@@ -64,11 +64,10 @@ def main():
     try:
         sim("boot", device)
         sim("bootstatus", device, "-b", timeout=300)
-        if args.device_family == "ipad":
-            # On iPad the first XCTest runner has stalled during simulator
-            # first-boot migration. Complete a clean boot cycle before the
-            # baseline test, without changing or reseeding any app records.
-            restart_simulator(device)
+        # A fresh simulator can stall its first XCTest app launch on either
+        # device family. Complete initial boot migration before the baseline
+        # creates any records; this never uninstalls or reseeds app data.
+        restart_simulator(device)
         method, label, root = cases[0]
         with chdir(root):
             run_ui_test(device, evidence, method, label + ".log", str(evidence / (label + ".xcresult")))
