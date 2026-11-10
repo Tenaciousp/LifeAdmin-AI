@@ -371,7 +371,7 @@ const assert = require("node:assert/strict");
         successfulGenerations.push(route.request().postDataJSON());
         return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({
           subject: '',
-          body: '## Best next action\nRequest a written renewal quote before switching.\n\n## Alternatives to consider\nOption A: Keep the existing supplier. Price not verified.\nOption B: Compare an equivalent package. Live pricing unavailable.\n\n## 6. Editable provider email\nSubject: Request a written renewal offer\nMessage:\nHello, please provide an itemised renewal quotation.',
+          body: '## Best next action\nRequest a written renewal quote before switching.\n\n## Alternatives to consider\nOption A: Keep the existing supplier. Price not verified.\nOption B: Compare an equivalent package. Live pricing unavailable.\n\n## Estimated savings\nNot available: no verified like-for-like prices. Confirm package, ongoing rate, fees and contract length before estimating a saving.\n\n## 6. Editable provider email\nSubject: Request a written renewal offer\nMessage:\nHello, please provide an itemised renewal quotation.',
         }) });
       }
       return route.continue();
@@ -398,6 +398,7 @@ const assert = require("node:assert/strict");
     const resultOverview = success.getByRole('region', { name: 'AI result overview' });
     assert.match(await resultOverview.innerText(), /Request a written renewal quote/);
     assert.match(await resultOverview.innerText(), /Option B: Compare an equivalent package/);
+    assert.match(await resultOverview.innerText(), /Not available: no verified like-for-like prices/, 'Unverified savings must be clearly unavailable, not invented.');
     assert.match(await resultOverview.innerText(), /does not include both a web link and a check date/);
     assert.match(await resultOverview.innerText(), /89\.00/);
     assert.doesNotMatch(await resultOverview.innerText(), /No complete current-cost information was provided/);
