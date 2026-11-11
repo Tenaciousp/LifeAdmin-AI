@@ -26,6 +26,20 @@ function replaceEmail(plan: string, segment: Segment, subject: string, message: 
   const replacement = [segment.header, "Subject: " + subject, "Message:", message.trim(), ""];
   return [...lines.slice(0, segment.start), ...replacement, ...lines.slice(segment.end)].join("\n");
 }
+// Keep the displayed fallback in the saved plan even when the user makes no edits.
+export function planWithProviderEmail(plan: string, provider: string): string {
+  if (locateEmail(plan)) return plan;
+  const safeProvider = provider.trim().slice(0, 120);
+  const fallback: Segment = {
+    start: plan.split("\n").length,
+    end: plan.split("\n").length,
+    header: "## Editable provider email",
+    subject: "Request to review my bill and available options",
+    message: "Hello " + (safeProvider || "Customer Services") + " team,\n\nI am reviewing my current bill and would appreciate details of your best available price and any suitable alternatives. Please confirm the monthly cost, total contract cost, duration, any price increases or charges, and the steps needed to proceed. I would prefer a written, itemised offer before making a decision.\n\nThank you.",
+  };
+  return replaceEmail(plan, fallback, fallback.subject, fallback.message);
+}
+
 export default function PlanEmailEditor({ plan, provider, onChange, onStatus, onError }: {
   plan: string;
   provider: string;
