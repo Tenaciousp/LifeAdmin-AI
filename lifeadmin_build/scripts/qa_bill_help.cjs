@@ -154,6 +154,8 @@ const assert = require("node:assert/strict");
     assert.ok(planText.length > 100, "The generated offline plan should contain actionable content.");
     await page.getByRole("checkbox", { name: /^I have checked the answer/ }).check();
     await page.getByRole("button", { name: "Save reviewed result", exact: true }).click();
+    await page.getByRole("heading", { name: "Editable provider email", exact: true }).waitFor();
+    await page.getByText("Request to review my bill and available options", { exact: false }).waitFor();
     await page.getByRole("heading", { name: "Saved plans (2)", exact: true }).waitFor();
     assert.equal(await page.locator("#saved-plans").getByRole("button", { name: /^Open (plan|reply)$/ }).count(), 2);
     await page.getByRole("button", { name: "Create a plan or message", exact: true }).click();
