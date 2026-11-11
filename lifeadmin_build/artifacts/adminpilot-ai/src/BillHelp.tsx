@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { LoadingSpinner } from "./Feedback";
 import ComparisonWorksheet from "./ComparisonWorksheet";
-import PlanEmailEditor from "./PlanEmailEditor";
+import PlanEmailEditor, { planWithProviderEmail } from "./PlanEmailEditor";
 import PlanResultSummary from "./PlanResultSummary";
 import { recurringCost } from "./lib/offline/bill-overview.mjs";
 import { billCategory } from "./lib/offline/bill-types.mjs";
@@ -155,7 +155,7 @@ export default function BillHelp({ task, onClose, onEdit, onProgress, onSave, on
           <p className="mt-2 text-sm text-slate-600">Editing the answer resets this check. Nothing is sent automatically. Your saved bill details stay unchanged.</p>
         </fieldset>
         {!draft.reviewed && <p className="text-slate-600">Before saving: read your answer, compare the bill details and tick the check above.</p>}
-        <div className="flex flex-wrap gap-3"><button className={secondary} onClick={revise}>Revise the request</button><button className={button} disabled={!draft.reviewed || !draft.body.trim() || draft.output !== "plan" && !draft.subject.trim()} onClick={() => void act(async () => { await onSave(draft, selectedService.name); onDirty(false); })}>Save reviewed result</button></div>
+        <div className="flex flex-wrap gap-3"><button className={secondary} onClick={revise}>Revise the request</button><button className={button} disabled={!draft.reviewed || !draft.body.trim() || draft.output !== "plan" && !draft.subject.trim()} onClick={() => void act(async () => { await onSave(draft.output === "plan" ? { ...draft, body: planWithProviderEmail(draft.body, String(task.details?.provider || task.title || "")) } : draft, selectedService.name); onDirty(false); })}>Save reviewed result</button></div>
       </>}
       <div className="border-t border-slate-200 pt-4"><button className={secondary} onClick={() => void act(saveProgress)}>Save progress for later</button><p className="mt-2 text-slate-600">Use Save progress before leaving unfinished work. Saved progress and results are included in your private bill backup.</p></div>
     </fieldset>
