@@ -38,7 +38,7 @@ def sim(*args, timeout=60):
 
 
 
-def run_ui_test(device, evidence, method, log_name, result_path):
+def run_ui_test(device, evidence, method, log_name, result_path, execution_allowance=900, process_timeout=1200):
     from capture_apple_network import capture_snapshot
 
     capture_snapshot(evidence, "before:" + method)
@@ -52,25 +52,27 @@ def run_ui_test(device, evidence, method, log_name, result_path):
                 "-resultBundlePath", result_path,
                 "-parallel-testing-enabled", "NO",
                 "-test-timeouts-enabled", "YES",
-                "-default-test-execution-time-allowance", "900",
-                "-maximum-test-execution-time-allowance", "900",
+                "-default-test-execution-time-allowance", str(execution_allowance),
+                "-maximum-test-execution-time-allowance", str(execution_allowance),
                 "-only-testing:LifeAdminUITests/LifeAdminUITests/" + method,
                 "CODE_SIGNING_ALLOWED=NO", "test",
-            ], check=True, stdout=log, stderr=subprocess.STDOUT, timeout=1200)
+            ], check=True, stdout=log, stderr=subprocess.STDOUT, timeout=process_timeout)
     except subprocess.CalledProcessError:
-        # A simulator runner sometimes fails before XCTest executes even one
-        # case after a boot. Do not retry genuine test assertions or failures
-        # after any test has run. Preserve the original evidence in all cases.
+        # Retry only simulator startup failures, never a test assertion.
+        # A launch timeout occurs before the app runs; restart preserves all
+        # records installed for upgrade verification.
         output = (evidence / log_name).read_text(errors="replace")
         infrastructure_stall = (
-            "Restarting after unexpected exit, crash, or test timeout" in output
-            and "Executed 0 tests" in output
-            and "Executed 1 test" not in output
-            and "error: -[" not in output
+            ("Restarting after unexpected exit, crash, or test timeout" in output
+             and "Executed 0 tests" in output
+             and "Executed 1 test" not in output
+             and "error: -[" not in output)
+            or ("Timed out while launching application via Xcode" in output
+                and "XCTAssert" not in output)
         )
         if not infrastructure_stall:
             raise
-        print("XCTest runner exited before executing a test; restarting disposable simulator once.", flush=True)
+        print("XCTest startup stalled; restarting disposable simulator once.", flush=True)
         restart_simulator(device)
         retry_result = str(result_path).removesuffix(".xcresult") + "-runner-retry.xcresult"
         with (evidence / (log_name + ".runner-retry")).open("w") as log:
@@ -82,11 +84,11 @@ def run_ui_test(device, evidence, method, log_name, result_path):
                 "-resultBundlePath", retry_result,
                 "-parallel-testing-enabled", "NO",
                 "-test-timeouts-enabled", "YES",
-                "-default-test-execution-time-allowance", "900",
-                "-maximum-test-execution-time-allowance", "900",
+                "-default-test-execution-time-allowance", str(execution_allowance),
+                "-maximum-test-execution-time-allowance", str(execution_allowance),
                 "-only-testing:LifeAdminUITests/LifeAdminUITests/" + method,
                 "CODE_SIGNING_ALLOWED=NO", "test",
-            ], check=True, stdout=log, stderr=subprocess.STDOUT, timeout=1200)
+            ], check=True, stdout=log, stderr=subprocess.STDOUT, timeout=process_timeout)
     finally:
         capture_snapshot(evidence, "after:" + method)
 
@@ -373,7 +375,8 @@ def main():
                 print("Starting Apple interactive acceptance on a fresh installation.", flush=True)
                 run_ui_test(device, evidence,
                             "testNativeBackupRoundTripAndCancellationPreserveRecords",
-                            "ui-tests.log", "apple-ui-tests.xcresult")
+                            "ui-tests.log", "apple-ui-tests.xcresult",
+                            execution_allowance=1200, process_timeout=1500)
                 container = Path(sim("get_app_container", device, bundle, "data"))
                 device_data = next(parent for parent in container.parents if parent.name == "data")
                 exports = [path for path in device_data.rglob("homeadmin-backup.json")

@@ -158,7 +158,7 @@ export default function LocalApp() {
   if (goal === "water_usage") for (const id of ["reading_basis", "meter_reading", "water_usage", "bill_period"]) primaryIds.add(id);
   const primaryFields = fields.filter(field => field.recommended || primaryIds.has(field.id));
   const additionalFields = fields.filter(field => !primaryFields.includes(field));
-  const renderField = (field: any) => <label key={field.id} className="block min-w-0">{field.label}{field.recommended && <span className="text-base text-slate-500"> (useful)</span>}
+  const renderField = (field: any) => <label key={field.id} className="block min-w-0">{field.label}{field.recommended && <span aria-hidden="true" className="text-base text-slate-500"> (useful)</span>}
     {field.type === "select" ? <select id={field.id} aria-invalid={!!fieldErrors[field.id]} aria-describedby={fieldErrors[field.id] ? field.id + "-error" : undefined} className={input + " mt-1"} value={details[field.id] || ""} onChange={event => changeDetail(field.id, event.target.value)}><option value="">Choose if known</option>{field.options?.map((option: string) => <option key={option}>{option}</option>)}</select>
       : field.type === "textarea" ? <textarea id={field.id} aria-invalid={!!fieldErrors[field.id]} aria-describedby={fieldErrors[field.id] ? field.id + "-error" : undefined} className={input + " mt-1"} maxLength={500} rows={3} value={details[field.id] || ""} placeholder={field.placeholder} onChange={event => changeDetail(field.id, event.target.value)} />
       : <input id={field.id} aria-invalid={!!fieldErrors[field.id]} aria-describedby={fieldErrors[field.id] ? field.id + "-error" : undefined} className={input + " mt-1" + (field.type === "date" ? " appearance-none" : "")} type={field.type === "date" ? "date" : "text"} maxLength={500} value={details[field.id] || ""} placeholder={field.placeholder} onChange={event => changeDetail(field.id, event.target.value)} />}
@@ -337,7 +337,7 @@ export default function LocalApp() {
 }
 
 function PlanText({ text }: { text: string }) {
-  return <div className="mt-2 leading-relaxed">{text.replace(/^##\s+(Next steps|Provider message|Things to check|Approval checklist)\s*\n/i, "").split(/\r?\n/).map((line, index) => {
+  return <div role="group" aria-label="Saved plan text" className="mt-2 leading-relaxed">{text.replace(/^##\s+(Next steps|Provider message|Things to check|Approval checklist)\s*\n/i, "").split(/\r?\n/).map((line, index) => {
     const heading = line.match(/^#{1,3}\s+(.+)$/);
     if (heading) return <h4 key={index} className="mt-4 mb-2 font-semibold">{heading[1]}</h4>;
     return line.trim() ? <p key={index} className="my-2 whitespace-pre-wrap break-words">{line.split(/(\[[^\]\n]+\]\(https?:\/\/[^\s)]+\)|https?:\/\/[^\s<>]+)/g).map((part, partIndex) => {

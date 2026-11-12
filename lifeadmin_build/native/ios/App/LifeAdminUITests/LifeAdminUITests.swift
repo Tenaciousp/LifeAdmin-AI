@@ -228,6 +228,19 @@ final class LifeAdminUITests: XCTestCase {
         return control
     }
 
+    private func pasteWithNativeMenu(into field: XCUIElement) {
+        // The iOS edit menu sometimes needs a second gesture after WKWebView relaunch.
+        let menu = app.menuItems["Paste"]
+        let button = app.buttons["Paste"]
+        for _ in 0..<2 {
+            field.tap()
+            field.press(forDuration: 1)
+            if menu.waitForExistence(timeout: 3) { menu.tap(); return }
+            if button.waitForExistence(timeout: 3) { button.tap(); return }
+        }
+        XCTFail("Native Paste action did not appear after two edit-menu gestures")
+    }
+
     private func cancelFilePicker(exporting: Bool = false) {
         if exporting {
             _ = pickerControl("Save")
@@ -285,7 +298,7 @@ final class LifeAdminUITests: XCTestCase {
         if checkCurrentLayout {
             let columnWidth = app.textFields["Provider or organisation"].frame.width
             XCTAssertGreaterThan(columnWidth, 0)
-            for label in ["Relevant date", "Next payment date (useful)", "Minimum term ends (useful)"] {
+            for label in ["Relevant date", "Next payment date", "Minimum term ends"] {
                 let date = app.otherElements[label].firstMatch
                 XCTAssertTrue(date.exists)
                 XCTAssertGreaterThan(date.frame.width, 0)
@@ -320,10 +333,13 @@ final class LifeAdminUITests: XCTestCase {
         let legacyPrefix = prefix == "homeadmin-backup" ? "lifeadmin-backup" : prefix
         let document = app.cells.matching(
             NSPredicate(format: "label BEGINSWITH[c] %@ OR label BEGINSWITH[c] %@", prefix, legacyPrefix)).firstMatch
-        // Export saves to the local location, which need not appear in Recents.
-        // iPad already displays Browse as a sidebar; iPhone uses a Browse tab.
-        if UIDevice.current.userInterfaceIdiom != .pad {
+        // On iPhone, enter Browse before looking for local files.
+        // On iPad, Browse is sometimes already visible in the sidebar.
+        if UIDevice.current.userInterfaceIdiom == .phone {
             pickerControl("Browse").tap()
+        } else {
+            let browse = app.buttons["Browse"].firstMatch
+            if browse.exists && browse.isHittable { browse.tap() }
         }
         if !document.waitForExistence(timeout: 5) {
             let local = app.descendants(matching: .any).matching(
@@ -788,12 +804,7 @@ final class LifeAdminUITests: XCTestCase {
         assertWorkspaceReady()
         let field = app.textFields["Bill or provider"]
         XCTAssertTrue(field.exists)
-        field.tap()
-        field.press(forDuration: 1)
-        let menuPaste = app.menuItems["Paste"]
-        let paste = menuPaste.waitForExistence(timeout: 3) ? menuPaste : app.buttons["Paste"]
-        XCTAssertTrue(paste.waitForExistence(timeout: 10))
-        paste.tap()
+        pasteWithNativeMenu(into: field)
         let pasted = XCTNSPredicateExpectation(
             predicate: NSPredicate(
                 format: "value CONTAINS %@ AND value CONTAINS %@ AND value CONTAINS %@ AND value CONTAINS %@",
@@ -815,6 +826,7 @@ final class LifeAdminUITests: XCTestCase {
     }
 
     func testMessageEditingCancelSaveAndRestart() throws {
+        print("HOMEADMIN_MESSAGE_EDIT_STAGE: initial launch")
         app.launch()
         assertWorkspaceReady()
         let open = app.buttons["Open plan"]
@@ -826,6 +838,7 @@ final class LifeAdminUITests: XCTestCase {
         let subject = app.textFields["Message subject"]
         let body = app.textViews["Message body"]
         reveal(subject)
+        print("HOMEADMIN_MESSAGE_EDIT_STAGE: initial edit form")
         let originalSubject = try XCTUnwrap(subject.value as? String)
         let originalBody = try XCTUnwrap(body.value as? String)
         XCTAssertFalse(originalSubject.isEmpty)
@@ -838,6 +851,7 @@ final class LifeAdminUITests: XCTestCase {
         let cancel = app.buttons["Cancel message edit"]
         reveal(cancel)
         cancel.tap()
+        print("HOMEADMIN_MESSAGE_EDIT_STAGE: cancel original edit")
         reveal(edit)
         edit.tap()
         XCTAssertEqual(subject.value as? String, originalSubject)
@@ -852,6 +866,7 @@ final class LifeAdminUITests: XCTestCase {
         prepareKeyboard(for: body)
         body.typeText(" CI reviewed body 7319")
         closeKeyboard()
+        print("HOMEADMIN_MESSAGE_EDIT_STAGE: edited subject and body")
         let savedSubject = try XCTUnwrap(subject.value as? String)
         let savedBody = try XCTUnwrap(body.value as? String)
         XCTAssertTrue(savedSubject.contains("CI reviewed 7319"))
@@ -859,6 +874,7 @@ final class LifeAdminUITests: XCTestCase {
         let save = app.buttons["Save message"]
         reveal(save)
         save.tap()
+        print("HOMEADMIN_MESSAGE_EDIT_STAGE: saved message")
         XCTAssertTrue(app.staticTexts["Message saved on this device. Nothing was sent."].waitForExistence(timeout: 20))
         app.terminate()
         app.launch()
@@ -872,8 +888,10 @@ final class LifeAdminUITests: XCTestCase {
         reveal(cancel)
         cancel.tap()
 
+        print("HOMEADMIN_MESSAGE_EDIT_STAGE: verified edits after restart")
         // Restore the earlier synthetic backup, then compare all original
         // fields on the host. Unit tests separately check edit isolation.
+        print("HOMEADMIN_MESSAGE_EDIT_STAGE: start backup restore")
         selectExportedBackup()
         confirm(timeout: 30)
         XCTAssertTrue(app.staticTexts["Backup restored on this device."].waitForExistence(timeout: 20))
@@ -886,6 +904,7 @@ final class LifeAdminUITests: XCTestCase {
         edit.tap()
         XCTAssertEqual(subject.value as? String, originalSubject)
         XCTAssertEqual(body.value as? String, originalBody)
+        print("HOMEADMIN_MESSAGE_EDIT_STAGE: backup restored values verified")
         reveal(cancel)
         cancel.tap()
     }
@@ -932,12 +951,7 @@ final class LifeAdminUITests: XCTestCase {
         let note = app.textViews["Additional notes"]
         XCTAssertTrue(note.waitForExistence(timeout: 10))
         reveal(note)
-        note.tap()
-        note.press(forDuration: 1)
-        let menuPaste = app.menuItems["Paste"]
-        let paste = menuPaste.waitForExistence(timeout: 3) ? menuPaste : app.buttons["Paste"]
-        XCTAssertTrue(paste.waitForExistence(timeout: 10))
-        paste.tap()
+        pasteWithNativeMenu(into: note)
         let pasted = XCTNSPredicateExpectation(
             predicate: NSPredicate(format: "value == %@", reviewed), object: note)
         XCTAssertEqual(XCTWaiter.wait(for: [pasted], timeout: 10), .completed)

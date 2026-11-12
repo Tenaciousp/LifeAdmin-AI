@@ -30,7 +30,7 @@ const assert = require("node:assert/strict");
     await page.getByLabel("Bill name", { exact: true }).fill("Water at home");
     await page.getByLabel("Country / region of this bill").selectOption("Canada");
     await page.getByLabel("Bill currency").selectOption("CAD");
-    await page.getByRole("textbox", { name: "Bill amount (useful)", exact: true }).fill("45.00");
+    await page.getByRole("textbox", { name: "Bill amount", exact: true }).fill("45.00");
     await page.getByLabel("Payment frequency").selectOption("Monthly");
     await page.getByLabel("State, province or municipality").fill("Ontario");
     await page.getByLabel("How is your water bill calculated?").selectOption("Metered");

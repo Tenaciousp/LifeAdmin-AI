@@ -13,7 +13,8 @@ concurrency:
 
 jobs:
   verify:
-    runs-on: ubuntu-latest
+    # Playwright 1.56.1 headless shell does not support Ubuntu 26.04.
+    runs-on: ubuntu-24.04
     defaults:
       run:
         working-directory: lifeadmin_build
@@ -129,7 +130,21 @@ jobs:
 
       - name: Compile Android development package
         working-directory: lifeadmin_build/native/android
-        run: ./gradlew assembleDebug testDebugUnitTest --no-daemon
+        shell: bash
+        run: |
+          # Retry only transient Maven rate limits. Never hide compilation or test failures.
+          for attempt in 1 2 3; do
+            set +e
+            ./gradlew assembleDebug testDebugUnitTest --no-daemon 2>&1 | tee "/tmp/homeadmin-gradle-attempt-${attempt}.log"
+            result=${PIPESTATUS[0]}
+            set -e
+            if [ "$result" -eq 0 ]; then exit 0; fi
+            if [ "$attempt" -eq 3 ] || ! grep -Eq 'Received status code 429|HTTP (response code )?429|Too Many Requests' "/tmp/homeadmin-gradle-attempt-${attempt}.log"; then
+              exit "$result"
+            fi
+            echo "Maven rate-limited dependency retrieval. Reattempting after backoff (${attempt}/3)."
+            sleep $((attempt * 30))
+          done
 
       - name: Verify compiled Android customer package
         run: python scripts/verify_android_package.py

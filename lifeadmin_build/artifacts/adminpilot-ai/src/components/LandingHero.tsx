@@ -23,11 +23,11 @@ export function LandingHero() {
           </div>
 
           <h1 className="text-4xl sm:text-5xl md:text-6xl font-extrabold tracking-tight leading-[1.06] max-w-4xl">
-            Your household bills. One place.
+            Your household bills, with a plan for what to do next.
           </h1>
 
           <p className="text-lg sm:text-xl text-blue-100/85 leading-relaxed max-w-2xl">
-            List your household bills, plan your next steps and save useful plans. Prepare provider messages and review every action before sending.
+            Save your bill details, review AI-assisted options and potential savings, then prepare an editable letter or email to your provider. Check every offer before making a decision.
           </p>
 
           <div className="flex flex-col sm:flex-row gap-3 pt-2">
@@ -60,19 +60,20 @@ export function LandingHero() {
               <div className="flex items-center justify-between gap-3 mb-5">
                 <div>
                   <p className="text-xs font-bold text-primary uppercase tracking-wider">HomeAdmin plan</p>
-                  <h2 className="text-xl font-extrabold mt-1">Sky bill too high</h2>
+                  <h2 className="text-xl font-extrabold mt-1">Reviewing a Sky bill</h2>
                 </div>
-                <span className="px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 text-xs font-bold">Ready to review</span>
+                <span className="px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 text-xs font-bold">Illustrative example</span>
               </div>
 
               <div className="space-y-3 text-sm">
-                <PreviewRow number="1" title="Next steps" text="Check the package, contract date and discounts ending." />
-                <PreviewRow number="2" title="Provider message" text="Ask for the cheapest suitable package and written terms." />
-                <PreviewRow number="3" title="Things to check" text="Minimum term, equipment return and bundled discounts." />
-                <PreviewRow number="4" title="Approval checklist" text="Review the price, term and exit fees before agreeing." />
+                <PreviewRow number="1" title="Your bill" text="Review the current package, payment and renewal date." />
+                <PreviewRow number="2" title="Compare options" text="Check equivalent offers, sources, contract lengths and fees." />
+                <PreviewRow number="3" title="Potential difference" text="Estimate the change across your chosen period using checked figures." />
+                <PreviewRow number="4" title="Editable provider email" text="Ask for a competitive renewal quote. Review before sending." />
               </div>
 
-              <a href="https://tenaciouspl.co.uk/#contact" target="_blank" rel="noopener noreferrer" className="mt-5 block rounded-xl bg-slate-900 text-white p-4 font-semibold underline underline-offset-4 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300">
+              <p className="mt-4 text-xs leading-relaxed text-slate-600">Example journey. No live price or saving is shown or independently verified.</p>
+              <a href="https://tenaciouspl.co.uk/#contact" target="_blank" rel="noopener noreferrer" className="mt-4 block rounded-xl bg-slate-900 text-white p-4 font-semibold underline underline-offset-4 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300">
                 Examples and support at tenaciouspl.co.uk
               </a>
             </div>
