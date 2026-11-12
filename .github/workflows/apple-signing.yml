@@ -183,7 +183,7 @@ jobs:
           app="$RUNNER_TEMP/HomeAdmin.xcarchive/Products/Applications/App.app"
           codesign --verify --deep --strict "$app"
           python - <<'PY'
-          import json, os, plistlib, subprocess, zipfile
+          import hashlib, json, os, plistlib, subprocess, zipfile
           from pathlib import Path
           temporary = Path(os.environ["RUNNER_TEMP"])
           info = plistlib.loads((temporary / "HomeAdmin.xcarchive/Products/Applications/App.app/Info.plist").read_bytes())
@@ -192,6 +192,7 @@ jobs:
           assert info["CFBundleVersion"] == str(int(os.environ["APPLE_BUILD_NUMBER"]))
           ipas = list((temporary / "homeadmin-export").glob("*.ipa"))
           assert len(ipas) == 1
+          ipa_sha256 = hashlib.sha256(ipas[0].read_bytes()).hexdigest()
           unpacked = temporary / "verify-export"
           zipfile.ZipFile(ipas[0]).extractall(unpacked)
           apps = list((unpacked / "Payload").glob("*.app"))
@@ -205,6 +206,7 @@ jobs:
           assert signed.get("get-task-allow", False) is False
           (temporary / "homeadmin-export/build-evidence.json").write_text(json.dumps({
               "source_commit": os.environ["GITHUB_SHA"], "build": info["CFBundleVersion"],
+              "ipa_sha256": ipa_sha256,
               "version": info["CFBundleShortVersionString"], "team": "C8T85FCR6R",
               "scope": "Signed build only; not uploaded, installed or accepted by Apple"
           }, indent=2) + "\n")
