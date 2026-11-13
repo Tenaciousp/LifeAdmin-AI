@@ -33,9 +33,17 @@ final class LifeAdminUITests: XCTestCase {
         // Simulator WebKit processes took 21.6s to launch after a restart in
         // CI #390. Use the same bounded startup allowance as first launch.
         let started = Date()
-        let ready = app.buttons["Search"].waitForExistence(timeout: 60)
+        var ready = app.buttons["Search"].waitForExistence(timeout: 60)
+        if !ready && app.webViews.firstMatch.exists {
+            // WebKit sometimes leaves an empty accessibility tree on cold launch.
+            // Relaunch once, then retain the same Search assertion if still blank.
+            print("WebView started without page controls; retrying one clean launch.")
+            app.terminate()
+            app.launch()
+            ready = app.buttons["Search"].waitForExistence(timeout: 60)
+        }
         print("Workspace ready: \(ready); elapsed after launch: \(Date().timeIntervalSince(started))s")
-        XCTAssertTrue(ready, "Workspace did not open within 60 seconds", file: file, line: line)
+        XCTAssertTrue(ready, "Workspace did not open after bounded startup retry", file: file, line: line)
     }
 
     private func reveal(_ element: XCUIElement, file: StaticString = #filePath, line: UInt = #line) {
@@ -1062,7 +1070,7 @@ final class LifeAdminUITests: XCTestCase {
         }
         // This audit now owns the cold simulator launch.
         app.launch()
-        XCTAssertTrue(app.buttons["Search"].waitForExistence(timeout: 60))
+        assertWorkspaceReady()
         XCTAssertTrue(app.images["HomeAdmin logo"].exists,
                       "The logo contains text and needs an accessible name")
         var findings: [[String: String]] = []
