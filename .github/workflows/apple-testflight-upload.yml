@@ -13,16 +13,19 @@ on:
           - upload
           - diagnose
       signed_run_id:
-        description: Successful HomeAdmin manual signed-build run ID
-        required: false
+        description: Successful HomeAdmin manual signed-build run ID (Build 3 default; change for future builds)
+        required: true
+        default: '43436275455'
         type: string
       source_commit:
         description: Exact 40-character main commit signed by that run
-        required: false
+        required: true
+        default: '22e3ef50cf5aee0ecf507af38bbd2bb1ba4605d9'
         type: string
       build_number:
         description: Version 1.0 build number in the signed artifact
-        required: false
+        required: true
+        default: '3'
         type: string
 
 permissions:
