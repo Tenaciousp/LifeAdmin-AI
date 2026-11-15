@@ -581,9 +581,11 @@ def main():
                     if directory == "accessibility-attachments":
                         attachment_dir = evidence / directory
                         for report in sorted(attachment_dir.glob("*.txt")):
-                            if "accessibility findings" not in report.name.lower():
-                                continue
                             details = report.read_text(errors="replace")
+                            # XCTest exports attachment filenames as UUIDs.
+                            # Find the JSON payload by content, not filename.
+                            if '"audit_type"' not in details or '"stage"' not in details:
+                                continue
                             print("Apple accessibility attachment " + report.name +
                                   ":\\n" + details[:12000], flush=True)
                 except (OSError, subprocess.TimeoutExpired) as error:
