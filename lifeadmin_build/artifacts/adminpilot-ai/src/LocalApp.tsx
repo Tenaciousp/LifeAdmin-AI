@@ -300,14 +300,14 @@ export default function LocalApp() {
       {ready && <>
       <fieldset disabled={busy} className="min-w-0 space-y-6 border-0 p-0" aria-busy={busy}>
         <section aria-labelledby="start-here-heading" className="rounded-2xl border-2 border-violet-200 bg-white p-5 shadow-sm">
-          <p className="font-semibold text-violet-800">Start here</p>
+          <p className="font-semibold text-violet-800">{snapshot.tasks.length ? "Your next step" : "Start here"}</p>
           <h2 id="start-here-heading" className="mt-1 text-2xl font-bold text-slate-950">Get help with a household bill</h2>
-          <p className="mt-2 text-slate-700">You do not need to know how to use AI. HomeAdmin will help you gather the details, prepare a question, check the answer and save your next step. Nothing is sent to a provider without your action.</p>
-          <ol className="mt-4 grid gap-3 sm:grid-cols-3">
+          <p className="mt-2 text-slate-700">{snapshot.tasks.length ? "Choose a saved bill to get AI assistance, or add another. All your bills and previous results remain available." : "First time here? Save one household bill, then HomeAdmin will help you ask AI for guidance and save a useful result. Nothing is sent to a provider without your action."}</p>
+          <details className="mt-4 rounded-xl border border-violet-100 p-3" open={snapshot.tasks.length === 0 ? true : undefined}><summary className="min-h-[44px] cursor-pointer py-2 font-semibold text-violet-900">How HomeAdmin works: three simple steps</summary><ol className="mt-3 grid gap-3 sm:grid-cols-3">
             <li className="rounded-xl bg-violet-50 p-3"><strong className="block text-violet-950">1. Save a bill</strong><span className="mt-1 block text-slate-700">Choose electricity, gas, TV, broadband or another bill. Add the details you know.</span></li>
             <li className="rounded-xl bg-violet-50 p-3"><strong className="block text-violet-950">2. Ask for help</strong><span className="mt-1 block text-slate-700">Choose to save money, understand a charge or prepare a message. Follow the prompts.</span></li>
             <li className="rounded-xl bg-violet-50 p-3"><strong className="block text-violet-950">3. Keep your answer</strong><span className="mt-1 block text-slate-700">Review suggestions and any prices, edit your letter, save the result and set a reminder.</span></li>
-          </ol>
+          </ol></details>
           <div className="mt-4 flex flex-wrap gap-3">
             <a className={button + " inline-flex items-center"} href="#bill-entry" onClick={addEntry}>{snapshot.tasks.length ? "Add another bill" : "Add my first bill"}</a>
             {snapshot.tasks.length > 0 && <a className="inline-flex min-h-[44px] items-center rounded-xl border border-violet-300 bg-white px-4 py-2 font-semibold text-violet-900" href="#saved-bills">Choose a saved bill</a>}
