@@ -20,7 +20,7 @@ export default function SavedResults({ plans, tasks, query, billId, kind, onQuer
   const reset = () => { onQuery(""); onBill(""); onKind(""); };
   return <section id="saved-plans" aria-labelledby="saved-results-heading" className="rounded-2xl border border-violet-100 bg-white p-[20px] shadow-sm">
     <h2 id="saved-results-heading" tabIndex={-1} className="text-xl font-bold focus-visible:outline focus-visible:outline-2 focus-visible:outline-violet-700">{`Saved plans (${plans.length})`}</h2>
-    <p className="mt-2 text-slate-600">Your plans, letters and replies, newest first. Each result stays linked to its bill. Saving or copying a message does not send it.</p>
+    <p className="mt-2 text-slate-700">This is where your finished AI answers and letters are kept. Choose Open to read or edit a saved result. Choose Delete only if you no longer need it. Saving or copying a message never sends it to a provider.</p>
     {plans.length > 0 ? <>
       <div className="mt-4 grid gap-3 sm:grid-cols-2">
         <label>Search saved results<input className={control + " mt-1"} value={query} onChange={event => onQuery(event.target.value)} placeholder="Title, message subject, bill or provider" /></label>
