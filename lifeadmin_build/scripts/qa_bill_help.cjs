@@ -325,6 +325,7 @@ const assert = require("node:assert/strict");
     await recovery.getByLabel('What would you like help with?').selectOption('check_bill');
     await recovery.getByLabel('Bill name', { exact: true }).fill('Synthetic AI recovery bill');
     await recovery.getByRole('button', { name: 'Save bill', exact: true }).click();
+    await recovery.locator('summary').filter({ hasText: 'More ways to get help' }).click();
     await recovery.getByRole('button', { name: 'Reply to a provider message', exact: true }).click();
     await recovery.getByRole('radio', { name: /^Get an AI answer directly in HomeAdmin/ }).check();
     await recovery.getByRole('button', { name: 'Continue to details', exact: true }).click();
