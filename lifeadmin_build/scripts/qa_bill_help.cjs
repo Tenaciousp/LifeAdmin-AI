@@ -31,7 +31,13 @@ const assert = require("node:assert/strict");
     assert.equal(await page.locator("#bill-form").isVisible(), false,
       "Saving a bill should close entry so the guided next step is not obscured.");
     await page.getByText("What do you want to achieve?", { exact: true }).waitFor();
-    for (const objective of ["Renew or negotiate a better deal", "Compare providers and save money", "Switch or cancel a service", "Query a charge or complain", "Write a price negotiation email", "Reply to a provider message"]) {
+    const moreChoices = page.locator('#bill-help details').filter({ has: page.locator('summary', { hasText: 'More ways to get help' }) });
+    assert.equal(await moreChoices.evaluate(node => node.open), false, 'Additional outcomes start collapsed.');
+    for (const objective of ["Compare providers and save money", "Query a charge or complain", "Write a price negotiation email"]) {
+      assert.equal(await page.getByRole("button", { name: objective, exact: true }).isVisible(), true, 'Main outcomes must be visible.');
+    }
+    await moreChoices.locator('summary').click();
+    for (const objective of ["Renew or negotiate a better deal", "Switch or cancel a service", "Reply to a provider message"]) {
       await page.getByRole("button", { name: objective, exact: true }).waitFor();
     }
     await page.getByRole("button", { name: "Renew or negotiate a better deal", exact: true }).click();
