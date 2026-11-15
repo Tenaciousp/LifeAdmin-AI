@@ -89,7 +89,7 @@ const assert = require("node:assert/strict");
     await page.getByText("Language and writing style", { exact: true }).click();
     await page.locator("label").filter({ hasText: /^Response language/ }).locator("select").selectOption("French");
     await page.getByRole("button", { name: "Review AI request", exact: true }).click();
-    await page.getByRole("heading", { name: "Review, copy and open your AI", exact: true }).waitFor({ timeout: 5000 }).catch(async () => {
+    await page.getByRole("heading", { name: "Let your chosen AI help with this bill", exact: true }).waitFor({ timeout: 5000 }).catch(async () => {
       const alert = await page.getByRole("alert").textContent().catch(() => "no validation message");
       throw new Error("AI request review did not open: " + alert);
     });
