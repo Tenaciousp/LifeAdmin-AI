@@ -119,6 +119,9 @@ jobs:
           run-id: ${{ inputs.signed_run_id }}
           github-token: ${{ github.token }}
           path: ${{ runner.temp }}/signed-build
+          # Extract the single ID-selected artifact directly into signed-build.
+          # Without this, download-artifact nests files beneath the artifact name.
+          merge-multiple: true
 
       - name: Verify signed IPA identity and provenance
         if: inputs.action != 'diagnose'
