@@ -7,6 +7,14 @@ Date: 2026-11-15. Scope: user-provided TestFlight Build 3 feedback and source re
 - Combined gas and electricity, separate water and energy categories, selected external AI (Copilot default), optional direct Gemini only where configured and healthy.
 - User approval before sending information externally, honesty about unverified supplier offers, editable plan and letter, no automatic provider correspondence.
 
+## Accessibility for all experience levels
+- The same primary journey must serve beginners and experienced customers. Do not require a skill-level choice, onboarding account or lengthy tutorial.
+- First visit: open the three-step explanation and offer a single obvious Add bill action.
+- Returning visit: collapse instructional detail, expose direct Help with saved bill shortcuts, keep the same walkthrough available on demand.
+- AI routes: label what each option does, show a concise recommendation without removing user choice, and retain advanced controls behind optional disclosure.
+- Do not add extra confirmation or wizard pages solely to present instructions. Clear next action matters more than volume of text.
+- Test both first-time and returning users, including screen reader and larger-text users, and measure completion and confusion rather than counting visible instructions.
+
 ## Critical customer journey
 B01: Starting from a fresh HomeAdmin install, customer must see **Start here** and understand:
 1. Add one household bill or subscription using their own saved details.
@@ -17,8 +25,8 @@ B01: Starting from a fresh HomeAdmin install, customer must see **Start here** a
 
 ## Acceptance cases (must be tested before Build 4 signing)
 - B01-H1: First-launch 390px and tablet view; three steps visible; add bill action scrolls to entry and opens form.
-- B01-H2: Existing bills show a clear path to the right bill without needing to understand the Plans tab.
-- B01-H3: User chooses a primary outcome; other goals remain available under More ways to get help; selected state visible.
+- B01-H2: Existing bills show direct Help with bill buttons and a clear path to the full list; the explanatory walkthrough is optional and does not block frequent use.
+- B01-H3: User chooses a primary outcome; other goals remain available under More ways to get help; selected state visible. Test both concise and expanded options.
 - B01-H4: External AI instructions clearly explain copy, paste, return and save; no account access or silent sending.
 - B01-H5: Existing plans and draft progress persist through app restart and upgrade, with accurate bill association.
 - B01-H6: Combined gas/electricity example preserves both fuel details, dates, monthly cost and letter context.
