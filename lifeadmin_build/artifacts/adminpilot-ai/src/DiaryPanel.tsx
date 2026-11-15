@@ -52,7 +52,7 @@ export default function DiaryPanel({ tasks }: { tasks: Record<string, any>[] }) 
   }
   return <section className="rounded-2xl border border-violet-100 bg-white p-5 shadow-sm" aria-labelledby="diary-heading">
     <h2 id="diary-heading" className="text-xl font-bold">Contract diary</h2>
-    <p className="mt-3">Add expiry, renewal, cancellation and follow-up dates when editing a bill. Enable diary entries for each bill, then connect a calendar here. Ordinary payment dates are separate.</p>
+    <p className="mt-3 text-slate-700">Keep track of when contracts end or when you need to contact a provider again. First open a bill and add a renewal, cancellation or follow-up date. Next, choose to add that date to your diary. If you want calendar alerts, connect a device calendar below. Dates and reminders are separate from recording a payment.</p>
     <details className="mt-3 rounded-xl border border-violet-100 p-3"><summary className="min-h-[44px] cursor-pointer py-2 font-semibold focus-visible:outline focus-visible:outline-2 focus-visible:outline-violet-700">Calendar privacy and how updates work</summary>
     <p className="mt-3">Entries use neutral titles without provider names or account references. Your selected calendar might sync or be shared through its provider. Permission supports maintaining HomeAdmin entries; unrelated events are not uploaded. Setup is device-specific, so connecting two devices to one calendar risks duplicate entries.</p>
     <p className="mt-3">Updates run while HomeAdmin is open and on reopening. Calendar alerts then follow your calendar settings. Existing entries are not guaranteed to be removed when uninstalling the app. Past dates are not added as new events.</p>
