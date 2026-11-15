@@ -55,7 +55,7 @@ const assert = require("node:assert/strict");
       await page.locator("#bill-help").screenshot({ path: "/tmp/homeadmin-choices-" + width + ".png" });
     }
     await page.getByRole("button", { name: "Reply to a provider message", exact: true }).click();
-    const chosenAi = page.getByRole("radio", { name: /^Use my chosen AI service/ });
+    const chosenAi = page.getByRole("radio", { name: /^Use Copilot or my preferred AI/ });
     await chosenAi.check();
     assert.equal(await page.getByRole("radio", { name: /^Generate a draft in HomeAdmin/ }).count(), 0, "Unavailable in-app AI should not be offered.");
     const provider = page.getByLabel("Your AI service", { exact: false });
