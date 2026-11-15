@@ -394,6 +394,7 @@ const assert = require("node:assert/strict");
     await success.locator('#amount').fill('89.00');
     await success.locator('#billing_frequency').selectOption('Monthly');
     await success.getByRole('button', { name: 'Save bill', exact: true }).click();
+    await success.locator('summary').filter({ hasText: 'More ways to get help' }).click();
     await success.getByRole('button', { name: 'Renew or negotiate a better deal', exact: true }).click();
     await success.getByRole('radio', { name: /^Get an AI answer directly in HomeAdmin/ }).check();
     await success.getByRole('button', { name: 'Continue to details', exact: true }).click();
