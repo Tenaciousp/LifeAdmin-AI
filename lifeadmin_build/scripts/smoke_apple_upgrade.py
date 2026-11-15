@@ -133,7 +133,14 @@ def main():
         for _, label, _ in cases:
             log = evidence / (label + ".log")
             if log.exists():
-                print(label + " diagnostics:\n" + log.read_text(errors="replace")[-12000:], flush=True)
+                diagnostics = log.read_text(errors="replace")
+                failures = [line for line in diagnostics.splitlines()
+                            if ": error:" in line or "failed -" in line
+                            or "HOMEADMIN_MESSAGE_EDIT_STAGE" in line]
+                if failures:
+                    print(label + " failure assertions and stages:\n" +
+                          "\n".join(failures)[-16000:], flush=True)
+                print(label + " diagnostics:\n" + diagnostics[-12000:], flush=True)
             result = evidence / (label + ".xcresult")
             if result.is_dir():
                 try:

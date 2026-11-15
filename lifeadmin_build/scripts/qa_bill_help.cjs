@@ -210,7 +210,8 @@ const assert = require("node:assert/strict");
     await page.getByRole('heading', { name: 'Help with Synthetic water case', exact: true }).waitFor();
     await page.waitForFunction(() => [...document.querySelectorAll('button')].some(button => button.textContent === 'Save bill' && !button.disabled));
     await page.reload();
-    await page.locator('summary').filter({ hasText: 'Manage bill' }).click();
+    await page.getByLabel('Show bills').selectOption('all');
+    await page.getByRole('button', { name: 'Delete bill', exact: true }).first().waitFor();
     await page.getByRole('button', { name: 'Edit', exact: true }).click();
     assert.equal(await page.getByLabel('Follow-up date', { exact: true }).inputValue(), '2027-04-20');
     // A household with more than five dates must reach every date and its guided help.

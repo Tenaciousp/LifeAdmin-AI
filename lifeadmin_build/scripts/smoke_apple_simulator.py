@@ -575,6 +575,19 @@ def main():
                             "xcrun", "xcresulttool", "export", "attachments",
                             "--path", bundle, "--output-path", str(evidence / directory),
                         ], stdout=log, stderr=subprocess.STDOUT, timeout=60, check=False)
+                    # XCTest writes detailed audit findings as text attachments.
+                    # Surface them in CI logs so the exact failing element can
+                    # be fixed without disabling or bypassing the Apple audit.
+                    if directory == "accessibility-attachments":
+                        attachment_dir = evidence / directory
+                        for report in sorted(attachment_dir.glob("*.txt")):
+                            details = report.read_text(errors="replace")
+                            # XCTest exports attachment filenames as UUIDs.
+                            # Find the JSON payload by content, not filename.
+                            if '"audit_type"' not in details or '"stage"' not in details:
+                                continue
+                            print("Apple accessibility attachment " + report.name +
+                                  ":\\n" + details[:12000], flush=True)
                 except (OSError, subprocess.TimeoutExpired) as error:
                     print("XCTest attachment export failed: " + str(error), flush=True)
         subprocess.run(["xcrun", "simctl", "shutdown", device], check=False, timeout=60)
