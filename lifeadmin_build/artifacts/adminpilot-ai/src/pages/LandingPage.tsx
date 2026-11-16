@@ -80,14 +80,14 @@ export function LandingPage() {
             HomeAdmin
           </a>
           <div className="hidden md:flex items-center gap-6 text-sm font-semibold text-blue-100/80">
-            <a href="#examples" className="hover:text-white transition-colors">Examples</a>
+            <a href="#benefits" className="hover:text-white transition-colors">What you get</a>
             <a href="#how-it-works" className="hover:text-white transition-colors">How it works</a>
-            <a href="#your-result" className="hover:text-white transition-colors">Your result</a>
-            <a href="#support" className="hover:text-white transition-colors">Examples & support</a>
+            <a href="#your-result" className="hover:text-white transition-colors">AI assistance</a>
+            <a href="#support" className="hover:text-white transition-colors">Support</a>
             <a href="#faq" className="hover:text-white transition-colors">FAQ</a>
           </div>
           <a href="#app" className="min-h-[44px] inline-flex items-center bg-white text-slate-900 hover:bg-blue-50 px-4 py-2 rounded-full text-sm font-bold transition-colors">
-            Start with a bill
+            Explore the app
           </a>
         </div>
       </nav>
@@ -98,8 +98,8 @@ export function LandingPage() {
         <section id="examples" className="max-w-6xl mx-auto px-5 sm:px-6 py-16 md:py-20">
           <div className="text-center max-w-3xl mx-auto mb-10">
             <p className="text-sm font-bold text-primary tracking-wider uppercase mb-2">Start with the problem you have</p>
-            <h2 className="text-3xl md:text-4xl font-extrabold text-slate-900 mb-4">Built around the household admin people actually put off.</h2>
-            <p className="text-lg text-slate-600">Search for the provider, bill or payment. HomeAdmin suggests the bill type and the most useful goal, then you stay in control.</p>
+            <h2 className="text-3xl md:text-4xl font-extrabold text-slate-900 mb-4">From energy to streaming, keep every household bill on your list.</h2>
+            <p className="text-lg text-slate-600">Track subscriptions and recurring bills, then choose the one you want to review. These examples show common questions HomeAdmin helps you prepare, not automatically completed provider actions.</p>
           </div>
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
             {examples.map((example) => (
@@ -115,14 +115,14 @@ export function LandingPage() {
           <div className="max-w-6xl mx-auto px-5 sm:px-6 py-16 md:py-20">
             <div className="max-w-2xl mb-10">
               <p className="text-sm font-bold text-primary tracking-wider uppercase mb-2">How it works</p>
-              <h2 className="text-3xl md:text-4xl font-extrabold text-slate-900 mb-4">From messy bill to a clear next move.</h2>
-              <p className="text-lg text-slate-600">Start with your saved bill, choose the outcome you want, and follow guided steps. Use your preferred AI or an offline draft, then review the result before saving.</p>
+              <h2 className="text-3xl md:text-4xl font-extrabold text-slate-900 mb-4">One guided process, whatever your experience with AI.</h2>
+              <p className="text-lg text-slate-600">Start with a bill, tell HomeAdmin your goal and follow plain-language steps. Use Copilot or another preferred AI service, or prepare an offline draft. With external AI, HomeAdmin prepares a request for you to copy, then you bring the answer back for review.</p>
             </div>
             <div className="grid md:grid-cols-4 gap-5">
-              <HowCard icon={<MousePointerClick />} number="1" title="Choose the bill" text="Search a provider, payment or household category." />
-              <HowCard icon={<Sparkles />} number="2" title="Choose your goal" text="Reduce, renew, check a charge, cancel or prepare a provider reply." />
-              <HowCard icon={<FileCheck2 />} number="3" title="Add bill details" text="Include cost, provider, dates and terms when known. Choose your AI route." />
-              <HowCard icon={<MailCheck />} number="4" title="Review and act" text="Check the options, estimated difference, next action and editable letter." />
+              <HowCard icon={<MousePointerClick />} number="1" title="Keep a bill" text="Record the provider, amount, renewal date and details you know." />
+              <HowCard icon={<Sparkles />} number="2" title="Pick what you need" text="Ask about alternatives, challenge a charge or prepare a provider email." />
+              <HowCard icon={<FileCheck2 />} number="3" title="Follow the AI steps" text="Use your preferred AI with a prepared prompt, or choose available in-app or offline assistance." />
+              <HowCard icon={<MailCheck />} number="4" title="Save your next action" text="Check suggestions and provider prices, edit your letter, save the answer and set a follow-up." />
             </div>
           </div>
         </section>
@@ -130,8 +130,8 @@ export function LandingPage() {
         <section id="your-result" aria-labelledby="result-heading" className="bg-slate-950 text-white">
           <div className="max-w-6xl mx-auto px-5 sm:px-6 py-16 md:py-20">
             <p className="text-sm font-bold text-cyan-300 tracking-wider uppercase mb-2">The main HomeAdmin benefit</p>
-            <h2 id="result-heading" className="text-3xl md:text-4xl font-extrabold max-w-3xl">From one household bill to a clear decision and a ready-to-edit message.</h2>
-            <p className="mt-4 max-w-3xl text-lg text-slate-300">Your saved details inform the AI request. HomeAdmin organises the response for review; you remain responsible for checking any prices and terms before acting.</p>
+            <h2 id="result-heading" className="text-3xl md:text-4xl font-extrabold max-w-3xl">More than a bill list: get a plan and words to contact your provider.</h2>
+            <p className="mt-4 max-w-3xl text-lg text-slate-300">HomeAdmin uses the bill details you enter to prepare questions for AI and organise your next steps. Check suggested providers, official offer sources and dates yourself. The app does not verify live tariffs or contact providers automatically.</p>
             <div className="mt-10 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
               {[
                 ["01", "Your current cost", "See your entered monthly and annual bill estimate where enough information is available."],
@@ -147,7 +147,7 @@ export function LandingPage() {
               ))}
             </div>
             <p className="mt-6 text-sm text-slate-300">Example workflow only. No live offer, saving, supplier switch or provider response is guaranteed.</p>
-            <a href="#app" className="mt-6 inline-flex min-h-[48px] items-center rounded-xl bg-white px-6 py-3 font-bold text-slate-900 hover:bg-cyan-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300">Start with your bill</a>
+            <a href="#app" className="mt-6 inline-flex min-h-[48px] items-center rounded-xl bg-white px-6 py-3 font-bold text-slate-900 hover:bg-cyan-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300">Explore HomeAdmin</a>
           </div>
         </section>
 
@@ -208,24 +208,28 @@ export function LandingPage() {
         </div>
 
         <section id="benefits" className="max-w-6xl mx-auto px-5 sm:px-6 py-16 md:py-20">
-          <div className="max-w-2xl mb-10">
-            <p className="text-sm font-bold text-primary tracking-wider uppercase mb-2">You stay in control</p>
-            <h2 className="text-3xl md:text-4xl font-extrabold text-slate-900 mb-4">Useful enough to act on. Cautious enough to review first.</h2>
-            <p className="text-lg text-slate-600">HomeAdmin is designed for everyday household administration without asking for broad access to your financial or communication accounts.</p>
+          <div className="max-w-3xl mb-10">
+            <p className="text-sm font-bold text-primary tracking-wider uppercase mb-2">What HomeAdmin helps you do</p>
+            <h2 className="text-3xl md:text-4xl font-extrabold text-slate-900 mb-4">Three practical benefits. One place to start.</h2>
+            <p className="text-lg text-slate-600">A personal list of bills is only the beginning. HomeAdmin helps you understand what to check, ask better questions and take your next step with confidence.</p>
           </div>
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-5">
+          <div className="grid md:grid-cols-3 gap-5">
             {[
-              ["Privacy-light by design", "No bank connection or mailbox access is required for the core workflow."],
-              ["Approval before action", "The app prepares drafts and checklists. It does not send, cancel or purchase for you."],
-              ["Built around real bills", "Separate water and energy routes, including combined gas and electricity, with questions matched to your goal."],
-              ["Choice of AI", "Copilot is the default external AI option. Where available, in-app Gemini drafting requires your consent."],
-            ].map(([title, text]) => (
-              <div key={title} className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm">
-                <ShieldCheck className="w-8 h-8 text-primary mb-5" />
-                <h3 className="text-lg font-bold text-slate-900 mb-2">{title}</h3>
-                <p className="text-slate-600 text-sm leading-relaxed">{text}</p>
-              </div>
+              ["1", "Keep every bill organised", "Record utilities, broadband, insurance, TV, mobile and subscriptions. Keep costs, renewal dates and reminders together.", "Open a bill whenever you need to review, edit or remove it."],
+              ["2", "Get help from your chosen AI", "Select whether to look for better value, query a charge or prepare a message. HomeAdmin prepares the AI question and explains how to use the answer.", "Copilot is the default external option. External responses need your review."],
+              ["3", "Prepare your next move", "Bring AI suggestions back, compare customer-checked figures, save a plan and edit a letter or email to your provider.", "You check prices and send correspondence yourself."]
+            ].map(([number, title, description, detail]) => (
+              <article key={title} className="rounded-2xl border border-violet-100 bg-white p-6 shadow-sm">
+                <span className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-violet-100 font-black text-violet-900">{number}</span>
+                <h3 className="mt-5 text-xl font-extrabold text-slate-900">{title}</h3>
+                <p className="mt-3 text-slate-700 leading-relaxed">{description}</p>
+                <p className="mt-4 border-t border-slate-100 pt-4 text-sm text-slate-600">{detail}</p>
+              </article>
             ))}
+          </div>
+          <div className="mt-8 rounded-2xl border border-teal-200 bg-teal-50 p-5 md:p-6">
+            <h3 className="text-xl font-bold text-slate-900">Built for first-time and experienced AI users</h3>
+            <p className="mt-2 max-w-4xl text-slate-700">New to AI? Follow the instructions from your saved bill to a reviewed answer. Already use Copilot, Gemini or another service? Choose your preferred route. You control which information you share and what you do with the result.</p>
           </div>
         </section>
 
