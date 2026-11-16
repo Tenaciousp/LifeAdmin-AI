@@ -75,6 +75,14 @@ def main():
         run_ui_test(device, evidence, "testStoreScreenshots",
                     "store-screenshots.log", str(result))
     except Exception:
+        # Report the XCTest assertion rather than only the outer return code.
+        test_log = evidence / "store-screenshots.log"
+        if test_log.exists():
+            diagnostics = test_log.read_text(errors="replace")
+            failures = [line for line in diagnostics.splitlines()
+                        if ": error:" in line or "failed -" in line or "TEST FAILED" in line]
+            print("Store preview failure assertions:\n" + "\n".join(failures)[-12000:], flush=True)
+            print("Store preview final diagnostics:\n" + diagnostics[-6000:], flush=True)
         # A blank WKWebView has no useful accessibility tree. Preserve its
         # app/WebKit startup logs before deleting the synthetic simulator.
         try:
