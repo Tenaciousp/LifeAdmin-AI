@@ -29,10 +29,10 @@ const faqs = [
   ["Does HomeAdmin contact providers for me?", "No. HomeAdmin prepares editable plans and provider messages. You review and send messages yourself. No provider is contacted automatically."],
   ["Does it connect to my bank or email?", "No bank connection or mailbox access is required for the core workflow. You enter only the details you choose to use."],
   ["What happens if I do not know all the details?", "Start with what you know. Missing figures and contract details stay clearly marked for review. Verified offer comparisons need a valid source, check date and equivalent terms."],
-  ["Does the app find live deals for me?", "HomeAdmin prepares an AI-assisted comparison and a customer-checkable worksheet. It does not independently verify live tariffs or guarantee savings. Open provider source links and check price, eligibility, fees and dates before acting."],
+  ["Does HomeAdmin check live prices?", "No. HomeAdmin helps prepare an AI-assisted comparison and an editable worksheet, but it does not independently check current provider offers or guarantee savings. Check prices, eligibility, fees and dates with the provider before acting."],
   ["Which AI service do I need?", "Microsoft Copilot is the default external AI choice. You may use another preferred AI service. Where an in-app Gemini draft is available, HomeAdmin requests explicit consent before sharing your chosen bill details."],
   ["What about gas, electricity and water?", "Combined gas and electricity (dual fuel) and separate energy bills are supported. Water bills have their own review and query journey rather than suggesting an inappropriate supplier switch."],
-  ["How do I access my plans?", "Sign in with your purchasing account on this web version. Your purchase provides access to planning tools and saved work."],
+  ["Do I need an account?", "The iPhone and iPad app is designed without compulsory sign-in, with records stored on your device. This separate web version uses a purchasing account for access to its own saved planning tools."],
   ["Is this legal or financial advice?", "No. HomeAdmin provides general admin guidance and draft wording. For regulated or high-stakes issues, check official information or seek qualified advice."],
 ];
 
