@@ -1,25 +1,8 @@
 import { money } from "./lib/offline/bill-overview.mjs";
-
-function section(text: string, names: RegExp): string {
-  const lines = text.split("\n");
-  const first = lines.findIndex(line => {
-    const heading = line.trim().match(/^#{1,4}\s+(?:\d+[.):]\s*)?(.+)$/);
-    return Boolean(heading && names.test(heading[1].trim()));
-  });
-  if (first < 0) return "";
-  let end = lines.length;
-  for (let i = first + 1; i < lines.length; i++) {
-    if (/^\s*#{1,4}\s+\S/.test(lines[i])) { end = i; break; }
-  }
-  return lines.slice(first + 1, end).join("\n").trim();
-}
+import { extractPlanSections } from "./lib/offline/plan-sections.mjs";
 
 export default function PlanResultSummary({ plan, savedCost }: { plan: string; savedCost?: { monthly: number; yearly: number; currency: string } | null }) {
-  const bill = section(plan, /^(?:My bill at a glance|Current bill|Current cost)$/i);
-  const recommendation = section(plan, /^(?:Best next action|My first next step|Recommended action)$/i);
-  const alternatives = section(plan, /^(?:Alternatives to consider|Comparison of alternatives|Provider comparison)$/i);
-  const actionList = section(plan, /^(?:My action list|Action list|Next steps)$/i);
-  const estimatedSavings = section(plan, /^(?:Estimated savings|Estimated saving|Potential savings|Potential saving)$/i);
+  const { bill, recommendation, alternatives, actions: actionList, savings: estimatedSavings } = extractPlanSections(plan);
   const customerChecked = /Savings comparison \(customer-checked source, not independently verified by HomeAdmin\)/i.test(plan);
   const reviewedDifferences = customerChecked ? [...plan.matchAll(/(\d{1,2})-month difference: ([^\n]{1,100}) \((saving|additional cost)\)/gi)].slice(0, 3).map((match) => ({ months: match[1], value: match[2], direction: match[3] })) : [];
   const hasSourceEvidence = /https:\/\/[^\s)\]]+/i.test(alternatives) && /(?:checked|verified|as of|accessed)\s*(?:on\s*)?\d{1,4}[\/-]\d{1,2}[\/-]\d{1,4}/i.test(alternatives);
