@@ -29,3 +29,16 @@ Validation: type checks pass. Production local build/bundle checks, 80 offline t
 ## 2026-10-29: AI recovery and native preview gesture
 
 Baseline #17 at 5d01f939. Add direct chosen-AI and offline recovery from the in-app generation screen, preserving request context and resetting consent. 80 offline tests, type checks, production build/bundle and the expanded synthetic browser journey pass, including HTTP 429 recovery and accessibility at 100%/200% text. Move bounded native reveal drags to the gutter after the store-preview failure screenshot showed text selection. The native change requires fresh Apple CI. The user now authorises validated deployment/live AI integration; update the published privacy disclosure and verify real provider responses before claiming readiness or 9/10 quality. Details: ai-recovery-and-preview.md.
+
+
+## 2026-11-17: Build 6A structured saved AI results
+
+Baseline: TestFlight Build 5 commit e944bc3011e4f8bfdc6edf581c157e754f7a44ee. Scope: implement the highest-impact post-Build 5 recommendation without changing the approved bill-entry, privacy or AI-choice model.
+
+Implementation: save recognised AI plan content under current bill, recommended action, action list, alternatives and potential savings. Reopened external-AI plans use the existing structured result summary, retain the full original response in a disclosure and show the approval checklist separately. Build 5 saved AI plans receive the same presentation by parsing their retained original content. Offline plans keep their prior readable body and approval checklist.
+
+Preservation: no storage migration, dependency, branding, provider-choice, consent, bill-record or backup-format change. Letters and replies retain their existing save and reopen behaviour. Copying a structured saved plan includes the original AI response once, followed by safety checks, without duplicated sections.
+
+Validation: 22 targeted Node tests pass, including structured persistence, unstructured-content safety and offline-plan compatibility. Frontend and API type checks pass. The complete synthetic bill-help browser journey passes after save, reload and reopen, including structured overview content, safe links, chosen-AI recovery, private-reference exclusion, 200% phone/tablet text and no unapproved external requests.
+
+Remaining: live provider response quality, source verification and installed-device acceptance remain separate gates. Build 6A does not establish the overall 9/10 quality target or authorise deployment.

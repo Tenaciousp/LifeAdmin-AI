@@ -37,3 +37,14 @@ export function extractPlanSections(text) {
   flush();
   return sections;
 }
+
+export function storedPlanSections(text) {
+  const parsed = extractPlanSections(text);
+  return Object.fromEntries([
+    ["current_bill", parsed.bill],
+    ["recommended_action", parsed.recommendation],
+    ["action_list", parsed.actions],
+    ["alternatives", parsed.alternatives],
+    ["potential_savings", parsed.savings],
+  ].filter(([, value]) => value));
+}
