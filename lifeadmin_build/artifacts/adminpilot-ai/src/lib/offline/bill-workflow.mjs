@@ -1,6 +1,7 @@
 import { promptFields, taskAiPrompt } from "./ai-handoff.mjs";
 import { billCategory, customerCatalog, goalsFor } from "./bill-types.mjs";
 import { generateLocalResult, missingDetails, safetyNotices } from "./plans.mjs";
+import { storedPlanSections } from "./plan-sections.mjs";
 
 export const outputs = [{ id: "plan", label: "Make a plan", description: "Get a short action list, an explained plan and suitable alternatives." }, { id: "letter", label: "Write a letter or email", description: "Ask for a better price, query a charge or make a request." }, { id: "reply", label: "Reply to my provider", description: "Paste a message you received and prepare a reply." }];
 export const tones = ["Polite and clear", "Firm and factual", "Short and friendly"];
@@ -60,11 +61,12 @@ export function workflowResult(task, draft, service = "") {
   const isPlan = draft.output === "plan";
   const notices = safetyNotices(task);
   const safety = "Check the supplied facts and current local provider terms. Remove remaining placeholders. Nothing has been sent or agreed automatically." + (notices.length ? "\n" + notices.join("\n") : "");
+  const planSections = isPlan ? (draft.method === "local" ? { next_steps: draft.body } : storedPlanSections(draft.body)) : {};
   return {
     id: globalThis.crypto.randomUUID(), task_id: task.id, title: (task.title + " · " + ({ plan: "Plan", letter: "Letter", reply: "Reply" }[draft.output])).slice(0, 160),
     category_id: billCategory(task), created_at: new Date().toISOString(), source: draft.method === "local" ? "local" : draft.method === "gemini_api" ? "external_ai_api" : "external_ai_manual",
     workflow_output: draft.output, ai_service: draft.method === "local" ? "" : draft.method === "gemini_api" ? "Google Gemini API" : service, content: draft.body,
-    sections: isPlan ? { next_steps: draft.body, approval_checklist: safety } : { next_steps: "Copy the reviewed message and send through the provider's official contact route yourself. Keep their response with this bill and add a follow-up date if needed.", approval_checklist: safety },
+    sections: isPlan ? { ...planSections, approval_checklist: safety } : { next_steps: "Copy the reviewed message and send through the provider's official contact route yourself. Keep their response with this bill and add a follow-up date if needed.", approval_checklist: safety },
     provider_email: isPlan ? null : { subject: draft.subject, body: draft.body, kind: "provider" },
     known_details: { ...task.details }, missing_details: missingDetails(task),
   };

@@ -60,6 +60,26 @@ test("reviewed results retain preparation source and never mark the bill paid or
   assert.equal(initialWorkflow({ ...bill, workflow_draft: { method: "gemini_api" } }).method, "gemini_api");
   assert.deepEqual(bill, before);
 });
+test("reviewed AI plans retain structured results for reopening and backup", () => {
+  const body = "## My bill at a glance\nCAD 45 monthly\n## My action list\n1. Check the meter reading\n## Alternatives to consider\nAsk about billing support\n## Estimated savings\nNot available: no verified like-for-like prices\n## My first next step\nSend the reading to Example Water";
+  const note = workflowResult(bill, { ...draft("plan"), body }, "Copilot");
+  assert.equal(note.content, body);
+  assert.deepEqual(note.sections, {
+    current_bill: "CAD 45 monthly",
+    recommended_action: "Send the reading to Example Water",
+    action_list: "1. Check the meter reading",
+    alternatives: "Ask about billing support",
+    potential_savings: "Not available: no verified like-for-like prices",
+    approval_checklist: note.sections.approval_checklist,
+  });
+  assert.match(note.sections.approval_checklist, /Nothing has been sent/);
+});
+test("offline plans retain their complete readable body", () => {
+  const note = workflowResult(bill, { ...draft("plan"), method: "local" });
+  assert.equal(note.content, "Reviewed result");
+  assert.equal(note.sections.next_steps, "Reviewed result");
+  assert.match(note.sections.approval_checklist, /Nothing has been sent/);
+});
 test("empty, oversized and unreviewed results fail instead of silently truncating", () => {
   for (const patch of [{ reviewed: false }, { body: "" }, { body: "x".repeat(20001) }, { subject: "" }, { subject: "x".repeat(201) }, { output: "unknown" }, { method: "unknown" }]) assert.throws(() => workflowResult(bill, { ...draft("letter"), ...patch }));
 });

@@ -4,7 +4,7 @@ const { chromium } = require("playwright");
 const assert = require("node:assert/strict");
 
 (async () => {
-  const browser = await chromium.launch({ headless: true, args: ["--no-sandbox"] });
+  const browser = await chromium.launch({ headless: true, args: ["--no-sandbox"], ...(process.env.HOMEADMIN_CHROMIUM_PATH ? { executablePath: process.env.HOMEADMIN_CHROMIUM_PATH } : {}) });
   try {
     const page = await browser.newPage({ viewport: { width: 1024, height: 1366 } });
     const base = process.env.HOMEADMIN_QA_URL || "http://127.0.0.1:5174";
@@ -186,16 +186,51 @@ const assert = require("node:assert/strict");
     assert.match(await page.getByLabel("Plan text", { exact: true }).inputValue(), /please send an itemised offer/);
     await page.getByRole("region", { name: "AI result overview" }).waitFor();
     await page.getByText("Recommendation needs review", { exact: true }).waitFor();
-    const originalPlanForReview = await page.getByLabel("Plan text", { exact: true }).inputValue();
-    await page.getByLabel("Plan text", { exact: true }).fill("## Best next action\nRequest a renewal quote.\n## My action list\n1. Check the offer.\n## Alternatives to consider\nAn illustrative provider offer, not independently verified.\n\nSavings comparison (customer-checked source, not independently verified by HomeAdmin)\n12-month difference: GBP 120.00 (saving)");
+    const structuredPlanForReview = "## My bill at a glance\nCAD 45 monthly for Example Water.\n## Best next action\nRequest a written explanation of the estimated reading.\n## My action list\n1. Check the reading.\n2. Ask for the calculation in writing.\n## My plan\nReview [Example source](https://example.invalid/bill) before acting.\n[Unsafe](javascript:alert(1))\n## Alternatives to consider\nBilling support from the existing water company; no household supplier switch assumed.\n\nSavings comparison (customer-checked source, not independently verified by HomeAdmin)\n12-month difference: CAD 120.00 (saving)\n## Estimated savings\nCAD 10 monthly if the checked calculation is corrected.\n## 6. Editable provider email\nSubject: Request a clearer quote\nMessage:\nHello, please send an itemised offer.";
+    await page.getByLabel("Plan text", { exact: true }).fill(structuredPlanForReview);
     const summary = page.getByRole("region", { name: "AI result overview" });
     await summary.getByText("Your action list", { exact: true }).waitFor();
     await summary.getByText("Potential savings", { exact: true }).waitFor();
-    await summary.getByText("Indicative saving: GBP 120.00 over 12 months", { exact: true }).waitFor();
+    await summary.getByText("Indicative saving: CAD 120.00 over 12 months", { exact: true }).waitFor();
     await summary.getByText(/HomeAdmin has not independently verified the offer/).waitFor();
-    await page.getByLabel("Plan text", { exact: true }).fill(originalPlanForReview);
     await page.getByRole("checkbox", { name: /^I have checked the answer/ }).check();
     await page.getByRole("button", { name: "Save reviewed result", exact: true }).click();
+    await page.waitForFunction(() => {
+      const saved = [...document.querySelectorAll("#local-plan-heading")].some(node => node.textContent?.trim() === "Synthetic water case · Plan");
+      const error = [...document.querySelectorAll('[role="alert"]')].some(node => Boolean(node.textContent?.trim()));
+      return saved || error;
+    }, null, { timeout: 30000 });
+    const saveFailure = await page.getByRole("alert").allTextContents();
+    assert.equal(await page.getByRole("heading", { name: "Synthetic water case · Plan", exact: true, level: 2 }).count(), 1,
+      "Saving the reviewed AI plan must open the saved result. Save errors: " + saveFailure.join(" | "));
+    await page.getByRole("heading", { name: "Synthetic water case · Plan", exact: true, level: 2 }).waitFor();
+    await page.reload();
+    const savedAfterReload = page.locator("#saved-plans");
+    try {
+      await savedAfterReload.getByRole("heading", { name: "Saved plans (3)", exact: true }).waitFor();
+    } catch (failure) {
+      console.log("HomeAdmin state after reviewed-result reload", {
+        title: await page.title(),
+        url: page.url(),
+        body: (await page.locator("body").innerText()).slice(0, 10000),
+        pageErrors: errors,
+        storage: await page.evaluate(async () => ({
+          localStorage: Object.keys(localStorage),
+          databases: await indexedDB.databases().then(items => items.map(item => ({ name: item.name, version: item.version }))),
+        })).catch(error => ({ inspectionError: String(error) })),
+      });
+      throw failure;
+    }
+    const reviewedAiResult = savedAfterReload.locator("li")
+      .filter({ hasText: "Synthetic water case · Plan" })
+      .filter({ hasText: "AI answer reviewed by you" });
+    assert.equal(await reviewedAiResult.count(), 1);
+    await reviewedAiResult.getByRole("button", { name: "Open plan", exact: true }).click();
+    const reopenedSummary = page.getByRole("region", { name: "AI result overview" });
+    await reopenedSummary.getByText("CAD 45 monthly for Example Water.", { exact: true }).waitFor();
+    await reopenedSummary.getByText("Request a written explanation of the estimated reading.", { exact: true }).waitFor();
+    await reopenedSummary.getByText("CAD 10 monthly if the checked calculation is corrected.", { exact: true }).waitFor();
+    await page.getByText("Read full AI plan", { exact: true }).click();
     assert.equal(await page.getByRole("link", { name: "Example source", exact: true }).getAttribute("href"), "https://example.invalid/bill");
     assert.equal(await page.getByRole("link", { name: "Unsafe", exact: true }).count(), 0);
     await page.getByRole("heading", { name: "My action list", exact: true }).waitFor();

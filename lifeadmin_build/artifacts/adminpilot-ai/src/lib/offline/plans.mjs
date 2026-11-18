@@ -146,12 +146,18 @@ export function planTextForCopy(plan) {
   const parts = ["# " + (plan.title || "Admin plan")];
   if (plan.missing_details?.length) parts.push("Useful missing details: " + plan.missing_details.join(", "));
   parts.push("General guidance only. Confirm current provider terms and official information before acting. Nothing is sent automatically.");
-  for (const [key, value] of Object.entries(plan.sections || {})) {
-    if (!String(value).trim() || (key === "provider_message" && plan.provider_email)) continue;
-    const text = String(value).replace(/^##\s+(Next steps|Provider message|Things to check|Approval checklist)\s*\n/i, "").trim();
-    parts.push("## " + key.replaceAll("_", " ") + "\n" + text);
+  const reviewedAiPlan = plan.workflow_output === "plan" && plan.source !== "local" && String(plan.content || "").trim();
+  if (reviewedAiPlan) {
+    parts.push(plan.content);
+    if (String(plan.sections?.approval_checklist || "").trim()) parts.push("## Approval checklist\n" + plan.sections.approval_checklist);
+  } else {
+    for (const [key, value] of Object.entries(plan.sections || {})) {
+      if (!String(value).trim() || (key === "provider_message" && plan.provider_email)) continue;
+      const text = String(value).replace(/^##\s+(Next steps|Provider message|Things to check|Approval checklist)\s*\n/i, "").trim();
+      parts.push("## " + key.replaceAll("_", " ") + "\n" + text);
+    }
+    if (!Object.values(plan.sections || {}).some(value => String(value).trim()) && plan.content) parts.push(plan.content);
   }
-  if (!Object.values(plan.sections || {}).some(value => String(value).trim()) && plan.content) parts.push(plan.content);
   if (plan.provider_email) {
     const draft = plan.provider_email;
     parts.push("## " + (draft.kind === "bank_query" ? "Bank-query draft" : "Provider-message draft") +
