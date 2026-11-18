@@ -4,7 +4,7 @@ const { chromium } = require("playwright");
 const assert = require("node:assert/strict");
 
 (async () => {
-  const browser = await chromium.launch({ headless: true, args: ["--no-sandbox"] });
+  const browser = await chromium.launch({ headless: true, args: ["--no-sandbox"], ...(process.env.HOMEADMIN_CHROMIUM_PATH ? { executablePath: process.env.HOMEADMIN_CHROMIUM_PATH } : {}) });
   try {
     const page = await browser.newPage({ viewport: { width: 1024, height: 1366 } });
     const base = process.env.HOMEADMIN_QA_URL || "http://127.0.0.1:5174";
@@ -195,7 +195,15 @@ const assert = require("node:assert/strict");
     await summary.getByText(/HomeAdmin has not independently verified the offer/).waitFor();
     await page.getByRole("checkbox", { name: /^I have checked the answer/ }).check();
     await page.getByRole("button", { name: "Save reviewed result", exact: true }).click();
-    await page.getByText("Reviewed result saved on this device.", { exact: false }).waitFor();
+    await page.waitForFunction(() => {
+      const saved = [...document.querySelectorAll("#local-plan-heading")].some(node => node.textContent?.trim() === "Synthetic water case · Plan");
+      const error = [...document.querySelectorAll('[role="alert"]')].some(node => Boolean(node.textContent?.trim()));
+      return saved || error;
+    }, null, { timeout: 30000 });
+    const saveFailure = await page.getByRole("alert").allTextContents();
+    assert.equal(await page.getByRole("heading", { name: "Synthetic water case · Plan", exact: true, level: 2 }).count(), 1,
+      "Saving the reviewed AI plan must open the saved result. Save errors: " + saveFailure.join(" | "));
+    await page.getByRole("heading", { name: "Synthetic water case · Plan", exact: true, level: 2 }).waitFor();
     await page.reload();
     const savedAfterReload = page.locator("#saved-plans");
     try {

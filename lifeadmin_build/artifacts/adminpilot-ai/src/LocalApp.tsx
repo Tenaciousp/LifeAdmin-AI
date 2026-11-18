@@ -184,6 +184,7 @@ export default function LocalApp() {
   function showHelp(task: RecordData) {
     if (draftEdit && !window.confirm("Discard unsaved message edits and open bill help?")) return;
     if (!closeHelp()) return;
+    setMessage("");
     setDraftEdit(null);
     setHelpSession(value => value + 1); setHelpId(task.id);
   }
