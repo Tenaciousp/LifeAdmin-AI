@@ -314,16 +314,20 @@ final class LifeAdminUITests: XCTestCase {
                                          "Date field extends beyond its form column: " + label)
             }
         }
-        let reference = app.textFields["Account or customer reference"]
-        reveal(reference)
-        reference.tap()
-        enterText(referenceText, into: reference)
-        closeKeyboard()
-        let notes = app.textViews["Additional notes"]
-        reveal(notes)
-        notes.tap()
-        enterText(noteText, into: notes)
-        closeKeyboard()
+        if !referenceText.isEmpty {
+            let reference = app.textFields["Account or customer reference"]
+            reveal(reference)
+            reference.tap()
+            enterText(referenceText, into: reference)
+            closeKeyboard()
+        }
+        if !noteText.isEmpty {
+            let notes = app.textViews["Additional notes"]
+            reveal(notes)
+            notes.tap()
+            enterText(noteText, into: notes)
+            closeKeyboard()
+        }
         let save = app.buttons["Save bill"]
         reveal(save)
         save.tap()
@@ -1009,8 +1013,10 @@ final class LifeAdminUITests: XCTestCase {
         }
         app.launch()
         assertWorkspaceReady()
-        addSubscription(named: "Streaming subscription", referenceText: "DEMO-2401",
-                        noteText: "Review before the next monthly payment.")
+        // Store previews do not show the optional private reference or notes.
+        // Leaving both blank removes two iPad software-keyboard interactions,
+        // keeping screenshot capture within the bounded XCTest allowance.
+        addSubscription(named: "Streaming subscription", referenceText: "", noteText: "")
         app.terminate()
         app.launch()
         assertWorkspaceReady()

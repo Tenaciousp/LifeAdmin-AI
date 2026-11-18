@@ -195,8 +195,15 @@ const assert = require("node:assert/strict");
     await summary.getByText(/HomeAdmin has not independently verified the offer/).waitFor();
     await page.getByRole("checkbox", { name: /^I have checked the answer/ }).check();
     await page.getByRole("button", { name: "Save reviewed result", exact: true }).click();
+    await page.getByText("Reviewed result saved on this device.", { exact: false }).waitFor();
     await page.reload();
-    await page.locator("#saved-plans").getByRole("button", { name: "Open plan", exact: true }).first().click();
+    const savedAfterReload = page.locator("#saved-plans");
+    await savedAfterReload.getByRole("heading", { name: "Saved plans (3)", exact: true }).waitFor();
+    const reviewedAiResult = savedAfterReload.locator("li")
+      .filter({ hasText: "Synthetic water case · Plan" })
+      .filter({ hasText: "AI answer reviewed by you" });
+    assert.equal(await reviewedAiResult.count(), 1);
+    await reviewedAiResult.getByRole("button", { name: "Open plan", exact: true }).click();
     const reopenedSummary = page.getByRole("region", { name: "AI result overview" });
     await reopenedSummary.getByText("CAD 45 monthly for Example Water.", { exact: true }).waitFor();
     await reopenedSummary.getByText("Request a written explanation of the estimated reading.", { exact: true }).waitFor();
