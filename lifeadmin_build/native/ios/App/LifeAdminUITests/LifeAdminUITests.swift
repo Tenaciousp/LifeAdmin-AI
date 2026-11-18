@@ -345,13 +345,15 @@ final class LifeAdminUITests: XCTestCase {
         let legacyPrefix = prefix == "homeadmin-backup" ? "lifeadmin-backup" : prefix
         let document = app.cells.matching(
             NSPredicate(format: "label BEGINSWITH[c] %@ OR label BEGINSWITH[c] %@", prefix, legacyPrefix)).firstMatch
-        // Files may open directly in Browse on iPhone. Enter it only when the
-        // navigation control is present, matching the iPad picker behaviour.
-        let browse = app.buttons["Browse"].firstMatch
-        if browse.exists && browse.isHittable { browse.tap() }
+        // Files can open on either Recents or the local Browse location.
+        // If no local folder is visible, wait for Browse and enter it.
         if !document.waitForExistence(timeout: 5) {
             let local = app.descendants(matching: .any).matching(
                 NSPredicate(format: "label IN %@", ["On My iPhone", "On My iPad"])).firstMatch
+            if !local.waitForExistence(timeout: 5) {
+                let browse = app.buttons["Browse"].firstMatch
+                if browse.waitForExistence(timeout: 45) && browse.isHittable { browse.tap() }
+            }
             XCTAssertTrue(local.waitForExistence(timeout: 45))
             XCTAssertTrue(local.frame.intersects(app.frame))
             local.coordinate(
