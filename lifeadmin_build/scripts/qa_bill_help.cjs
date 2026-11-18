@@ -198,7 +198,21 @@ const assert = require("node:assert/strict");
     await page.getByText("Reviewed result saved on this device.", { exact: false }).waitFor();
     await page.reload();
     const savedAfterReload = page.locator("#saved-plans");
-    await savedAfterReload.getByRole("heading", { name: "Saved plans (3)", exact: true }).waitFor();
+    try {
+      await savedAfterReload.getByRole("heading", { name: "Saved plans (3)", exact: true }).waitFor();
+    } catch (failure) {
+      console.log("HomeAdmin state after reviewed-result reload", {
+        title: await page.title(),
+        url: page.url(),
+        body: (await page.locator("body").innerText()).slice(0, 10000),
+        pageErrors: errors,
+        storage: await page.evaluate(async () => ({
+          localStorage: Object.keys(localStorage),
+          databases: await indexedDB.databases().then(items => items.map(item => ({ name: item.name, version: item.version }))),
+        })).catch(error => ({ inspectionError: String(error) })),
+      });
+      throw failure;
+    }
     const reviewedAiResult = savedAfterReload.locator("li")
       .filter({ hasText: "Synthetic water case · Plan" })
       .filter({ hasText: "AI answer reviewed by you" });
