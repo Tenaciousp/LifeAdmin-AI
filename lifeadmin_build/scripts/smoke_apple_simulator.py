@@ -303,11 +303,12 @@ def select_ios_runtime(runtimes):
         if (runtime.get("isAvailable") and
                 identifier.startswith("com.apple.CoreSimulator.SimRuntime.iOS-") and
                 version and all(part.isdigit() for part in version.split("."))):
-            matches.append((tuple(int(part) for part in version.split(".")), identifier, runtime))
+            matches.append((tuple(int(part) for part in version.split(".")),
+                            len(runtime.get("supportedDeviceTypes", [])), identifier, runtime))
     if not matches:
         raise RuntimeError("No available iOS simulator runtime was found")
     preferred = [entry for entry in matches if entry[0][:2] == (26, 2)]
-    return max(preferred or matches, key=lambda entry: (entry[0], entry[1]))[2]
+    return max(preferred or matches, key=lambda entry: (entry[0], entry[1], entry[2]))[3]
 
 
 def select_simulator_type(types, runtime, family):
