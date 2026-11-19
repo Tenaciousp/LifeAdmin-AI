@@ -35,6 +35,10 @@ assert.match(await nativeFile("ios/App/App/LifeAdminViewController.swift"), /reg
 assert.match(project, /LifeAdminCalendarPlugin\.swift in Sources/);
 assert.match(project, /PrivacyInfo\.xcprivacy in Resources/);
 const info = await nativeFile("ios/App/App/Info.plist");
+assert.match(info, /<key>UILaunchStoryboardName<\/key>\s*<string>LaunchScreen<\/string>/,
+  "The iOS app must declare its native launch screen.");
+assert.ok((await nativeFile("ios/App/App/Base.lproj/LaunchScreen.storyboard")).includes("document type=\"com.apple.InterfaceBuilder3.CocoaTouch.Storyboard.XIB\""),
+  "The declared launch screen storyboard must exist and be readable.");
 for (const key of ["NSCalendarsUsageDescription", "NSCalendarsFullAccessUsageDescription"]) assert.ok(info.includes(key));
 const android = await nativeFile("android/app/src/main/AndroidManifest.xml");
 for (const permission of ["READ_CALENDAR", "WRITE_CALENDAR"]) assert.ok(android.includes(permission));
