@@ -42,6 +42,9 @@ jobs:
       - name: Test offline AI questions, diary dates and device repositories
         run: node --test artifacts/adminpilot-ai/src/lib/offline/*.test.mjs
 
+      - name: Test Apple simulator runtime selection
+        run: python -m unittest discover -s scripts -p test_apple_simulator_runtime.py -v
+
       - name: Run automated tests
         run: npm test
 
