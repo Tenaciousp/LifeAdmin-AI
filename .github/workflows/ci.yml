@@ -176,7 +176,7 @@ jobs:
     name: Apple simulator (${{ matrix.device-family }})
     # Standard hosted runners are free for public repositories; skip if that changes.
     if: ${{ github.event.repository.private == false }}
-    runs-on: xcode-27
+    runs-on: macos-26
     # Full interactive acceptance plus post-test XCTest and simulator evidence export.
     timeout-minutes: 90
     strategy:
@@ -208,9 +208,9 @@ jobs:
           python - <<'PY'
           import re, subprocess
           version = subprocess.check_output(["xcodebuild", "-version"], text=True)
-          assert int(version.splitlines()[0].split()[1].split(".")[0]) >= 27, "Xcode 27 or later required for the iOS 27 SDK upload requirement."
+          assert int(version.splitlines()[0].split()[1].split(".")[0]) >= 26, "Xcode 26 or later required for simulator acceptance."
           sdks = subprocess.check_output(["xcodebuild", "-showsdks"], text=True)
-          assert re.search(r"iphoneos(?:27|[3-9]\d)\.", sdks), "iOS 27 SDK or later is required for Apple device builds."
+          assert "iphonesimulator" in sdks, "iOS simulator SDK is required for simulator acceptance."
           PY
 
       - name: Build and verify offline customer assets
@@ -257,7 +257,7 @@ jobs:
     name: Apple upgrade (${{ matrix.device-family }})
     # Standard hosted runners are free for public repositories; skip if that changes.
     if: ${{ github.event.repository.private == false }}
-    runs-on: xcode-27
+    runs-on: macos-26
     # Keep the two-build acceptance separate from the full simulator journey.
     timeout-minutes: 45
     strategy:
@@ -296,9 +296,9 @@ jobs:
           python - <<'PY'
           import re, subprocess
           version = subprocess.check_output(["xcodebuild", "-version"], text=True)
-          assert int(version.splitlines()[0].split()[1].split(".")[0]) >= 27, "Xcode 27 or later required for the iOS 27 SDK upload requirement."
+          assert int(version.splitlines()[0].split()[1].split(".")[0]) >= 26, "Xcode 26 or later required for simulator acceptance."
           sdks = subprocess.check_output(["xcodebuild", "-showsdks"], text=True)
-          assert re.search(r"iphoneos(?:2[7-9]|[3-9]\d|[1-9]\d{2})\.", sdks), "iOS 27 SDK or later is required for Apple device builds."
+          assert "iphonesimulator" in sdks, "iOS simulator SDK is required for simulator acceptance."
           PY
 
       - name: Build and verify offline customer assets
@@ -416,6 +416,8 @@ jobs:
           if info.get("DTPlatformName") != "iphoneos" or info.get("CFBundleSupportedPlatforms") != ["iPhoneOS"]:
               raise RuntimeError("Archive is not an iPhone/iPad device build")
           if info.get("MinimumOSVersion") != "16.4":
+          if not info.get("DTSDKName", "").startswith("iphoneos27."):
+              raise RuntimeError("Archive was not built with the required iOS 27 SDK")
               raise RuntimeError("Unexpected archived minimum OS")
           architectures = subprocess.check_output(["xcrun", "lipo", "-archs", str(app / info["CFBundleExecutable"])], text=True).split()
           if architectures != ["arm64"]:
@@ -449,7 +451,7 @@ jobs:
   store-screenshots:
     name: Store previews (${{ matrix.device-family }})
     if: ${{ github.event.repository.private == false }}
-    runs-on: xcode-27
+    runs-on: macos-26
     timeout-minutes: 40
     strategy:
       fail-fast: false
