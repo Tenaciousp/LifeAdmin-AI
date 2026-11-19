@@ -416,9 +416,11 @@ jobs:
           if info.get("DTPlatformName") != "iphoneos" or info.get("CFBundleSupportedPlatforms") != ["iPhoneOS"]:
               raise RuntimeError("Archive is not an iPhone/iPad device build")
           if info.get("MinimumOSVersion") != "16.4":
-          if not info.get("DTSDKName", "").startswith("iphoneos27."):
-              raise RuntimeError("Archive was not built with the required iOS 27 SDK")
               raise RuntimeError("Unexpected archived minimum OS")
+          sdk_name = info.get("DTSDKName", "")
+          sdk_version = tuple(int(part) for part in sdk_name.removeprefix("iphoneos").split(".") if part.isdigit())
+          if not sdk_name.startswith("iphoneos") or sdk_version < (27,):
+              raise RuntimeError("Archive was not built with the required iOS 27 SDK")
           architectures = subprocess.check_output(["xcrun", "lipo", "-archs", str(app / info["CFBundleExecutable"])], text=True).split()
           if architectures != ["arm64"]:
               raise RuntimeError("Unexpected device architectures")
