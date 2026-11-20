@@ -15,6 +15,7 @@ const assert = require("node:assert/strict");
     await page.getByRole("heading", { name: "No saved plans" }).waitFor();
     await page.getByRole("heading", { name: "No forecast yet" }).waitFor();
     await page.getByRole("heading", { name: "No dates to review" }).waitFor();
+    await page.getByRole("button", { name: "Add a bill with a date", exact: true }).waitFor();
     await page.getByRole("button", { name: "Save bill", exact: true }).click();
     await page.getByText("Choose a bill category.", { exact: true }).waitFor();
     assert.equal(await page.getByLabel("Bill category").getAttribute("aria-invalid"), "true");

@@ -99,7 +99,7 @@ export default function BillHelp({ task, onClose, onEdit, onProgress, onSave, on
             <label className="mt-3 flex min-h-[44px] items-start gap-3"><input type="radio" name="bill-help-method" className="mt-1 h-5 w-5 shrink-0" checked={draft.method === "local"} onChange={() => change({ method: "local" })} /><span><strong className="block">Start from an offline draft</strong>A template for you to personalise.</span></label>
           </details>
         </fieldset>
-        <p className="text-slate-600">{draft.method === "chosen_ai" ? "Next: check your bill details, copy the request into your AI, then bring the answer back to review and save." : "Next: check your bill details and prepare a draft for review."}</p>
+        {draft.method === "chosen_ai" ? <div className="rounded-xl border border-violet-200 bg-violet-50 p-4"><h3 className="font-bold text-violet-950">Your next steps</h3><ol className="mt-2 list-decimal space-y-1 pl-5 text-slate-800"><li>Check which bill details you want to share.</li><li>Copy your prepared request and paste it into {selectedService.name}.</li><li>Return with the answer, check it and save your result.</li></ol><p className="mt-2 text-slate-700">Nothing is sent to an AI automatically.</p></div> : <p className="text-slate-600">Next: check your bill details and prepare a draft for review.</p>}
         <button className={button} onClick={() => change({ step: 2 })}>Continue to details</button>
       </>}
       {draft.step === 2 && <>
