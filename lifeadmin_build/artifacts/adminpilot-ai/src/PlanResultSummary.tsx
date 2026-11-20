@@ -1,11 +1,12 @@
 import { money } from "./lib/offline/bill-overview.mjs";
 import { extractPlanSections } from "./lib/offline/plan-sections.mjs";
+import { hasDatedSourceReference } from "./lib/offline/source-evidence.mjs";
 
 export default function PlanResultSummary({ plan, savedCost }: { plan: string; savedCost?: { monthly: number; yearly: number; currency: string } | null }) {
   const { bill, recommendation, alternatives, actions: actionList, savings: estimatedSavings } = extractPlanSections(plan);
   const customerChecked = /Savings comparison \(customer-checked source, not independently verified by HomeAdmin\)/i.test(plan);
   const reviewedDifferences = customerChecked ? [...plan.matchAll(/(\d{1,2})-month difference: ([^\n]{1,100}) \((saving|additional cost)\)/gi)].slice(0, 3).map((match) => ({ months: match[1], value: match[2], direction: match[3] })) : [];
-  const hasSourceEvidence = /https:\/\/[^\s)\]]+/i.test(alternatives) && /(?:checked|verified|as of|accessed)\s*(?:on\s*)?\d{1,4}[\/-]\d{1,2}[\/-]\d{1,4}/i.test(alternatives);
+  const hasSourceEvidence = hasDatedSourceReference(alternatives);
   if (!recommendation && !alternatives) {
     return <section aria-label="AI result overview" className="rounded-xl border border-amber-200 bg-amber-50 p-4">
       <h4 className="font-bold text-amber-950">Recommendation needs review</h4>

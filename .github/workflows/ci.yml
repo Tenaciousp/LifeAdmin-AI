@@ -42,6 +42,9 @@ jobs:
       - name: Test offline AI questions, diary dates and device repositories
         run: node --test artifacts/adminpilot-ai/src/lib/offline/*.test.mjs
 
+      - name: Test Apple simulator runtime selection
+        run: python -m unittest discover -s scripts -p test_apple_simulator_runtime.py -v
+
       - name: Run automated tests
         run: npm test
 
@@ -202,7 +205,13 @@ jobs:
       - name: Check Apple toolchain
         run: |
           xcodebuild -version
-          python -c 'import subprocess; v=subprocess.check_output(["xcodebuild","-version"],text=True); assert int(v.splitlines()[0].split()[1].split(".")[0]) >= 26, "Xcode 26 or later required"'
+          python - <<'PY'
+          import re, subprocess
+          version = subprocess.check_output(["xcodebuild", "-version"], text=True)
+          assert int(version.splitlines()[0].split()[1].split(".")[0]) >= 26, "Xcode 26 or later required for simulator acceptance."
+          sdks = subprocess.check_output(["xcodebuild", "-showsdks"], text=True)
+          assert "iphonesimulator" in sdks, "iOS simulator SDK is required for simulator acceptance."
+          PY
 
       - name: Build and verify offline customer assets
         run: |
@@ -284,7 +293,13 @@ jobs:
       - name: Check Apple toolchain
         run: |
           xcodebuild -version
-          python -c 'import subprocess; v=subprocess.check_output(["xcodebuild","-version"],text=True); assert int(v.splitlines()[0].split()[1].split(".")[0]) >= 26, "Xcode 26 or later required"'
+          python - <<'PY'
+          import re, subprocess
+          version = subprocess.check_output(["xcodebuild", "-version"], text=True)
+          assert int(version.splitlines()[0].split()[1].split(".")[0]) >= 26, "Xcode 26 or later required for simulator acceptance."
+          sdks = subprocess.check_output(["xcodebuild", "-showsdks"], text=True)
+          assert "iphonesimulator" in sdks, "iOS simulator SDK is required for simulator acceptance."
+          PY
 
       - name: Build and verify offline customer assets
         run: |
@@ -344,7 +359,7 @@ jobs:
   verify-apple-device:
     name: Compile unsigned Apple device archive
     if: ${{ github.event.repository.private == false }}
-    runs-on: macos-26
+    runs-on: xcode-27
     timeout-minutes: 20
     permissions:
       contents: read
@@ -402,6 +417,10 @@ jobs:
               raise RuntimeError("Archive is not an iPhone/iPad device build")
           if info.get("MinimumOSVersion") != "16.4":
               raise RuntimeError("Unexpected archived minimum OS")
+          sdk_name = info.get("DTSDKName", "")
+          sdk_version = tuple(int(part) for part in sdk_name.removeprefix("iphoneos").split(".") if part.isdigit())
+          if not sdk_name.startswith("iphoneos") or sdk_version < (27,):
+              raise RuntimeError("Archive was not built with the required iOS 27 SDK")
           architectures = subprocess.check_output(["xcrun", "lipo", "-archs", str(app / info["CFBundleExecutable"])], text=True).split()
           if architectures != ["arm64"]:
               raise RuntimeError("Unexpected device architectures")

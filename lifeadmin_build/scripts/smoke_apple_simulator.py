@@ -293,15 +293,22 @@ def prepare_accessibility_fixture(device, bundle, evidence, fixture_text=None):
 
 
 def select_ios_runtime(runtimes):
-    # Keep simulator results reproducible. CI #369's automatically selected
-    # iOS 26.5 WebKit networking process stalled before the audit could start.
-    matches = [runtime for runtime in runtimes
-               if runtime.get("isAvailable") and
-               runtime.get("identifier", "").startswith("com.apple.CoreSimulator.SimRuntime.iOS-") and
-               runtime.get("version") == "26.2"]
-    if len(matches) != 1:
-        raise RuntimeError("Exactly one available iOS 26.2 simulator runtime is required")
-    return matches[0]
+    # Prefer the previously stable 26.2 runtime when installed. New Xcode
+    # hosted images often ship only their current iOS runtime, so fall forward
+    # to the newest available iOS runtime instead of pinning the whole build.
+    matches = []
+    for runtime in runtimes:
+        version = runtime.get("version", "")
+        identifier = runtime.get("identifier", "")
+        if (runtime.get("isAvailable") and
+                identifier.startswith("com.apple.CoreSimulator.SimRuntime.iOS-") and
+                version and all(part.isdigit() for part in version.split("."))):
+            matches.append((tuple(int(part) for part in version.split(".")),
+                            len(runtime.get("supportedDeviceTypes", [])), identifier, runtime))
+    if not matches:
+        raise RuntimeError("No available iOS simulator runtime was found")
+    preferred = [entry for entry in matches if entry[0][:2] == (26, 2)]
+    return max(preferred or matches, key=lambda entry: (entry[0], entry[1], entry[2]))[3]
 
 
 def select_simulator_type(types, runtime, family):
