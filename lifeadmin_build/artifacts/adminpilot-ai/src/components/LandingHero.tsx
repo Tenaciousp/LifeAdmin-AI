@@ -19,15 +19,15 @@ export function LandingHero() {
         <div className="lg:col-span-7 space-y-7">
           <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/10 border border-white/15 text-sm font-semibold text-blue-100">
             <Sparkles className="w-4 h-4 text-cyan-300" />
-            List. Plan. Save.
+            Bills organised. AI help explained.
           </div>
 
           <h1 className="text-4xl sm:text-5xl md:text-6xl font-extrabold tracking-tight leading-[1.06] max-w-4xl">
-            Your household bills, with a plan for what to do next.
+            Take control of household bills. Get help with what to do next.
           </h1>
 
           <p className="text-lg sm:text-xl text-blue-100/85 leading-relaxed max-w-2xl">
-            Save your bill details, review AI-assisted options and potential savings, then prepare an editable letter or email to your provider. Check every offer before making a decision.
+            Keep bills and subscriptions in one place. Get step-by-step AI assistance to question a charge, explore ways to save and prepare a letter or email to your provider. You choose the action, and you check every offer before relying on a price.
           </p>
 
           <div className="flex flex-col sm:flex-row gap-3 pt-2">
@@ -35,15 +35,13 @@ export function LandingHero() {
               onClick={scrollToApp}
               className="min-h-[52px] bg-primary hover:bg-blue-600 text-white px-7 py-3.5 rounded-xl font-bold text-base sm:text-lg flex items-center justify-center gap-2 transition-all hover:-translate-y-0.5 shadow-lg shadow-primary/25 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900"
             >
-              Start with a bill <ArrowRight className="w-5 h-5" />
+              Explore HomeAdmin <ArrowRight className="w-5 h-5" />
             </button>
             <a
-              href="https://tenaciouspl.co.uk/#example"
-              target="_blank"
-              rel="noopener noreferrer"
+              href="#examples"
               className="min-h-[52px] bg-white/10 hover:bg-white/15 text-white px-7 py-3.5 rounded-xl font-bold text-base sm:text-lg flex items-center justify-center transition-all border border-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300"
             >
-              See website examples
+              See example bills
             </a>
           </div>
 
@@ -60,21 +58,21 @@ export function LandingHero() {
               <div className="flex items-center justify-between gap-3 mb-5">
                 <div>
                   <p className="text-xs font-bold text-primary uppercase tracking-wider">HomeAdmin plan</p>
-                  <h2 className="text-xl font-extrabold mt-1">Reviewing a Sky bill</h2>
+                  <h2 className="text-xl font-extrabold mt-1">Getting help with a Sky bill</h2>
                 </div>
                 <span className="px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 text-xs font-bold">Illustrative example</span>
               </div>
 
               <div className="space-y-3 text-sm">
-                <PreviewRow number="1" title="Your bill" text="Review the current package, payment and renewal date." />
-                <PreviewRow number="2" title="Compare options" text="Check equivalent offers, sources, contract lengths and fees." />
-                <PreviewRow number="3" title="Potential difference" text="Estimate the change across your chosen period using checked figures." />
-                <PreviewRow number="4" title="Editable provider email" text="Ask for a competitive renewal quote. Review before sending." />
+                <PreviewRow number="1" title="Your bill" text="Keep the provider, monthly price and renewal date together." />
+                <PreviewRow number="2" title="Compare options" text="Ask your chosen AI about options; check official prices, eligibility and fees." />
+                <PreviewRow number="3" title="Potential difference" text="Work out indicative savings only from figures you have checked." />
+                <PreviewRow number="4" title="Editable provider email" text="Review and edit a negotiation email before you send it yourself." />
               </div>
 
               <p className="mt-4 text-xs leading-relaxed text-slate-600">Example journey. No live price or saving is shown or independently verified.</p>
-              <a href="https://tenaciouspl.co.uk/#contact" target="_blank" rel="noopener noreferrer" className="mt-4 block rounded-xl bg-slate-900 text-white p-4 font-semibold underline underline-offset-4 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300">
-                Examples and support at tenaciouspl.co.uk
+              <a href="#support" className="mt-4 block rounded-xl bg-slate-900 text-white p-4 font-semibold underline underline-offset-4 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300">
+                View guidance and support
               </a>
             </div>
           </div>

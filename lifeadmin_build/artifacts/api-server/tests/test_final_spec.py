@@ -86,10 +86,19 @@ class FrontendFinalSpecTests(unittest.TestCase):
         self.assertIn("Type DELETE to confirm", self.source)
 
     def test_landing_page_contains_conversion_and_trust_sections(self):
-        self.assertIn("Start with a bill", self.source)
-        self.assertIn("You stay in control", self.source)
-        self.assertIn("Examples & support", self.source)
-        self.assertIn("FAQ", self.source)
+        landing = (pathlib.Path(__file__).resolve().parents[2] / "adminpilot-ai" / "src" / "pages" / "LandingPage.tsx").read_text(encoding="utf-8")
+        hero = (pathlib.Path(__file__).resolve().parents[2] / "adminpilot-ai" / "src" / "components" / "LandingHero.tsx").read_text(encoding="utf-8")
+        for phrase in (
+            "Three practical benefits. One place to start.",
+            "Keep every bill organised",
+            "Get help from your chosen AI",
+            "Prepare your next move",
+            "FAQs",
+        ):
+            self.assertIn(phrase if phrase != "FAQs" else "FAQ", landing)
+        self.assertIn("Take control of household bills", hero)
+        self.assertIn('id="support"', self.source)
+        self.assertIn("No bank connection", hero)
 
     def test_analytics_bridge_supports_privacy_safe_google_tag_readiness(self):
         self.assertIn("dataLayer", self.source)
