@@ -6,7 +6,7 @@ const { chromium } = require("playwright");
 const assert = require("node:assert/strict");
 
 (async () => {
-  const browser = await chromium.launch({ headless: true, chromiumSandbox: true, ...(process.env.HOMEADMIN_CHROMIUM_PATH ? { executablePath: process.env.HOMEADMIN_CHROMIUM_PATH } : {}) });
+  const browser = await chromium.launch({ headless: true, chromiumSandbox: false, ...(process.env.HOMEADMIN_CHROMIUM_PATH ? { executablePath: process.env.HOMEADMIN_CHROMIUM_PATH } : {}) });
   try {
     const page = await browser.newPage({ viewport: { width: 1024, height: 900 } });
     const base = process.env.HOMEADMIN_QA_URL || "http://127.0.0.1:5174";
