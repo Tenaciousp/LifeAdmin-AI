@@ -43,57 +43,44 @@ def run_ui_test(device, evidence, method, log_name, result_path, execution_allow
 
     capture_snapshot(evidence, "before:" + method)
     try:
-        with (evidence / log_name).open("w") as log:
-            subprocess.run([
+        for attempt in range(3):
+            suffix = "" if attempt == 0 else f"-infra-retry-{attempt}"
+            attempt_log = evidence / (log_name if attempt == 0 else log_name + suffix)
+            attempt_result = str(result_path).removesuffix(".xcresult") + suffix + ".xcresult"
+            command = [
                 "xcodebuild", "-project", "ios/App/App.xcodeproj",
                 "-scheme", "LifeAdminAcceptance", "-configuration", "Debug",
                 "-destination", "platform=iOS Simulator,id=" + device,
                 "-derivedDataPath", "build-ios-simulator",
-                "-resultBundlePath", result_path,
+                "-resultBundlePath", attempt_result,
                 "-parallel-testing-enabled", "NO",
                 "-test-timeouts-enabled", "YES",
                 "-default-test-execution-time-allowance", str(execution_allowance),
                 "-maximum-test-execution-time-allowance", str(execution_allowance),
                 "-only-testing:LifeAdminUITests/LifeAdminUITests/" + method,
                 "CODE_SIGNING_ALLOWED=NO", "test",
-            ], check=True, stdout=log, stderr=subprocess.STDOUT, timeout=process_timeout)
-    except subprocess.CalledProcessError:
-        # Retry only simulator startup failures, never a test assertion.
-        # A launch timeout occurs before the app runs; restart preserves all
-        # records installed for upgrade verification.
-        output = (evidence / log_name).read_text(errors="replace")
-        infrastructure_stall = (
-            ("Restarting after unexpected exit, crash, or test timeout" in output
-             and "Executed 0 tests" in output
-             and "Executed 1 test" not in output
-             and "error: -[" not in output)
-            or ("Timed out while launching application via Xcode" in output
-                and "XCTAssert" not in output)
-            or "error: unexpected service error: The Xcode build system has crashed" in output
-        )
-        if not infrastructure_stall:
-            raise
-        print("XCTest or Xcode build service stalled; restarting disposable simulator once.", flush=True)
-        restart_simulator(device)
-        retry_result = str(result_path).removesuffix(".xcresult") + "-runner-retry.xcresult"
-        with (evidence / (log_name + ".runner-retry")).open("w") as log:
-            subprocess.run([
-                "xcodebuild", "-project", "ios/App/App.xcodeproj",
-                "-scheme", "LifeAdminAcceptance", "-configuration", "Debug",
-                "-destination", "platform=iOS Simulator,id=" + device,
-                "-derivedDataPath", "build-ios-simulator",
-                "-resultBundlePath", retry_result,
-                "-parallel-testing-enabled", "NO",
-                "-test-timeouts-enabled", "YES",
-                "-default-test-execution-time-allowance", str(execution_allowance),
-                "-maximum-test-execution-time-allowance", str(execution_allowance),
-                "-only-testing:LifeAdminUITests/LifeAdminUITests/" + method,
-                "CODE_SIGNING_ALLOWED=NO", "test",
-            ], check=True, stdout=log, stderr=subprocess.STDOUT, timeout=process_timeout)
+            ]
+            try:
+                with attempt_log.open("w") as log:
+                    subprocess.run(command, check=True, stdout=log, stderr=subprocess.STDOUT, timeout=process_timeout)
+                return
+            except subprocess.CalledProcessError:
+                output = attempt_log.read_text(errors="replace")
+                infrastructure_stall = (
+                    ("Restarting after unexpected exit, crash, or test timeout" in output
+                     and "Executed 0 tests" in output
+                     and "Executed 1 test" not in output
+                     and "error: -[" not in output)
+                    or ("Timed out while launching application via Xcode" in output
+                        and "XCTAssert" not in output)
+                    or "error: unexpected service error: The Xcode build system has crashed" in output
+                )
+                if not infrastructure_stall or attempt == 2:
+                    raise
+                print(f"XCTest or Xcode service stalled; restarting disposable simulator (retry {attempt + 1}/2).", flush=True)
+                restart_simulator(device)
     finally:
         capture_snapshot(evidence, "after:" + method)
-
-
 def restart_simulator(device):
     # Restart the disposable OS without deleting app data or retrying a test.
     # This clears keyboard/runner state left across UI test sessions.
