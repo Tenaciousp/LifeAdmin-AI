@@ -46,7 +46,10 @@ const assert = require("node:assert/strict");
 
     // Bill corrections preserve the current AI request and resume at the same stage.
     await page.getByRole("button", { name: "Edit bill details and return here", exact: true }).click();
-    assert.equal(await page.getByLabel("Bill name", { exact: true }).inputValue(), "Synthetic water case");
+    await page.getByRole("heading", { name: "Edit bill", exact: true }).waitFor({ state: "visible" });
+    const editForm = page.locator("#bill-form");
+    await editForm.getByRole("button", { name: "Save and return to AI help", exact: true }).waitFor({ state: "visible" });
+    assert.equal(await editForm.getByLabel("Bill name", { exact: true }).inputValue(), "Synthetic water case");
     const closedAmountDetails = page.locator("#bill-entry details:not([open])").filter({ has: page.locator("#amount") });
     if (await closedAmountDetails.count()) await closedAmountDetails.locator(":scope > summary").click();
     await page.locator("#amount").fill("46.00");
