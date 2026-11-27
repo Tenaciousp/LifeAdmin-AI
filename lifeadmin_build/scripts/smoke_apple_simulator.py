@@ -69,10 +69,11 @@ def run_ui_test(device, evidence, method, log_name, result_path, execution_allow
              and "error: -[" not in output)
             or ("Timed out while launching application via Xcode" in output
                 and "XCTAssert" not in output)
+            or "error: unexpected service error: The Xcode build system has crashed" in output
         )
         if not infrastructure_stall:
             raise
-        print("XCTest startup stalled; restarting disposable simulator once.", flush=True)
+        print("XCTest or Xcode build service stalled; restarting disposable simulator once.", flush=True)
         restart_simulator(device)
         retry_result = str(result_path).removesuffix(".xcresult") + "-runner-retry.xcresult"
         with (evidence / (log_name + ".runner-retry")).open("w") as log:
