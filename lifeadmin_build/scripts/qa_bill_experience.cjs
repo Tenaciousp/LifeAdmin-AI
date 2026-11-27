@@ -42,8 +42,8 @@ const assert = require("node:assert/strict");
     await page.getByRole("status").filter({ hasText: "Bill saved on this device." }).waitFor();
     await page.getByRole("navigation", { name: "Household sections" }).getByRole("link", { name: "Home", exact: true }).click();
     await page.getByText("Diary and reminders", { exact: true }).click();
-    assert.equal(await page.locator("#upcoming-bills").evaluate(node => node === document.activeElement), true,
-      "Home date shortcut must transfer keyboard focus to the destination.");
+    assert.equal(await page.locator("#household-diary").evaluate(node => node === document.activeElement), true,
+      "Home diary shortcut must transfer keyboard focus to the destination.");
     await page.getByText("Your bills", { exact: true }).click();
     assert.equal(await page.locator("#saved-bills").evaluate(node => node === document.activeElement), true,
       "Home bills shortcut must transfer keyboard focus to the destination.");
