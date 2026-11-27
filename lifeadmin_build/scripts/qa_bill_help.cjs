@@ -30,9 +30,10 @@ const assert = require("node:assert/strict");
     await page.getByRole("button", { name: "Save bill and continue to AI help", exact: true }).click();
     await page.getByRole("heading", { name: "Help with Synthetic water case", exact: true }).waitFor();
     await page.getByRole("heading", { name: "Check your bill details", exact: true }).waitFor();
-    assert.equal(await page.getByText("Step 1 of 3", { exact: true }).count(), 1);
+    assert.equal(await page.getByText("Step 2 of 4", { exact: true }).count(), 1);
     assert.match(await page.getByLabel("Your request to the AI").inputValue(), /Compare suitable alternatives/,
       "The saved bill should open with the main savings action ready.");
+    await page.getByRole("button", { name: "Change AI action", exact: true }).click();
     const aiChoice = page.getByLabel("AI service to use", { exact: true });
     assert.equal(await aiChoice.getAttribute("aria-describedby"), "preferred-ai-guidance",
       "Subscription guidance should be announced as a description, separate from the AI control name.");
@@ -41,32 +42,36 @@ const assert = require("node:assert/strict");
     assert.equal(await page.getByText("Choose an AI service you already use or subscribe to. HomeAdmin starts with Copilot and adds no AI subscription or API charge. Your selected service is saved only on this device; HomeAdmin does not check or store your account or payment details. Your AI provider's own plan and limits still apply.", { exact: true }).count(), 1,
       "The AI choice must explain existing subscriptions, HomeAdmin cost and local-only preference storage.");
 
+    await page.getByRole("button", { name: "Continue to details", exact: true }).click();
+
     // Bill corrections preserve the current AI request and resume at the same stage.
     await page.getByRole("button", { name: "Edit bill details and return here", exact: true }).click();
     assert.equal(await page.getByLabel("Bill name", { exact: true }).inputValue(), "Synthetic water case");
+    const closedAmountDetails = page.locator("#bill-entry details:not([open])").filter({ has: page.locator("#amount") });
+    if (await closedAmountDetails.count()) await closedAmountDetails.locator(":scope > summary").click();
     await page.locator("#amount").fill("46.00");
     await page.getByRole("button", { name: "Save and return to AI help", exact: true }).click();
     await page.getByRole("heading", { name: "Check your bill details", exact: true }).waitFor();
-    assert.equal(await page.getByText("Step 1 of 3", { exact: true }).count(), 1,
+    assert.equal(await page.getByText("Step 2 of 4", { exact: true }).count(), 1,
       "Bill editing must return to the current workflow stage.");
-    assert.match(await page.getByRole("group", { name: "Check the details to include" }).innerText(), /46\.00/);
 
     // The primary route moves directly from reviewed bill facts to a prepared request and chosen AI link.
-    await aiChoice.selectOption("gemini");
+    await page.getByRole("combobox", { name: /^AI service/ }).selectOption("gemini");
     await page.getByRole("button", { name: "Prepare comparison question", exact: true }).click();
     await page.getByRole("heading", { name: "Your AI question is ready", exact: true }).waitFor();
-    assert.equal(await page.getByText("Step 2 of 3", { exact: true }).count(), 1);
+    assert.equal(await page.getByText("Step 3 of 4", { exact: true }).count(), 1);
     assert.equal(await page.getByText("Your question asks Gemini (Google, free option) to look for current offers and dated sources if that AI supports web search. HomeAdmin cannot verify an answer returned from another AI: open cited provider pages and confirm prices, terms and eligibility. Check the facts below, copy the question, open Gemini (Google, free option), then return with the answer. Nothing is sent until you paste and send it.", { exact: true }).count(), 1,
       "External AI research must be described as conditional, with explicit source verification.");
     const requestField = page.getByLabel("Prepared AI request", { exact: true });
     const request = await requestField.inputValue();
     assert.match(request, /Compare suitable alternatives/);
+    assert.match(request, /46\.00/);
     assert.match(request, /official source links and the exact date/i);
     assert.match(request, /payment options instead of alternative suppliers/i);
     assert.doesNotMatch(request, /TEST-REF-SECRET/);
-    const openAi = page.getByRole("link", { name: "2. Open Gemini (Google, free option)", exact: true });
+    const openAi = page.getByRole("link", { name: "Open Gemini (Google, free option)", exact: true });
     assert.equal(await openAi.getAttribute("href"), "https://gemini.google.com/");
-    await page.getByRole("button", { name: "1. Copy question", exact: true }).click();
+    await page.getByRole("button", { name: "Copy question", exact: true }).click();
     await page.getByRole("status").filter({ hasText: "Question copied and progress saved." }).waitFor();
     await page.getByRole("button", { name: "Save progress for later", exact: true }).click();
     await page.getByRole("status").filter({ hasText: "Progress saved on this device." }).waitFor();
@@ -78,16 +83,16 @@ const assert = require("node:assert/strict");
     assert.equal(await page.getByLabel("Prepared AI request", { exact: true }).inputValue(), request,
       "Reopening saved help must keep the prepared prompt.");
 
-    await page.getByRole("button", { name: "3. I have an answer to review", exact: true }).click();
+    await page.getByRole("button", { name: "I have an answer to review", exact: true }).click();
     await page.getByRole("heading", { name: "Paste and review your AI answer", exact: true }).waitFor();
-    await page.getByLabel("Plan text", { exact: true }).fill("## My bill at a glance\nCAD 46 monthly for Example Water.\n## Best next action\nAsk the existing water company to check the reading.\n## Alternatives to consider\nNo household supplier switch. Check metering and payment support.\n## Estimated savings\nNot available: no verified like-for-like prices.\n## Editable provider email\nSubject: Please check my water bill\nMessage: Please explain the current bill.");
+    await page.getByLabel("Answer from your AI", { exact: true }).fill("## My bill at a glance\nCAD 46 monthly for Example Water.\n## Best next action\nAsk the existing water company to check the reading.\n## Alternatives to consider\nNo household supplier switch. Check metering and payment support.\n## Estimated savings\nNot available: no verified like-for-like prices.\n## Editable provider email\nSubject: Please check my water bill\nMessage: Please explain the current bill.");
     const factCheck = page.getByRole("checkbox", { name: /^I have checked the answer/ });
     const save = page.getByRole("button", { name: "Save reviewed result", exact: true });
     assert.equal(await save.isDisabled(), true, "The review check is required before saving.");
     await factCheck.check();
-    await page.getByLabel("Plan text", { exact: true }).fill("Edited synthetic plan.");
+    await page.getByLabel("Answer from your AI", { exact: true }).fill("Edited synthetic plan.");
     assert.equal(await factCheck.isChecked(), false, "Editing the answer resets its review check.");
-    await page.getByLabel("Plan text", { exact: true }).fill("Edited synthetic plan with no verified saving claimed.");
+    await page.getByLabel("Answer from your AI", { exact: true }).fill("Edited synthetic plan with no verified saving claimed.");
     await factCheck.check();
     await save.click();
     await page.getByRole("heading", { name: "Synthetic water case · Plan", exact: true, level: 2 }).waitFor();
