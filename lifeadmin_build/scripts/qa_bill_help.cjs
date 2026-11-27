@@ -25,7 +25,7 @@ const assert = require("node:assert/strict");
     await page.getByLabel("Country / region of this bill").selectOption("Canada");
     await page.getByLabel("Bill currency").selectOption("CAD");
     await page.locator("summary").filter({ hasText: "More bill details (optional)" }).click();
-    await page.getByLabel(/amount/i).fill("45.00");
+    await page.locator("#amount").fill("45.00");
     await page.getByLabel("Customer reference (optional)", { exact: true }).fill("TEST-REF-SECRET");
     await page.getByRole("button", { name: "Save bill and continue to AI help", exact: true }).click();
     await page.getByRole("heading", { name: "Help with Synthetic water case", exact: true }).waitFor();
@@ -44,7 +44,7 @@ const assert = require("node:assert/strict");
     // Bill corrections preserve the current AI request and resume at the same stage.
     await page.getByRole("button", { name: "Edit bill details and return here", exact: true }).click();
     assert.equal(await page.getByLabel("Bill name", { exact: true }).inputValue(), "Synthetic water case");
-    await page.getByLabel(/amount/i).fill("46.00");
+    await page.locator("#amount").fill("46.00");
     await page.getByRole("button", { name: "Save and return to AI help", exact: true }).click();
     await page.getByRole("heading", { name: "Check your bill details", exact: true }).waitFor();
     assert.equal(await page.getByText("Step 1 of 3", { exact: true }).count(), 1,
