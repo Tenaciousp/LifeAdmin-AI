@@ -34,3 +34,16 @@ export async function copyDeviceText(text) {
   if (!navigator.clipboard?.writeText) throw new Error("Copy is unavailable. Select the text and copy manually.");
   await navigator.clipboard.writeText(text);
 }
+
+export async function openExternalDeviceUrl(value) {
+  let url;
+  try { url = new URL(value); } catch { throw new Error("This link is invalid."); }
+  if (url.protocol !== "https:" && url.protocol !== "mailto:") throw new Error("HomeAdmin opens secure web links and email drafts only.");
+  if (url.username || url.password) throw new Error("This secure link is invalid.");
+  if (isNativeDevice()) {
+    await nativeFiles().openExternal({ url: url.href });
+    return;
+  }
+  if (url.protocol === "mailto:") window.location.assign(url.href);
+  else window.open(url.href, "_blank", "noopener,noreferrer");
+}

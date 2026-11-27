@@ -37,6 +37,19 @@ def validate_profile(profile, now=None):
     return str(uuid.UUID(profile["UUID"])).upper()
 
 
+def build_export_options(profile_id, build_profile):
+    if build_profile not in ("internal-offline", "live-release"):
+        raise ValueError("Choose internal-offline or live-release")
+    options = {
+        "method": "app-store-connect", "destination": "export", "teamID": TEAM,
+        "signingStyle": "manual", "signingCertificate": "Apple Distribution",
+        "provisioningProfiles": {BUNDLE: profile_id}, "manageAppVersionAndBuildNumber": False,
+    }
+    if build_profile == "internal-offline":
+        options["testFlightInternalTestingOnly"] = True
+    return options
+
+
 def main():
     temporary = Path(os.environ["RUNNER_TEMP"])
     number = os.environ["APPLE_BUILD_NUMBER"]
@@ -70,11 +83,9 @@ def main():
     if updated != 1:
         raise ValueError("Expected exactly one matching app Release configuration")
     project.write_bytes(plistlib.dumps(tree))
-    (temporary / "ExportOptions.plist").write_bytes(plistlib.dumps({
-        "method": "app-store-connect", "destination": "export", "teamID": TEAM,
-        "signingStyle": "manual", "signingCertificate": "Apple Distribution",
-        "provisioningProfiles": {BUNDLE: profile_id}, "manageAppVersionAndBuildNumber": False,
-    }))
+    build_profile = os.environ.get("HOMEADMIN_BUILD_PROFILE", "")
+    (temporary / "ExportOptions.plist").write_bytes(
+        plistlib.dumps(build_export_options(profile_id, build_profile)))
     print("Distribution profile validated; runner-only signing configuration prepared.")
 
 

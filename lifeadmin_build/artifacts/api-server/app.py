@@ -7,7 +7,7 @@ Optional: export OPENAI_API_KEY="..." for AI-generated outputs.
 Optional: export STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET and Stripe Price IDs for live web payments.
 """
 from http.server import ThreadingHTTPServer, SimpleHTTPRequestHandler
-from urllib.parse import urlparse, parse_qs, urlencode
+from urllib.parse import urlparse, parse_qs, urlencode, urlsplit
 import json
 import os
 import secrets
@@ -27,6 +27,7 @@ import password_recovery
 from backup_lock import data_lock, LockTimeout
 import domain
 import energy_renewal
+import customer_ai
 
 APP_DIR = os.path.dirname(os.path.abspath(__file__))
 DATA_DIR = os.path.join(APP_DIR, "data")
@@ -1841,6 +1842,140 @@ def call_gemini_draft(prompt, output):
         raise RuntimeError("Gemini generation failed") from None
 
 
+def live_comparisons_enabled():
+    """Live comparisons stay off until the publisher enables the paid search route."""
+    return env_bool("GEMINI_LIVE_COMPARISONS_ENABLED", False) and bool(os.environ.get("GEMINI_API_KEY"))
+
+
+def call_gemini_live_comparison(prompt):
+    """Return an unmodified Google Search-grounded response and display metadata."""
+    if not live_comparisons_enabled():
+        raise RuntimeError("Live comparisons are not configured")
+    model = os.environ.get("GEMINI_COMPARISON_MODEL", "gemini-3.5-flash-lite")
+    if not re.fullmatch(r"gemini-[A-Za-z0-9.-]{2,80}", model):
+        raise RuntimeError("Live comparison model is not configured")
+    system = (
+        "Compare current public offers for the customer's household bill or subscription. "
+        "Use Google Search for current information. Prefer official provider sources. "
+        "Compare equivalent service, total cost, contract term, fees, eligibility and "
+        "important features. Include staying with the current provider. Clearly separate "
+        "published facts, estimates and unknowns. Never invent prices, availability, "
+        "savings, fees or eligibility. If the supplied details do not support a reliable "
+        "comparison, say what is missing and do not recommend an unverified offer. "
+        "Do not send messages, switch providers, cancel services or take other actions. "
+        "Return a readable comparison only; do not add a fabricated source list or date."
+    )
+    payload = {
+        "systemInstruction": {"parts": [{"text": system}]},
+        "contents": [{"role": "user", "parts": [{"text": prompt}]}],
+        "tools": [{"google_search": {}}],
+        "generationConfig": {"temperature": 1.0, "maxOutputTokens": 5000},
+    }
+    request = urllib.request.Request(
+        f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent",
+        data=json.dumps(payload).encode("utf-8"),
+        headers={"Content-Type": "application/json", "x-goog-api-key": os.environ["GEMINI_API_KEY"]},
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(request, timeout=60) as response:
+            data = json.loads(response.read().decode("utf-8"))
+        candidates = data.get("candidates") if isinstance(data, dict) else None
+        candidate = candidates[0] if isinstance(candidates, list) and candidates else None
+        content = candidate.get("content") if isinstance(candidate, dict) else None
+        parts = content.get("parts") if isinstance(content, dict) else None
+        text = "".join(part.get("text", "") for part in parts if isinstance(part, dict)).strip() if isinstance(parts, list) else ""
+        metadata = candidate.get("groundingMetadata") if isinstance(candidate, dict) else None
+        metadata = metadata if isinstance(metadata, dict) else {}
+        chunks = metadata.get("groundingChunks") if isinstance(metadata.get("groundingChunks"), list) else []
+        source_by_chunk = []
+        for chunk in chunks[:20]:
+            web = chunk.get("web") if isinstance(chunk, dict) else None
+            uri = web.get("uri") if isinstance(web, dict) else None
+            title = web.get("title") if isinstance(web, dict) else None
+            parsed_uri = urlsplit(uri) if isinstance(uri, str) else None
+            if parsed_uri and parsed_uri.scheme == "https" and parsed_uri.hostname and not parsed_uri.username and not parsed_uri.password:
+                source_by_chunk.append({"title": (title if isinstance(title, str) else "Web source")[:200], "url": uri[:2000]})
+            else:
+                source_by_chunk.append(None)
+        sources = [source for source in source_by_chunk if source]
+        suggestion = metadata.get("searchEntryPoint")
+        suggestions_html = suggestion.get("renderedContent") if isinstance(suggestion, dict) else None
+        if not text or len(text) > 20000 or not sources or not isinstance(suggestions_html, str) or not suggestions_html.strip() or len(suggestions_html) > 20000:
+            raise ValueError("Grounding evidence is incomplete")
+        citations = []
+        supports = metadata.get("groundingSupports") if isinstance(metadata.get("groundingSupports"), list) else []
+        for support in supports[:100]:
+            if not isinstance(support, dict):
+                continue
+            segment = support.get("segment")
+            claim = segment.get("text") if isinstance(segment, dict) else None
+            indices = support.get("groundingChunkIndices")
+            if not isinstance(claim, str) or not claim.strip() or not isinstance(indices, list):
+                continue
+            linked_sources = [source_by_chunk[index] for index in indices if isinstance(index, int) and 0 <= index < len(source_by_chunk) and source_by_chunk[index]]
+            if linked_sources:
+                citations.append({"claim": claim[:1000], "sources": linked_sources[:5]})
+        return {
+            "body": text,
+            "sources": sources,
+            "citations": citations,
+            "search_suggestions_html": suggestions_html,
+            "checked_at": datetime.now(timezone.utc).isoformat(),
+            "model": model,
+        }
+    except urllib.error.HTTPError as exc:
+        if exc.code == 429:
+            raise RuntimeError("Gemini usage limit reached") from None
+        raise RuntimeError("Gemini comparison failed") from None
+    except (urllib.error.URLError, TimeoutError, json.JSONDecodeError, IndexError, KeyError, TypeError, ValueError):
+        raise RuntimeError("Gemini comparison failed") from None
+
+
+_AI_COMPARISON_RATE = {"day": None, "count": 0, "ips": {}}
+_AI_COMPARISON_RATE_LOCK = threading.Lock()
+
+
+def live_comparison_rate_limited(handler):
+    """Keep a deliberately small process-local trial limit; this is not a spend cap."""
+    now = time.time()
+    day = datetime.now(timezone.utc).date().isoformat()
+    ip = handler.client_address[0] if handler.client_address else "unknown"
+    with _AI_COMPARISON_RATE_LOCK:
+        if _AI_COMPARISON_RATE["day"] != day:
+            _AI_COMPARISON_RATE.update(day=day, count=0, ips={})
+        try:
+            limit = max(1, min(100, int(os.environ.get("GEMINI_LIVE_COMPARISONS_DAILY_LIMIT", "5"))))
+        except (TypeError, ValueError):
+            limit = 5
+        recent = [stamp for stamp in _AI_COMPARISON_RATE["ips"].get(ip, []) if now - stamp < 3600]
+        if _AI_COMPARISON_RATE["count"] >= limit or recent:
+            _AI_COMPARISON_RATE["ips"][ip] = recent
+            return True
+        _AI_COMPARISON_RATE["ips"][ip] = recent + [now]
+        _AI_COMPARISON_RATE["count"] += 1
+        return False
+
+
+def generate_ai_comparison(handler, body):
+    """Run an explicit, consented and user-specific live comparison."""
+    if not live_comparisons_enabled():
+        return json_response(handler, {"error": "Live offer research is not available yet."}, 503)
+    if not isinstance(body, dict) or body.get("consent") is not True:
+        return json_response(handler, {"error": "Review and approve the live research notice before continuing."}, 400)
+    prompt = body.get("prompt")
+    if not isinstance(prompt, str) or not prompt.strip() or len(prompt) > 20000:
+        return json_response(handler, {"error": "Review a request of up to 20,000 characters."}, 400)
+    if live_comparison_rate_limited(handler):
+        return json_response(handler, {"error": "Live research has reached its current usage limit. Try again later or use your preferred AI."}, 429, {"Retry-After": "3600"})
+    try:
+        return json_response(handler, call_gemini_live_comparison(prompt))
+    except RuntimeError as exc:
+        if str(exc) == "Gemini usage limit reached":
+            return json_response(handler, {"error": "Live research has reached its current usage limit. Try again later or use your preferred AI."}, 429, {"Retry-After": "3600"})
+        return json_response(handler, {"error": "A sourced live comparison could not be completed. Your request is still available; try again later or use your preferred AI."}, 502)
+
+
 def generate_ai_draft(handler, body):
     """Handle an explicit, consented request without saving or logging its text."""
     if not env_bool("GEMINI_DRAFTS_ENABLED", False) or not os.environ.get("GEMINI_API_KEY"):
@@ -1868,6 +2003,51 @@ def generate_ai_draft(handler, body):
         if str(exc) == "Gemini usage limit reached":
             return json_response(handler, {"error": "AI usage limit reached. Try again later."}, 429, {"Retry-After": "60"})
         return json_response(handler, {"error": "Gemini could not generate a draft. Try Copilot or retry later."}, 502)
+
+
+_CUSTOMER_AI_RATE = {}
+_CUSTOMER_AI_RATE_LOCK = threading.Lock()
+
+
+def customer_ai_rate_limited(handler):
+    now = time.time()
+    ip = handler.client_address[0] if handler.client_address else "unknown"
+    with _CUSTOMER_AI_RATE_LOCK:
+        recent = [stamp for stamp in _CUSTOMER_AI_RATE.get(ip, []) if now - stamp < 60]
+        if len(recent) >= 4:
+            _CUSTOMER_AI_RATE[ip] = recent
+            return True
+        _CUSTOMER_AI_RATE[ip] = recent + [now]
+        return False
+
+
+def generate_customer_ai(handler, body):
+    """Forward one explicitly consented key-and-prompt request without persistence."""
+    if not env_bool("CUSTOMER_KEY_AI_ENABLED", False):
+        return json_response(handler, {"error": "Customer-key AI is not enabled for this version."}, 503)
+    if not isinstance(body, dict) or body.get("consent") is not True:
+        return json_response(handler, {"error": "Review and approve the provider-sharing notice before continuing."}, 400)
+    if customer_ai_rate_limited(handler):
+        return json_response(handler, {"error": "Too many requests. Wait a minute, then try again."}, 429, {"Retry-After": "60"})
+    api_key = handler.headers.get("X-Customer-Provider-Key", "")
+    if not isinstance(body.get("provider"), str) or not isinstance(body.get("prompt"), str):
+        return json_response(handler, {"error": "Review the selected AI provider and request."}, 400)
+    try:
+        result = customer_ai.generate(body["provider"], api_key, body["prompt"], body.get("output"), body.get("search", False))
+    except ValueError as exc:
+        return json_response(handler, {"error": str(exc)}, 400)
+    except RuntimeError as exc:
+        reason = str(exc)
+        if reason == "provider_limit":
+            return json_response(handler, {"error": "Your provider has reached its API usage limit. Check its billing and limits, or choose another AI."}, 429)
+        if reason == "provider_key":
+            return json_response(handler, {"error": "The provider rejected this API key. Check the key and its API access, then retry."}, 401)
+        if reason == "research_evidence":
+            return json_response(handler, {"error": "The provider returned no linked search evidence. No live comparison was saved."}, 502)
+        if reason == "provider_response":
+            return json_response(handler, {"error": "The provider returned an incomplete answer. Your request remains here; retry or choose another AI."}, 502)
+        return json_response(handler, {"error": "The selected AI provider is unavailable. Your request remains here; retry or choose another AI."}, 502)
+    return json_response(handler, result)
 
 
 _AUTH_RATE = {}
@@ -2026,7 +2206,7 @@ class AdminPilotHandler(SimpleHTTPRequestHandler):
 
     def do_POST(self):
         # Includes Stripe webhook and account/session writes.
-        if urlparse(self.path).path == "/api/ai/draft":
+        if urlparse(self.path).path in {"/api/ai/draft", "/api/ai/comparison", "/api/ai/customer"}:
             return AdminPilotHandler._do_POST(self)
         return AdminPilotHandler._with_data_lock(self, lambda: AdminPilotHandler._do_POST(self))
 
@@ -2034,7 +2214,7 @@ class AdminPilotHandler(SimpleHTTPRequestHandler):
         parsed = urlparse(self.path)
         path = parsed.path
         if path in {"/api/health", "/api/healthz"}:
-            return json_response(self, {"status": "ok", "service": "lifeadmin-ai", "ai_drafts_available": bool(env_bool("GEMINI_DRAFTS_ENABLED", False) and os.environ.get("GEMINI_API_KEY"))})
+            return json_response(self, {"status": "ok", "service": "lifeadmin-ai", "ai_drafts_available": bool(env_bool("GEMINI_DRAFTS_ENABLED", False) and os.environ.get("GEMINI_API_KEY")), "live_comparisons_available": live_comparisons_enabled(), "customer_key_ai_available": env_bool("CUSTOMER_KEY_AI_ENABLED", False)})
         query = parse_qs(parsed.query)
         user = current_user(self)
         user_id = user["id"] if user else guest_session(self)
@@ -2104,6 +2284,10 @@ class AdminPilotHandler(SimpleHTTPRequestHandler):
             return json_response(self, {"error": str(exc)}, 413)
         if path == "/api/ai/draft":
             return generate_ai_draft(self, body)
+        if path == "/api/ai/comparison":
+            return generate_ai_comparison(self, body)
+        if path == "/api/ai/customer":
+            return generate_customer_ai(self, body)
         user = current_user(self)
         user_id = user["id"] if user else guest_session(self)
         if path == "/api/auth/forgot-password":

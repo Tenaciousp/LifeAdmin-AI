@@ -1,3 +1,4 @@
+import { locateEmail } from "./plan-email.mjs";
 import { promptFields, taskAiPrompt } from "./ai-handoff.mjs";
 import { billCategory, customerCatalog, goalsFor } from "./bill-types.mjs";
 import { generateLocalResult, missingDetails, safetyNotices } from "./plans.mjs";
@@ -18,13 +19,41 @@ export function initialWorkflow(task) {
   const text = (key, max) => typeof d[key] === "string" && d[key].length <= max ? d[key] : "";
   return {
     output: outputs.some(x => x.id === d.output) ? d.output : "plan",
-    method: ["local", "gemini_api"].includes(d.method) ? d.method : "chosen_ai",
+    method: ["local", "gemini_api", "customer_api"].includes(d.method) ? d.method : "chosen_ai",
+    aiProvider: ["openai", "gemini", "anthropic"].includes(d.aiProvider) ? d.aiProvider : "",
     step: Number.isInteger(d.step) && d.step >= 1 && d.step <= 4 ? d.step : 1,
     fieldKeys: Array.isArray(d.fieldKeys) ? [...new Set(d.fieldKeys.filter(key => fields.some(field => field.key === key)))] : fields.filter(x => x.selected).map(x => x.key),
     tone: tones.includes(d.tone) ? d.tone : tones[0], language: languages.includes(d.language) ? d.language : "English",
     brief: text("brief", 2000), incoming: text("incoming", 10000), subject: text("subject", 200), body: text("body", 20000),
+    liveComparison: d.liveComparison === true,
+    grounding: safeGrounding(d.grounding),
+    messageSubject: text("messageSubject", 200), messageBody: text("messageBody", 10000),
     reviewed: false,
   };
+}
+
+function safeGrounding(value) {
+  const provider = typeof value?.provider === "string" ? value.provider : "gemini";
+  const suggestions = typeof value?.search_suggestions_html === "string" ? value.search_suggestions_html : "";
+  if (!value || typeof value !== "object" || !Array.isArray(value.sources) || !value.sources.length ||
+      !["gemini", "openai", "anthropic"].includes(provider) || suggestions.length > 20000 ||
+      (!value.provider && !suggestions.trim()) ||
+      typeof value.checked_at !== "string" || Number.isNaN(Date.parse(value.checked_at))) return null;
+  const validSource = item => {
+    if (!item || typeof item.title !== "string" || typeof item.url !== "string") return false;
+    try { const url = new URL(item.url); return url.protocol === "https:" && Boolean(url.hostname) && !url.username && !url.password; }
+    catch { return false; }
+  };
+  const sources = value.sources.filter(validSource)
+    .slice(0, 20).map(item => ({ title: item.title.slice(0, 200), url: item.url.slice(0, 2000) }));
+  if (!sources.length) return null;
+  const citations = Array.isArray(value.citations) ? value.citations.slice(0, 100).flatMap(item => {
+    if (!item || typeof item.claim !== "string" || !Array.isArray(item.sources)) return [];
+    const linked = item.sources.filter(validSource)
+      .slice(0, 5).map(source => ({ title: source.title.slice(0, 200), url: source.url.slice(0, 2000) }));
+    return linked.length ? [{ claim: item.claim.slice(0, 1000), sources: linked }] : [];
+  }) : [];
+  return { sources, citations, search_suggestions_html: suggestions, checked_at: value.checked_at.slice(0, 60), model: typeof value.model === "string" ? value.model.slice(0, 100) : "", ...(value.provider ? { provider } : {}) };
 }
 export function workflowPrompt(task, draft) {
   if (!outputs.some(x => x.id === draft.output)) throw new Error("Choose a plan, letter or reply.");
@@ -46,6 +75,20 @@ export function workflowPrompt(task, draft) {
   if (draft.output === "reply") extra.push("Provider message (explicitly included):\n" + draft.incoming.trim());
   return extra.join("\n\n");
 }
+
+export function initialComparisonEmail(task) {
+  const provider = String(task?.details?.provider || "your provider").trim().slice(0, 120) || "your provider";
+  const service = String(task?.details?.bill_type || task?.details?.service_type || task?.title || "household service").trim().slice(0, 120) || "household service";
+  const amount = String(task?.details?.amount || "").trim().slice(0, 80);
+  const currency = String(task?.details?.currency || "GBP").trim().slice(0, 12);
+  const frequency = String(task?.details?.billing_frequency || "").trim().slice(0, 40);
+  const current = amount ? `The current amount recorded in HomeAdmin is ${currency} ${amount}${frequency ? ` ${frequency}` : ""}. Please confirm the current account price.` : "Please confirm the current account price and billing frequency.";
+  return {
+    subject: `Please review my ${service} price`,
+    body: `Hello ${provider},\n\nI am reviewing the cost of my ${service} and would like to know whether a lower price is available while keeping the features I need.\n\n${current}\n\nPlease provide the total price for the full contract period, the ongoing price after any introductory offer, contract length, fees, exit costs and any eligibility requirements. Please explain any material service or feature differences.\n\nPlease do not change my service or contract without my approval. I will review the full terms before deciding.\n\nThank you,\n[Your name]`,
+  };
+}
+
 export function localWorkflowDraft(task, output, brief = "") {
   if (!outputs.some(x => x.id === output)) throw new Error("Choose a plan, letter or reply.");
   const result = generateLocalResult(task);
@@ -54,7 +97,7 @@ export function localWorkflowDraft(task, output, brief = "") {
   return { subject: result.provider_email?.subject || "Bill query", body: (result.provider_email?.body || result.provider_message || "") + (brief.trim() ? "\n\nMy requested outcome: " + brief.trim() : "") };
 }
 export function workflowResult(task, draft, service = "") {
-  if (!outputs.some(x => x.id === draft.output) || !["local", "chosen_ai", "gemini_api"].includes(draft.method)) throw new Error("Choose an output and preparation method.");
+  if (!outputs.some(x => x.id === draft.output) || !["local", "chosen_ai", "gemini_api", "customer_api"].includes(draft.method)) throw new Error("Choose an output and preparation method.");
   if (!draft.reviewed) throw new Error("Review the facts, dates, amounts and placeholders before saving.");
   if (typeof draft.body !== "string" || !draft.body.trim() || draft.body.length > 20000) throw new Error("Enter a result of up to 20,000 characters.");
   if (draft.output !== "plan" && (typeof draft.subject !== "string" || !draft.subject.trim() || draft.subject.length > 200)) throw new Error("Enter a subject of up to 200 characters.");
@@ -62,12 +105,28 @@ export function workflowResult(task, draft, service = "") {
   const notices = safetyNotices(task);
   const safety = "Check the supplied facts and current local provider terms. Remove remaining placeholders. Nothing has been sent or agreed automatically." + (notices.length ? "\n" + notices.join("\n") : "");
   const planSections = isPlan ? (draft.method === "local" ? { next_steps: draft.body } : storedPlanSections(draft.body)) : {};
+  const groundedComparison = isPlan && draft.liveComparison === true && ["gemini_api", "customer_api"].includes(draft.method);
+  if (groundedComparison && (!safeGrounding(draft.grounding) || typeof draft.messageSubject !== "string" || !draft.messageSubject.trim() || typeof draft.messageBody !== "string" || !draft.messageBody.trim())) {
+    throw new Error("Keep the live comparison sources and a reviewed provider message before saving.");
+  }
   return {
     id: globalThis.crypto.randomUUID(), task_id: task.id, title: (task.title + " · " + ({ plan: "Plan", letter: "Letter", reply: "Reply" }[draft.output])).slice(0, 160),
-    category_id: billCategory(task), created_at: new Date().toISOString(), source: draft.method === "local" ? "local" : draft.method === "gemini_api" ? "external_ai_api" : "external_ai_manual",
-    workflow_output: draft.output, ai_service: draft.method === "local" ? "" : draft.method === "gemini_api" ? "Google Gemini API" : service, content: draft.body,
+    category_id: billCategory(task), created_at: new Date().toISOString(), source: draft.method === "local" ? "local" : groundedComparison ? "external_ai_grounded" : ["gemini_api", "customer_api"].includes(draft.method) ? "external_ai_api" : "external_ai_manual",
+    workflow_output: draft.output, ai_service: draft.method === "local" ? "" : groundedComparison ? draft.method === "gemini_api" ? "Google Gemini with Google Search" : `${draft.grounding.provider} with web search` : draft.method === "gemini_api" ? "Google Gemini API" : draft.method === "customer_api" ? `${draft.aiProvider || service} API` : service, content: draft.body,
+    live_comparison: groundedComparison ? safeGrounding(draft.grounding) : null,
     sections: isPlan ? { ...planSections, approval_checklist: safety } : { next_steps: "Copy the reviewed message and send through the provider's official contact route yourself. Keep their response with this bill and add a follow-up date if needed.", approval_checklist: safety },
-    provider_email: isPlan ? null : { subject: draft.subject, body: draft.body, kind: "provider" },
+    provider_email: groundedComparison ? { subject: draft.messageSubject.trim(), body: draft.messageBody.trim(), kind: "provider" } : isPlan ? null : { subject: draft.subject, body: draft.body, kind: "provider" },
     known_details: { ...task.details }, missing_details: missingDetails(task),
+  };
+}
+
+export function comparisonResult(task, body, currentSubject = "", currentBody = "") {
+  const email = locateEmail(body);
+  const fallback = initialComparisonEmail(task);
+  const usable = email?.subject?.trim() && email?.message?.trim();
+  return {
+    body,
+    messageSubject: usable ? email.subject.trim().slice(0, 200) : currentSubject.trim() || fallback.subject,
+    messageBody: usable ? email.message.trim().slice(0, 10000) : currentBody.trim() || fallback.body,
   };
 }

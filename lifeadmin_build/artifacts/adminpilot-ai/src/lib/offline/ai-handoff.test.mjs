@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { aiServices, aiActions, taskAiPrompt, promptFields, preferredAi, savePreferredAi } from './ai-handoff.mjs';
+import { aiServices, aiActions, taskAiPrompt, promptFields, preferredAi, savePreferredAi, aiSelectionGuidance, externalAiResearchGuidance } from './ai-handoff.mjs';
 const plan = { title: 'PRIVATE TITLE', known_details: { provider: 'Example Broadband', amount: '£42/month', date: '2027-05-31', account_reference: 'PRIVATE-REF-7319', what_happened: 'PRIVATE FREE TEXT', unknown_field: 'PRIVATE UNKNOWN' }, provider_email: { subject: 'PRIVATE SUBJECT', body: 'PRIVATE LETTER' } };
 test('prepared questions use selected facts and exclude identifiers/free text/draft by default', () => {
   const before = structuredClone(plan), prompt = taskAiPrompt(plan);
@@ -39,6 +39,18 @@ test('AI preference persists, rejects unknown services and tolerates unavailable
   assert.equal(preferredAi({ getItem() { throw new Error(); } }), 'copilot');
   assert.throws(() => savePreferredAi(null, 'claude'), /this session/);
   assert.throws(() => savePreferredAi({setItem() {}, getItem() { return null; }}, 'claude'), /this session/);
+});
+
+test('AI choice explains existing subscriptions, Copilot default and external research limits', () => {
+  assert.match(aiSelectionGuidance, /already use or subscribe to/i);
+  assert.match(aiSelectionGuidance, /starts with Copilot/i);
+  assert.match(aiSelectionGuidance, /no AI subscription or API charge/i);
+  assert.match(aiSelectionGuidance, /saved only on this device/i);
+  assert.match(aiSelectionGuidance, /does not check or store your account or payment details/i);
+  const handoff = externalAiResearchGuidance('Gemini (Google, free option)');
+  assert.match(handoff, /if that AI supports web search/i);
+  assert.match(handoff, /HomeAdmin cannot verify an answer returned from another AI/i);
+  assert.match(handoff, /confirm prices, terms and eligibility/i);
 });
 
 test('saved plan review requires explicit inclusion and preserves the original result', () => {

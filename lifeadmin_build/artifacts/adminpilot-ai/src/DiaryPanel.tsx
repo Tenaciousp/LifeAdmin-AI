@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react';
 import { EmptyState, LoadingSpinner } from './Feedback';
-import { diaryEvents } from './lib/offline/diary.mjs';
+import { diaryEvents, diaryAlertState } from './lib/offline/diary.mjs';
 import { calendarAvailable, chooseCalendars, syncDiary, removeDiaryEntries } from './lib/offline/device-calendar.mjs';
 const key = 'lifeadmin-calendar-v1';
 const button = 'min-h-[44px] max-w-full rounded-xl bg-violet-700 px-4 py-2 font-semibold text-white disabled:opacity-50';
 function rememberedCalendar() { try { return localStorage.getItem(key) || ''; } catch { return ''; } }
-export default function DiaryPanel({ tasks }: { tasks: Record<string, any>[] }) {
+export default function DiaryPanel({ tasks, onEdit }: { tasks: Record<string, any>[]; onEdit?: (task: Record<string, any>) => void }) {
   const [calendarId, setCalendarId] = useState(rememberedCalendar);
   const [choice, setChoice] = useState('');
   const [calendars, setCalendars] = useState<{id: string; title: string}[]>([]);
@@ -16,13 +16,14 @@ export default function DiaryPanel({ tasks }: { tasks: Record<string, any>[] }) 
   // The string dependency changes only when diary-relevant fields change.
   let events = '', invalid = '';
   try { events = JSON.stringify(diaryEvents(tasks)); } catch (failure) { invalid = failure instanceof Error ? failure.message : 'Check diary dates.'; }
+  const reminderStates = invalid || !events ? [] : (JSON.parse(events) as ReturnType<typeof diaryEvents>).map(event => ({...event, ...diaryAlertState(event)}));
   useEffect(() => {
     let active = true;
     if (!calendarId) return;
     if (invalid) { setError(invalid); setStatus("Diary update paused. Correct the saved dates or disconnect the diary."); setBusy(false); return; }
     setStatus('Updating diary entries…'); setError(''); setBusy(true);
     void syncDiary(calendarId, JSON.parse(events)).then(result => {
-      if (active) setStatus(`Diary updated: ${result.count} entries. ${result.skippedPast} past dates skipped. Check calendar alerts on your device.`);
+      if (active) setStatus(`Diary saved: ${result.count} entries. ${result.skippedPast} past dates skipped. Saved entries and alerts are separate; check the reminder times below and your device settings.`);
     }).catch(failure => { if (active) { setStatus('Diary update incomplete. Your saved bills are unchanged.'); setError(failure instanceof Error ? failure.message : 'Calendar update failed.'); } }).finally(() => { if (active) setBusy(false); });
     return () => { active = false; };
   }, [calendarId, events, invalid, retry]);
@@ -60,6 +61,7 @@ export default function DiaryPanel({ tasks }: { tasks: Record<string, any>[] }) 
     {busy && <p role="status" aria-busy="true" className="mt-3 flex items-center gap-2 font-semibold text-violet-900"><LoadingSpinner />Updating calendar…</p>}
     {status && !busy && <p role="status" className="mt-3">{status}</p>}{error && <p role="alert" className="mt-3 text-red-900">{error}</p>}
     {!invalid && events === '[]' && <EmptyState title="No diary dates yet" description="Add a contract or follow-up date to a bill. Connect a calendar only when you want device entries." />}
+    {!!reminderStates.length && <section className="mt-4 rounded-xl border p-3" aria-label="HomeAdmin reminder times"><h3 className="font-bold">Entries and alert times</h3><p>Calendar entries do not guarantee an alert. HomeAdmin requests a 09:00 local alert only when the selected reminder time is still in the future.</p><ul>{reminderStates.map(item => <li className="mt-3" key={item.key}><p>{item.title} · {item.date} · {item.leadDays} days before</p>{item.status === 'elapsed' ? <><p className="font-semibold text-amber-900">Selected alert time has elapsed. This entry has no future HomeAdmin alarm with this lead.</p>{onEdit && <button type="button" className={button + ' mt-2'} onClick={() => { const task = tasks.find(task => task.id === item.key.split('/')[0]); if (task) onEdit(task); }}>Edit bill reminder lead</button>}<p>Choose a shorter lead in the bill's Contract dates and diary section, then save. HomeAdmin will update the same linked entry.</p></> : <p>Eligible HomeAdmin alert time: {new Date(item.alertAt).toLocaleString()}. Connect a calendar to request this alert. Calendar permissions and device settings control delivery.</p>}</li>)}</ul></section>}
     {calendarAvailable() ? <div className="mt-4 space-y-3"><button disabled={busy} className={button} onClick={() => void choose()}>{calendarId ? 'Change calendar' : 'Connect calendar'}</button>
       {!!calendars.length && <div><label>Calendar<select className="mt-1 block min-h-[44px] w-full rounded-xl border p-2" value={choice} onChange={event => setChoice(event.target.value)}>{calendars.map(x => <option key={x.id} value={x.id}>{x.title}</option>)}</select></label><button disabled={busy} className={button + ' mt-3'} onClick={connect}>Enable diary updates</button></div>}
       {!!calendarId && <div className="flex flex-wrap gap-3"><button disabled={busy} className={button} onClick={() => setRetry(x => x + 1)}>Retry diary update</button><button disabled={busy} className={button} onClick={() => void disconnect(false)}>Disconnect and keep entries</button></div>}

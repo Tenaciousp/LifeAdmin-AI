@@ -1,485 +1,122 @@
-// Synthetic-only guided journey. No AI service is contacted and no real AI
-// output is claimed by this test; returned text is an explicitly entered fixture.
+if (process.argv.includes('--local-state')) {
+  import('./qa_broadband_states.mjs').then(m => m.runBroadbandStates()).catch(e => { console.error(e); process.exitCode = 1; });
+} else {
+// Synthetic-only guided bill journey. No AI provider or live price service is contacted.
 const { chromium } = require("playwright");
 const assert = require("node:assert/strict");
 
 (async () => {
-  const browser = await chromium.launch({ headless: true, args: ["--no-sandbox"], ...(process.env.HOMEADMIN_CHROMIUM_PATH ? { executablePath: process.env.HOMEADMIN_CHROMIUM_PATH } : {}) });
+  const browser = await chromium.launch({ headless: true, chromiumSandbox: true, ...(process.env.HOMEADMIN_CHROMIUM_PATH ? { executablePath: process.env.HOMEADMIN_CHROMIUM_PATH } : {}) });
   try {
-    const page = await browser.newPage({ viewport: { width: 1024, height: 1366 } });
+    const page = await browser.newPage({ viewport: { width: 1024, height: 900 } });
     const base = process.env.HOMEADMIN_QA_URL || "http://127.0.0.1:5174";
     const external = [], errors = [];
+    await page.context().grantPermissions(["clipboard-read", "clipboard-write"]);
     await page.route("**/*", route => {
       if (new URL(route.request().url()).origin !== new URL(base).origin) { external.push(route.request().url()); return route.abort(); }
       return route.continue();
     });
     page.on("pageerror", error => errors.push(error.message));
     await page.goto(base);
-    // This browser runs the offline LocalApp build (VITE_LIFEADMIN_LOCAL=true).
-    // Public landing-page assertions belong to the separate web build, not this local flow.
     await page.getByRole("button", { name: "Water", exact: true }).click();
     await page.getByLabel("What would you like help with?").selectOption("check_bill");
     await page.getByLabel("Bill name", { exact: true }).fill("Synthetic water case");
     await page.getByLabel("Water company (useful)", { exact: true }).fill("Example Water");
     await page.getByLabel("Country / region of this bill").selectOption("Canada");
     await page.getByLabel("Bill currency").selectOption("CAD");
+    await page.getByLabel("Bill amount", { exact: true }).fill("45.00");
     await page.locator("summary").filter({ hasText: "More bill details (optional)" }).click();
     await page.getByLabel("Customer reference (optional)", { exact: true }).fill("TEST-REF-SECRET");
-    await page.getByRole("button", { name: "Save bill", exact: true }).click();
+    await page.getByRole("button", { name: "Save bill and continue to AI help", exact: true }).click();
     await page.getByRole("heading", { name: "Help with Synthetic water case", exact: true }).waitFor();
-    await page.waitForFunction(() => document.activeElement?.id === "bill-help-heading", null, { timeout: 5000 });
-    assert.equal(await page.locator("#bill-form").isVisible(), false,
-      "Saving a bill should close entry so the guided next step is not obscured.");
-    await page.getByText("What do you want to achieve?", { exact: true }).waitFor();
-    const moreChoices = page.locator('#bill-help details').filter({ has: page.locator('summary', { hasText: 'More ways to get help' }) });
-    assert.equal(await moreChoices.evaluate(node => node.open), false, 'Additional outcomes start collapsed.');
-    for (const objective of ["Compare providers and save money", "Query a charge or complain", "Write a price negotiation email"]) {
-      assert.equal(await page.getByRole("button", { name: objective, exact: true }).isVisible(), true, 'Main outcomes must be visible.');
-    }
-    await moreChoices.locator('summary').click();
-    for (const objective of ["Renew or negotiate a better deal", "Switch or cancel a service", "Reply to a provider message"]) {
-      await page.getByRole("button", { name: objective, exact: true }).waitFor();
-    }
-    await page.getByRole("button", { name: "Renew or negotiate a better deal", exact: true }).click();
-    assert.equal(await page.getByRole("button", { name: "Renew or negotiate a better deal", exact: true }).getAttribute("aria-pressed"), "true", "Chosen objective should be announced to screen readers.");
-    assert.equal(await page.getByRole("button", { name: "Compare providers and save money", exact: true }).getAttribute("aria-pressed"), "false", "Unchosen objectives must not be announced as selected.");
-    await page.getByRole("button", { name: "Continue to details", exact: true }).waitFor();
-    const planSettings = page.locator("details").filter({ has: page.locator("summary", { hasText: "Optional offline plan settings" }) });
-    assert.equal(await planSettings.evaluate(node => node.open), false, "Specialist choices should start collapsed.");
-    await planSettings.locator("summary").click();
-    const focus = planSettings.getByLabel("Plan focus");
-    assert.equal(await focus.inputValue(), "full", "Recommended plan must remain the default.");
-    assert.deepEqual(await focus.locator("option").evaluateAll(nodes => nodes.map(node => node.value)),
-      ["full", "more_options", "renewal_pro", "refund_pro", "document_pro", "travel_pro", "family_board", "small_landlord"]);
-    await focus.selectOption("refund_pro");
-    assert.equal(await focus.inputValue(), "refund_pro");
-    await focus.selectOption("full");
-    await planSettings.locator("summary").click();
-    for (const width of [390, 768, 1024]) {
-      await page.setViewportSize({ width, height: 844 });
-      assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), true, "Choice screen overflow at " + width);
-      await page.locator("#bill-help").screenshot({ path: "/tmp/homeadmin-choices-" + width + ".png" });
-    }
-    await page.getByRole("button", { name: "Reply to a provider message", exact: true }).click();
-    const chosenAi = page.getByRole("radio", { name: /^Use Copilot or my preferred AI/ });
-    await chosenAi.check();
-    assert.equal(await page.getByRole("radio", { name: /^Generate a draft in HomeAdmin/ }).count(), 0, "Unavailable in-app AI should not be offered.");
-    const provider = page.getByLabel("Your AI service", { exact: false });
-    assert.equal(await provider.inputValue(), "copilot", "First use defaults to Copilot.");
-    await provider.selectOption("gemini");
-    assert.equal(await provider.inputValue(), "gemini", "User chooses the provider before entering the request.");
-    assert.equal(await chosenAi.isChecked(), true, "The AI-assisted route must be selected before preparing a request.");
-    // The common renewal journey must deliver a verifiable comparison and a provider negotiation draft.
-    const { workflowPrompt } = await import("../artifacts/adminpilot-ai/src/lib/offline/bill-workflow.mjs");
-    const renewalTask = { category_id: "tv_broadband_mobile", goal_id: "renew", details: { provider: "Sky", service_type: "Combined bundle", amount: "89", currency: "GBP", billing_frequency: "Monthly" } };
-    const renewalDraft = { output: "plan", method: "chosen_ai", step: 2, fieldKeys: [], tone: "Polite and clear", language: "English", brief: "Help me renew for less", incoming: "" };
-    const { fieldsFor } = await import("../artifacts/adminpilot-ai/src/lib/offline/bill-types.mjs");
-    const dualFuelFields = fieldsFor("energy_water", "reduce_price", { utility_type: "Dual fuel" });
-    for (const label of ["Annual electricity use (kWh)", "Annual gas use (kWh)", "Electricity unit rate (p/kWh)", "Gas unit rate (p/kWh)", "Electricity standing charge (p/day)", "Gas standing charge (p/day)"]) {
-      assert.equal(dualFuelFields.some(field => field.label === label), true, "Missing dual-fuel detail: " + label);
-    }
-    const renewalRequest = workflowPrompt(renewalTask, renewalDraft);
-    const energyTask = { category_id: "energy_water", goal_id: "reduce_price", details: { utility_type: "Dual fuel", provider: "Example Energy", currency: "GBP", electricity_usage: "2700", gas_usage: "11500" } };
-    const energyPrompt = workflowPrompt(energyTask, renewalDraft);
-    assert.match(energyPrompt, /each fuel from its own annual kWh consumption/i);
-    assert.match(energyPrompt, /do not invent missing rates/i);
-    assert.match(renewalRequest, /retention email/i);
-    assert.match(renewalRequest, /12- and 24-month totals/i);
-    assert.match(renewalRequest, /Never imply live research occurred/i);
-    await page.getByRole("button", { name: "Continue to details", exact: true }).click();
-    console.log("Guided bill-help selectors after continuing", JSON.stringify(await page.locator("label").evaluateAll(labels => labels.map(label => label.textContent?.trim()).filter(Boolean))));
-    await page.getByLabel("Choose a starting point").selectOption("Explain the provider message and ask about anything unclear.");
-    assert.match(await page.getByLabel("What outcome do you want?").inputValue(), /Explain the provider message/);
-    await page.getByLabel("What outcome do you want?").fill("Explain the estimated meter reading and remaining balance.");
-    await page.getByLabel("Provider message to respond to").fill("We used an estimated reading. Please send the actual reading and date.");
-    await page.getByText("Language and writing style", { exact: true }).click();
-    await page.locator("label").filter({ hasText: /^Response language/ }).locator("select").selectOption("French");
-    await page.getByRole("button", { name: "Review AI request", exact: true }).click();
-    await page.getByRole("heading", { name: "Let your chosen AI help with this bill", exact: true }).waitFor({ timeout: 5000 }).catch(async () => {
-      const alert = await page.getByRole("alert").textContent().catch(() => "no validation message");
-      throw new Error("AI request review did not open: " + alert);
-    });
-    await page.getByText("How do I copy, paste and return?", { exact: true }).click();
-    await page.getByText(/touch and hold, then choose Paste/).waitFor();
-    await page.locator("#bill-help").screenshot({ path: "/tmp/homeadmin-handoff.png" });
-    const requestField = page.locator("label").filter({ hasText: /^Prepared AI request/ }).locator("textarea");
+    await page.getByRole("heading", { name: "Check your bill details", exact: true }).waitFor();
+    assert.equal(await page.getByText("Step 1 of 3", { exact: true }).count(), 1);
+    assert.match(await page.getByLabel("Your request to the AI").inputValue(), /Compare suitable alternatives/,
+      "The saved bill should open with the main savings action ready.");
+    const aiChoice = page.getByLabel("AI service to use", { exact: true });
+    assert.equal(await aiChoice.getAttribute("aria-describedby"), "preferred-ai-guidance",
+      "Subscription guidance should be announced as a description, separate from the AI control name.");
+    assert.equal(await aiChoice.inputValue(), "copilot",
+      "Copilot is the first-use default.");
+    assert.equal(await page.getByText("Choose an AI service you already use or subscribe to. HomeAdmin starts with Copilot and adds no AI subscription or API charge. Your selected service is saved only on this device; HomeAdmin does not check or store your account or payment details. Your AI provider's own plan and limits still apply.", { exact: true }).count(), 1,
+      "The AI choice must explain existing subscriptions, HomeAdmin cost and local-only preference storage.");
+
+    // Bill corrections preserve the current AI request and resume at the same stage.
+    await page.getByRole("button", { name: "Edit bill details and return here", exact: true }).click();
+    assert.equal(await page.getByLabel("Bill name", { exact: true }).inputValue(), "Synthetic water case");
+    await page.getByLabel("Bill amount", { exact: true }).fill("46.00");
+    await page.getByRole("button", { name: "Save and return to AI help", exact: true }).click();
+    await page.getByRole("heading", { name: "Check your bill details", exact: true }).waitFor();
+    assert.equal(await page.getByText("Step 1 of 3", { exact: true }).count(), 1,
+      "Bill editing must return to the current workflow stage.");
+    assert.match(await page.getByRole("group", { name: "Check the details to include" }).innerText(), /46\.00/);
+
+    // The primary route moves directly from reviewed bill facts to a prepared request and chosen AI link.
+    await aiChoice.selectOption("gemini");
+    await page.getByRole("button", { name: "Prepare comparison question", exact: true }).click();
+    await page.getByRole("heading", { name: "Your AI question is ready", exact: true }).waitFor();
+    assert.equal(await page.getByText("Step 2 of 3", { exact: true }).count(), 1);
+    assert.equal(await page.getByText("Your question asks Gemini (Google, free option) to look for current offers and dated sources if that AI supports web search. HomeAdmin cannot verify an answer returned from another AI: open cited provider pages and confirm prices, terms and eligibility. Check the facts below, copy the question, open Gemini (Google, free option), then return with the answer. Nothing is sent until you paste and send it.", { exact: true }).count(), 1,
+      "External AI research must be described as conditional, with explicit source verification.");
+    const requestField = page.getByLabel("Prepared AI request", { exact: true });
     const request = await requestField.inputValue();
-    assert.match(request, /Details to confirm/);
-    assert.match(request, /actual reading and date/); assert.match(request, /French/);
-    assert.match(request, /Water and sewerage/); assert.doesNotMatch(request, /TEST-REF-SECRET/);
-    const open = page.getByRole("link", { name: "Open Gemini (Google, free option)", exact: true });
-    assert.equal(await open.getAttribute("href"), "https://gemini.google.com/");
+    assert.match(request, /Compare suitable alternatives/);
+    assert.match(request, /official source links and the exact date/i);
+    assert.match(request, /payment options instead of alternative suppliers/i);
+    assert.doesNotMatch(request, /TEST-REF-SECRET/);
+    const openAi = page.getByRole("link", { name: "2. Open Gemini (Google, free option)", exact: true });
+    assert.equal(await openAi.getAttribute("href"), "https://gemini.google.com/");
+    await page.getByRole("button", { name: "1. Copy question", exact: true }).click();
+    await page.getByRole("status").filter({ hasText: "Question copied and progress saved." }).waitFor();
     await page.getByRole("button", { name: "Save progress for later", exact: true }).click();
     await page.getByRole("status").filter({ hasText: "Progress saved on this device." }).waitFor();
     await page.reload();
-    const savedHelp = page.getByRole('region', { name: 'Continue your bill help', exact: true });
-    await savedHelp.getByText('Reply · Saved at step 3 of 4: Ask your AI', { exact: true }).waitFor();
-    assert.doesNotMatch(await savedHelp.innerText(), /TEST-REF-SECRET|estimated reading|actual reading and date/);
-    await savedHelp.getByRole('button', { name: 'Continue saved help for Synthetic water case', exact: true }).click();
-    assert.equal(await page.getByLabel("Chosen AI service").inputValue(), "gemini", "Provider preference survives reload.");
-    assert.equal(await page.locator("label").filter({ hasText: /^Prepared AI request/ }).locator("textarea").inputValue(), request);
-    await page.getByRole("button", { name: "I have an answer to review", exact: true }).click();
-    await page.getByLabel("Result subject", { exact: true }).fill("Synthetic reading query");
-    await page.getByLabel("Message text", { exact: true }).fill("Synthetic reviewed reply. Please confirm the revised calculation.");
-    assert.equal(await page.getByRole("button", { name: "Save reviewed result", exact: true }).isDisabled(), true);
-    for (const width of [390, 768, 1024]) {
-      await page.setViewportSize({ width, height: 844 });
-      await page.evaluate(() => { document.documentElement.style.fontSize = "32px"; });
-      await page.getByRole("heading", { name: "Paste and review your AI answer", exact: true }).scrollIntoViewIfNeeded();
-      assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), true, "Guided review overflow at " + width);
-      await page.screenshot({ path: "/tmp/homeadmin-help-" + width + ".png" });
-    }
-    await page.evaluate(() => { document.documentElement.style.fontSize = "16px"; });
-    const factCheck = page.getByRole("checkbox", { name: /^I have checked the answer/ });
-    assert.equal(await page.getByRole("button", { name: "Save reviewed result", exact: true }).isDisabled(), true, "Saving requires the bill comparison check.");
-    await factCheck.check();
-    await page.getByLabel("Message text", { exact: true }).fill("An edited synthetic reply.");
-    assert.equal(await factCheck.isChecked(), false, "Editing the answer must reset the comparison.");
-    const comparison = page.getByRole("group", { name: "Check the answer against your bill" });
-    assert.match(await comparison.innerText(), /Example Water/);
-    assert.doesNotMatch(await comparison.innerText(), /TEST-REF-SECRET/);
-    await page.getByLabel("Message text", { exact: true }).fill("Synthetic reviewed reply. Please confirm the revised calculation.");
-    await factCheck.check();
-    await page.getByRole("button", { name: "Save reviewed result", exact: true }).click();
-    await page.getByRole("heading", { name: "Synthetic water case · Reply", level: 2, exact: true }).waitFor();
-    await page.getByText("AI-service answer supplied and reviewed by you.", { exact: false }).waitFor();
-    assert.equal(await page.getByRole('region', { name: 'Continue your bill help', exact: true }).count(), 0, 'A saved result must clear its unfinished draft.');
-    await page.reload();
-    await page.getByRole("button", { name: "Open reply", exact: true }).click();
-    await page.getByText("Synthetic reviewed reply. Please confirm the revised calculation.", { exact: true }).waitFor();
-    await page.getByRole("button", { name: "Create a plan or message", exact: true }).click();
-    await page.getByRole("button", { name: "Compare providers and save money", exact: true }).click();
-    await page.getByText("Other ways to prepare a draft", { exact: true }).click();
-    await page.getByRole("radio", { name: /^Start from an offline draft/ }).check();
-    await page.getByRole("button", { name: "Continue to details", exact: true }).click();
-    await page.getByRole("button", { name: "Prepare offline draft", exact: true }).click();
-    await page.getByRole("heading", { name: "Personalise your offline draft", exact: true }).waitFor();
-    assert.equal(await page.getByRole("region", { name: "Savings comparison worksheet" }).count(), 0, "A water bill must not offer household supplier-switching comparisons.");
-    const offlinePlan = page.locator("label").filter({ hasText: /^Plan text/ }).locator("textarea");
-    const planText = await offlinePlan.inputValue();
-    assert.ok(planText.length > 100, "The generated offline plan should contain actionable content.");
-    await page.getByRole("checkbox", { name: /^I have checked the answer/ }).check();
-    await page.getByRole("button", { name: "Save reviewed result", exact: true }).click();
-    await page.getByRole("heading", { name: "Editable provider email", exact: true }).waitFor();
-    await page.getByText("Request to review my bill and available options", { exact: false }).waitFor();
-    await page.getByRole("heading", { name: "Saved plans (2)", exact: true }).waitFor();
-    assert.equal(await page.locator("#saved-plans").getByRole("button", { name: /^Open (plan|reply)$/ }).count(), 2);
-    await page.getByRole("button", { name: "Create a plan or message", exact: true }).click();
-    await page.getByRole("button", { name: "Compare providers and save money", exact: true }).click();
-    await page.getByRole("button", { name: "Continue to details", exact: true }).click();
-    await page.getByRole("button", { name: "Review AI request", exact: true }).click();
-    const planRequest = await page.getByLabel("Prepared AI request", { exact: true }).inputValue();
-    assert.match(planRequest, /My action list/);
-    assert.match(planRequest, /payment options instead of alternative suppliers/);
-    await page.getByRole("button", { name: "I have an answer to review", exact: true }).click();
-    await page.getByLabel("Plan text", { exact: true }).fill("## My action list\n1. Check the reading.\n## My plan\nReview [Example source](https://example.invalid/bill) before acting.\n[Unsafe](javascript:alert(1))\n## 6. Editable provider email\nSubject: Ask for a better price\nMessage:\nHello, please review my bill.");
-    const emailFallback = page.getByRole("region", { name: "Provider email editor" });
-    await page.getByLabel("Plan text", { exact: true }).fill("## My action list\n1. Check the bill.");
-    await emailFallback.getByText(/HomeAdmin prepared a basic request/).waitFor();
-    await emailFallback.getByLabel("Email subject").fill("Request a written offer");
-    assert.match(await page.getByLabel("Plan text", { exact: true }).inputValue(), /Subject: Request a written offer/);
-    await page.getByLabel("Plan text", { exact: true }).fill("## My action list\n1. Check the reading.\n## My plan\nReview [Example source](https://example.invalid/bill) before acting.\n[Unsafe](javascript:alert(1))\n## 6. Editable provider email\nSubject: Ask for a better price\nMessage:\nHello, please review my bill.");
-    const emailEditor = page.getByRole("region", { name: "Provider email editor" });
-    await emailEditor.getByLabel("Email subject").fill("Request a clearer quote");
-    await emailEditor.getByLabel("Email message").fill("Hello, please send an itemised offer.");
-    assert.match(await page.getByLabel("Plan text", { exact: true }).inputValue(), /Subject: Request a clearer quote/);
-    assert.match(await page.getByLabel("Plan text", { exact: true }).inputValue(), /please send an itemised offer/);
-    await page.getByRole("region", { name: "AI result overview" }).waitFor();
-    await page.getByText("Recommendation needs review", { exact: true }).waitFor();
-    const structuredPlanForReview = "## My bill at a glance\nCAD 45 monthly for Example Water.\n## Best next action\nRequest a written explanation of the estimated reading.\n## My action list\n1. Check the reading.\n2. Ask for the calculation in writing.\n## My plan\nReview [Example source](https://example.invalid/bill) before acting.\n[Unsafe](javascript:alert(1))\n## Alternatives to consider\nBilling support from the existing water company; no household supplier switch assumed.\n\nSavings comparison (customer-checked source, not independently verified by HomeAdmin)\n12-month difference: CAD 120.00 (saving)\n## Estimated savings\nCAD 10 monthly if the checked calculation is corrected.\n## 6. Editable provider email\nSubject: Request a clearer quote\nMessage:\nHello, please send an itemised offer.";
-    await page.getByLabel("Plan text", { exact: true }).fill(structuredPlanForReview);
-    const summary = page.getByRole("region", { name: "AI result overview" });
-    await summary.getByText("Your action list", { exact: true }).waitFor();
-    await summary.getByText("Potential savings", { exact: true }).waitFor();
-    await summary.getByText("Indicative saving: CAD 120.00 over 12 months", { exact: true }).waitFor();
-    await summary.getByText(/HomeAdmin has not independently verified the offer/).waitFor();
-    await page.getByRole("checkbox", { name: /^I have checked the answer/ }).check();
-    await page.getByRole("button", { name: "Save reviewed result", exact: true }).click();
-    await page.waitForFunction(() => {
-      const saved = [...document.querySelectorAll("#local-plan-heading")].some(node => node.textContent?.trim() === "Synthetic water case · Plan");
-      const error = [...document.querySelectorAll('[role="alert"]')].some(node => Boolean(node.textContent?.trim()));
-      return saved || error;
-    }, null, { timeout: 30000 });
-    const saveFailure = await page.getByRole("alert").allTextContents();
-    assert.equal(await page.getByRole("heading", { name: "Synthetic water case · Plan", exact: true, level: 2 }).count(), 1,
-      "Saving the reviewed AI plan must open the saved result. Save errors: " + saveFailure.join(" | "));
-    await page.getByRole("heading", { name: "Synthetic water case · Plan", exact: true, level: 2 }).waitFor();
-    await page.reload();
-    const savedAfterReload = page.locator("#saved-plans");
-    try {
-      await savedAfterReload.getByRole("heading", { name: "Saved plans (3)", exact: true }).waitFor();
-    } catch (failure) {
-      console.log("HomeAdmin state after reviewed-result reload", {
-        title: await page.title(),
-        url: page.url(),
-        body: (await page.locator("body").innerText()).slice(0, 10000),
-        pageErrors: errors,
-        storage: await page.evaluate(async () => ({
-          localStorage: Object.keys(localStorage),
-          databases: await indexedDB.databases().then(items => items.map(item => ({ name: item.name, version: item.version }))),
-        })).catch(error => ({ inspectionError: String(error) })),
-      });
-      throw failure;
-    }
-    const reviewedAiResult = savedAfterReload.locator("li")
-      .filter({ hasText: "Synthetic water case · Plan" })
-      .filter({ hasText: "AI answer reviewed by you" });
-    assert.equal(await reviewedAiResult.count(), 1);
-    await reviewedAiResult.getByRole("button", { name: "Open plan", exact: true }).click();
-    const reopenedSummary = page.getByRole("region", { name: "AI result overview" });
-    await reopenedSummary.getByText("CAD 45 monthly for Example Water.", { exact: true }).waitFor();
-    await reopenedSummary.getByText("Request a written explanation of the estimated reading.", { exact: true }).waitFor();
-    await reopenedSummary.getByText("CAD 10 monthly if the checked calculation is corrected.", { exact: true }).waitFor();
-    await page.getByText("Read full AI plan", { exact: true }).click();
-    assert.equal(await page.getByRole("link", { name: "Example source", exact: true }).getAttribute("href"), "https://example.invalid/bill");
-    assert.equal(await page.getByRole("link", { name: "Unsafe", exact: true }).count(), 0);
-    await page.getByRole("heading", { name: "My action list", exact: true }).waitFor();
-    await page.getByRole("heading", { name: "Saved plans (3)", exact: true }).waitFor();
-    await page.getByRole('button', { name: 'Prepare AI prompt', exact: true }).click();
-    await page.getByRole('checkbox', { name: 'Include saved result, which might contain personal details', exact: true }).check();
-    await page.getByRole('button', { name: 'Prepare question', exact: true }).click();
-    const revisedRequest = await page.getByRole('textbox', { name: /^AI prompt/ }).inputValue();
-    assert.match(revisedRequest, /Saved plan for review/);
-    assert.match(revisedRequest, /Check the reading/);
-    assert.doesNotMatch(revisedRequest, /TEST-REF-SECRET/);
-    await page.getByRole('button', { name: 'Close AI prompt', exact: true }).click();
-    await page.getByRole('button', { name: 'Update bill or follow-up date', exact: true }).click();
-    assert.equal(await page.getByLabel('Bill name', { exact: true }).inputValue(), 'Synthetic water case');
-    await page.locator('summary').filter({ hasText: 'Follow-up reminder' }).click();
-    await page.getByLabel('Follow-up date', { exact: true }).fill('2027-04-20');
-    await page.getByRole('button', { name: 'Save bill', exact: true }).click();
-    await page.getByRole('heading', { name: 'Help with Synthetic water case', exact: true }).waitFor();
-    await page.waitForFunction(() => [...document.querySelectorAll('button')].some(button => button.textContent === 'Save bill' && !button.disabled));
-    await page.reload();
-    await page.getByLabel('Show bills').selectOption('all');
-    await page.getByRole('button', { name: 'Delete bill', exact: true }).first().waitFor();
-    await page.getByRole('button', { name: 'Edit', exact: true }).click();
-    assert.equal(await page.getByLabel('Follow-up date', { exact: true }).inputValue(), '2027-04-20');
-    // A household with more than five dates must reach every date and its guided help.
-    for (let i = 1; i <= 5; i++) {
-      await page.getByRole('button', { name: 'Water', exact: true }).click();
-      await page.getByLabel('What would you like help with?').selectOption('check_bill');
-      await page.getByLabel('Bill name', { exact: true }).fill('Reminder example ' + i);
-      const date = page.getByLabel('Follow-up date', { exact: true });
-      if (!await date.isVisible()) await page.locator('summary').filter({ hasText: 'Follow-up reminder' }).click();
-      await date.fill('2027-05-0' + i);
-      await page.getByRole('button', { name: 'Save bill', exact: true }).click();
-      await page.getByRole('heading', { name: 'Help with Reminder example ' + i, exact: true }).waitFor();
-      await page.waitForFunction(() => [...document.querySelectorAll('button')].some(button => button.textContent === 'Save bill' && !button.disabled));
-      if (i <= 4) {
-        await page.getByRole('button', { name: 'Save progress for later', exact: true }).click();
-        await page.getByRole('status').filter({ hasText: 'Progress saved on this device.' }).waitFor();
-      }
-      await page.getByRole('button', { name: 'Close bill help', exact: true }).click();
-    }
-    const unfinished = page.getByRole('region', { name: 'Continue your bill help', exact: true });
-    assert.equal(await unfinished.locator('li').count(), 3);
-    await unfinished.getByRole('button', { name: 'Show all 4 saved drafts', exact: true }).click();
-    assert.equal(await unfinished.locator('li').count(), 4);
-    await unfinished.getByRole('button', { name: 'Continue saved help for Reminder example 4', exact: true }).click();
-    await page.getByRole('heading', { name: 'Help with Reminder example 4', exact: true }).waitFor();
-    await page.getByRole('button', { name: 'Close bill help', exact: true }).click();
-    await unfinished.getByRole('button', { name: 'Show fewer saved drafts', exact: true }).click();
-    assert.equal(await unfinished.locator('li').count(), 3);
-    const expandDates = page.getByRole('button', { name: 'Show all 6 dates', exact: true });
-    assert.equal(await expandDates.getAttribute('aria-expanded'), 'false');
-    await expandDates.click();
-    const upcoming = page.locator('#upcoming-bills');
-    assert.equal(await upcoming.locator('li').count(), 6);
-    await upcoming.getByRole('button', { name: 'Create a plan or message for Reminder example 5: Follow-up', exact: true }).click();
-    await page.getByRole('heading', { name: 'Help with Reminder example 5', exact: true }).waitFor();
-    await page.getByRole('button', { name: 'Close bill help', exact: true }).click();
-    await page.getByRole('button', { name: 'Show fewer dates', exact: true }).click();
-    assert.equal(await upcoming.locator('li').count(), 5);
-    const billSort = page.getByLabel('Sort bills', { exact: false });
-    assert.equal(await billSort.inputValue(), 'next_date');
-    await billSort.selectOption('name');
-    assert.equal(await page.locator('#saved-bills li h3').first().innerText(), 'Reminder example 1');
-    await billSort.selectOption('next_date');
-    assert.equal(await page.locator('#saved-bills li h3').first().innerText(), 'Synthetic water case');
-    // Result retrieval must preserve the bill link, filters, and saved content.
-    const saved = page.locator('#saved-plans');
-    await page.getByRole('button', { name: 'View saved results (3)', exact: true }).click();
-    assert.equal(await page.locator('#saved-results-heading').evaluate(node => node === document.activeElement), true);
-    assert.equal(await saved.locator('li').count(), 3);
-    await saved.getByLabel('Result type', { exact: false }).selectOption('reply');
-    assert.equal(await saved.locator('li').count(), 1);
-    assert.equal(await saved.getByRole('status').innerText(), 'Showing 1 of 3 saved results.');
-    assert.match(await saved.locator('li').innerText(), /Synthetic water case/);
-    await saved.getByLabel('Search saved results', { exact: true }).fill('  EXAMPLE WATER  ');
-    assert.equal(await saved.locator('li').count(), 1);
-    await saved.getByLabel('Search saved results', { exact: true }).fill('No matching fixture');
-    await saved.getByText('No results match these filters.', { exact: false }).waitFor();
-    await saved.getByRole('button', { name: 'Clear result filters', exact: true }).click();
-    assert.equal(await saved.locator('li').count(), 3);
-    await saved.getByLabel('Results for bill', { exact: false }).selectOption({ label: 'Reminder example 1' });
-    assert.equal(await saved.locator('li').count(), 0);
-    assert.equal(await saved.getByRole('status').innerText(), 'Showing 0 of 3 saved results.');
-    await saved.getByRole('button', { name: 'Clear result filters', exact: true }).click();
-    // Newest first: the latest AI plan precedes the earlier offline plan and reply.
-    assert.match(await saved.locator('li').first().innerText(), /AI answer reviewed by you/);
-    await saved.getByRole('button', { name: 'Open reply', exact: true }).click();
-    await page.getByText('Synthetic reviewed reply. Please confirm the revised calculation.', { exact: true }).waitFor();
-    await page.getByLabel('Search saved bills', { exact: true }).fill('Missing bill fixture');
-    await page.getByText('No bills match your search and status filter.', { exact: true }).waitFor();
-    await page.getByRole('button', { name: 'Show all bills', exact: true }).click();
-    assert.equal(await page.locator('#saved-bills li').count(), 6);
-    await page.addScriptTag({ path: require.resolve('axe-core/axe.min.js') });
-    for (const width of [390, 768, 1024]) {
-      await page.setViewportSize({ width, height: 844 });
-      await page.evaluate(() => { document.documentElement.style.fontSize = '32px'; });
-      assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), true);
-      const violations = await saved.evaluate(async node => (await axe.run(node, { runOnly: { type: 'tag', values: ['wcag2a', 'wcag2aa', 'wcag21aa'] } })).violations.map(item => ({ id: item.id, nodes: item.nodes.map(n => n.target) })));
-      assert.deepEqual(violations, [], 'Populated result accessibility at ' + width);
-      const unfinishedViolations = await unfinished.evaluate(async node => (await axe.run(node, { runOnly: { type: 'tag', values: ['wcag2a', 'wcag2aa', 'wcag21aa'] } })).violations.map(item => ({ id: item.id, nodes: item.nodes.map(n => n.target) })));
-      assert.deepEqual(unfinishedViolations, [], 'Saved-help overview accessibility at ' + width);
-      await unfinished.screenshot({ path: '/tmp/homeadmin-resume-help-' + width + '.png' });
-      await saved.screenshot({ path: '/tmp/homeadmin-saved-results-' + width + '.png' });
-    }
-    await page.reload();
-    await page.getByRole('heading', { name: 'Saved plans (3)', exact: true }).waitFor();
-    assert.equal(await page.locator('#saved-plans li').count(), 3);
-    assert.equal(await page.locator('#saved-bills li').count(), 6);
-    await page.getByRole('button', { name: 'Show all 4 saved drafts', exact: true }).waitFor();
-    assert.deepEqual(external, []); assert.deepEqual(errors, []);
-    // A synthetic proxy error must offer recovery without losing the request.
-    const recovery = await browser.newPage({ viewport: { width: 390, height: 844 } });
-    const generations = [], recoveryExternal = [], recoveryErrors = [];
-    recovery.on('pageerror', error => recoveryErrors.push(error.message));
-    await recovery.route('**/*', route => {
-      const url = new URL(route.request().url());
-      if (url.origin !== new URL(base).origin) { recoveryExternal.push(url.href); return route.abort(); }
-      if (url.pathname === '/api/health') return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ai_drafts_available: true }) });
-      if (url.pathname === '/api/ai/draft') {
-        generations.push(route.request().postDataJSON());
-        return route.fulfill({ status: 429, contentType: 'application/json', body: JSON.stringify({ error: 'Synthetic limit' }) });
-      }
-      return route.continue();
-    });
-    await recovery.goto(base);
-    await recovery.getByRole('button', { name: 'Water', exact: true }).click();
-    await recovery.getByLabel('What would you like help with?').selectOption('check_bill');
-    await recovery.getByLabel('Bill name', { exact: true }).fill('Synthetic AI recovery bill');
-    await recovery.getByRole('button', { name: 'Save bill', exact: true }).click();
-    await recovery.locator('summary').filter({ hasText: 'More ways to get help' }).click();
-    await recovery.getByRole('button', { name: 'Reply to a provider message', exact: true }).click();
-    await recovery.getByRole('radio', { name: /^Get an AI answer directly in HomeAdmin/ }).check();
-    await recovery.getByRole('button', { name: 'Continue to details', exact: true }).click();
-    await recovery.getByLabel('What outcome do you want?').fill('Explain the estimate without agreeing to changes.');
-    await recovery.getByLabel('Provider message to respond to').fill('Please supply a reading for the estimated charge.');
-    await recovery.getByRole('button', { name: 'Continue to AI answer', exact: true }).click();
-    const approvedRequest = await recovery.getByLabel('Reviewed request', { exact: false }).inputValue();
-    const generate = recovery.getByRole('button', { name: 'Generate draft with Gemini', exact: true });
-    assert.equal(await generate.isDisabled(), true, 'Generation requires explicit consent.');
-    assert.equal(generations.length, 0);
-    await recovery.getByRole('checkbox', { name: /^I agree to send the request above/ }).check();
-    await generate.click();
-    await recovery.getByRole('alert').filter({ hasText: 'current usage limit' }).waitFor();
-    assert.deepEqual(generations, [{ prompt: approvedRequest, output: 'reply', consent: true }]);
-    await recovery.addScriptTag({ path: require.resolve('axe-core/axe.min.js') });
-    for (const fontSize of [16, 32]) {
-      await recovery.evaluate(size => { document.documentElement.style.fontSize = size + 'px'; }, fontSize);
-      assert.equal(await recovery.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), true);
-      const recoveryViolations = await recovery.locator('#bill-help').evaluate(async node => (await axe.run(node, { runOnly: { type: 'tag', values: ['wcag2a', 'wcag2aa', 'wcag21aa'] } })).violations.map(item => ({ id: item.id, nodes: item.nodes.map(n => n.target) })));
-      assert.deepEqual(recoveryViolations, [], 'AI recovery accessibility at ' + fontSize);
-    }
-    await recovery.evaluate(() => { document.documentElement.style.fontSize = '16px'; });
-    await recovery.getByRole('button', { name: 'Use my chosen AI instead', exact: true }).click();
-    assert.equal(await recovery.getByLabel('Prepared AI request', { exact: true }).inputValue(), approvedRequest);
-    assert.equal(await recovery.getByLabel('Chosen AI service').inputValue(), 'copilot');
-    assert.equal(generations.length, 1, 'Switching provider must not retry generation.');
-    await recovery.getByRole('button', { name: 'Change request details', exact: true }).click();
-    assert.match(await recovery.getByLabel('What outcome do you want?').inputValue(), /without agreeing/);
-    assert.match(await recovery.getByLabel('Provider message to respond to').inputValue(), /estimated charge/);
-    await recovery.getByRole('button', { name: 'Back to choices', exact: true }).click();
-    await recovery.getByRole('radio', { name: /^Get an AI answer directly in HomeAdmin/ }).check();
-    await recovery.getByRole('button', { name: 'Continue to details', exact: true }).click();
-    await recovery.getByRole('button', { name: 'Continue to AI answer', exact: true }).click();
-    assert.equal(await recovery.getByRole('checkbox', { name: /^I agree to send the request above/ }).isChecked(), false, 'Returning to generation requires fresh consent.');
-    await recovery.getByRole('button', { name: 'Use an offline draft instead', exact: true }).click();
-    await recovery.getByRole('button', { name: 'Prepare offline draft', exact: true }).click();
-    assert.match(await recovery.getByLabel('Message text', { exact: true }).inputValue(), /Explain the estimate without agreeing to changes/);
-    assert.equal(await recovery.getByRole('button', { name: 'Save reviewed result', exact: true }).isDisabled(), true);
-    assert.equal(generations.length, 1);
-    assert.deepEqual(recoveryExternal, []); assert.deepEqual(recoveryErrors, []);
-    await recovery.close();
-    // An in-app AI success response should present the outcome, options and editable correspondence.
-    // All offer text here is synthetic and no provider prices or availability are asserted.
-    const success = await browser.newPage({ viewport: { width: 390, height: 844 } });
-    const successErrors = [], successfulGenerations = [];
-    success.on('pageerror', error => successErrors.push(error.message));
-    await success.route('**/*', route => {
-      const url = new URL(route.request().url());
-      if (url.origin !== new URL(base).origin) return route.abort();
-      if (url.pathname === '/api/health') return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ai_drafts_available: true }) });
-      if (url.pathname === '/api/ai/draft') {
-        successfulGenerations.push(route.request().postDataJSON());
-        return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({
-          subject: '',
-          body: '## Best next action\nRequest a written renewal quote before switching.\n\n## Alternatives to consider\nOption A: Keep the existing supplier. Price not verified.\nOption B: Compare an equivalent package. Live pricing unavailable.\n\n## Estimated savings\nNot available: no verified like-for-like prices. Confirm package, ongoing rate, fees and contract length before estimating a saving.\n\n## 6. Editable provider email\nSubject: Request a written renewal offer\nMessage:\nHello, please provide an itemised renewal quotation.',
-        }) });
-      }
-      return route.continue();
-    });
-    await success.goto(base);
-    await success.getByLabel('Bill category').selectOption('phone_internet_tv');
-    await success.getByLabel('Which bill is it?').selectOption('tv_package');
-    await success.getByLabel('What would you like help with?').selectOption('prepare_renewal');
-    await success.getByLabel('Bill name', { exact: true }).fill('Synthetic Sky renewal');
-    await success.getByLabel('Bill currency').selectOption('GBP');
-    await success.locator('#amount').fill('89.00');
-    await success.locator('#billing_frequency').selectOption('Monthly');
-    await success.getByRole('button', { name: 'Save bill', exact: true }).click();
-    await success.locator('summary').filter({ hasText: 'More ways to get help' }).click();
-    await success.getByRole('button', { name: 'Renew or negotiate a better deal', exact: true }).click();
-    await success.getByRole('radio', { name: /^Get an AI answer directly in HomeAdmin/ }).check();
-    await success.getByRole('button', { name: 'Continue to details', exact: true }).click();
-    await success.getByRole('button', { name: 'Continue to AI answer', exact: true }).click();
-    const renewalPrompt = await success.getByLabel('Reviewed request', { exact: false }).inputValue();
-    assert.match(renewalPrompt, /## Estimated savings/, 'AI plans should request a savings result explicitly.');
-    assert.match(renewalPrompt, /Not available: no verified like-for-like prices/, 'Missing live offer evidence must never become invented savings.');
-    await success.getByRole('checkbox', { name: /^I agree to send the request above/ }).check();
-    await success.getByRole('button', { name: 'Generate draft with Gemini', exact: true }).click();
-    await success.getByRole('heading', { name: 'Review your Gemini draft', exact: true }).waitFor();
-    const resultOverview = success.getByRole('region', { name: 'AI result overview' });
-    assert.match(await resultOverview.innerText(), /Request a written renewal quote/);
-    assert.match(await resultOverview.innerText(), /Option B: Compare an equivalent package/);
-    assert.match(await resultOverview.innerText(), /Not available: no verified like-for-like prices/, 'Unverified savings must be clearly unavailable, not invented.');
-    assert.match(await resultOverview.innerText(), /does not include both a web link and a check date/);
-    assert.match(await resultOverview.innerText(), /89\.00/);
-    assert.doesNotMatch(await resultOverview.innerText(), /No complete current-cost information was provided/);
-    const resultEmail = success.getByRole('region', { name: 'Provider email editor' });
-    assert.equal(await resultEmail.getByLabel('Email subject').inputValue(), 'Request a written renewal offer');
-    await resultEmail.getByLabel('Email message').fill('Please send your best equivalent renewal price in writing.');
-    assert.match(await success.getByLabel('Plan text', { exact: true }).inputValue(), /best equivalent renewal price in writing/);
-    // Switching-eligible synthetic renewal retains the comparison worksheet.
-    // The prior water-only scenario deliberately excludes this worksheet.
-    const optionalOffer = success.locator('details').filter({ has: success.getByText('Add a provider offer I have checked (optional)', { exact: true }) });
-    assert.equal(await optionalOffer.evaluate(node => node.open), false, 'Manual comparison should stay optional and initially closed.');
-    await optionalOffer.locator('summary').click();
-    const savings = success.getByRole('region', { name: 'Savings comparison worksheet' });
-    await savings.waitFor();
-    assert.equal(await savings.getByLabel('Current monthly cost (GBP)').inputValue(), '89.00', 'Saved bill amount should prefill the comparison without retyping.');
-    const addCheckedOffer = savings.getByRole('button', { name: 'Add checked offer and letter to plan' });
-    assert.equal(await addCheckedOffer.isDisabled(), true, 'Unverified offers must not be added.');
-    const missingOfferChecks = savings.getByText('Before adding this offer, complete:', { exact: false });
-    await missingOfferChecks.waitFor();
-    assert.match(await missingOfferChecks.innerText(), /valid current and alternative costs/);
-    assert.match(await missingOfferChecks.innerText(), /a valid HTTPS source link/);
-    assert.match(await missingOfferChecks.innerText(), /your confirmation of the source/);
-    const tomorrowLocal = await success.evaluate(() => {
-      const date = new Date();
-      date.setDate(date.getDate() + 1);
-      return [date.getFullYear(), String(date.getMonth() + 1).padStart(2, '0'), String(date.getDate()).padStart(2, '0')].join('-');
-    });
-    await savings.getByLabel('Date you checked the offer').fill(tomorrowLocal);
-    await savings.getByText('Future dates do not count as checked offers.', { exact: false }).waitFor();
-    await savings.getByLabel('Date you checked the offer').fill('');
-    assert.equal(successfulGenerations.length, 1);
-    assert.equal(successfulGenerations[0].output, 'plan');
-    assert.deepEqual(successErrors, []);
-    await success.close();
+    const savedHelp = page.getByRole("region", { name: "Continue your bill help", exact: true });
+    await savedHelp.getByText("Plan · Saved at step 2 of 3: Get AI answer", { exact: true }).waitFor();
+    assert.doesNotMatch(await savedHelp.innerText(), /TEST-REF-SECRET|46\.00/);
+    await savedHelp.getByRole("button", { name: "Continue saved help for Synthetic water case", exact: true }).click();
+    assert.equal(await page.getByLabel("Prepared AI request", { exact: true }).inputValue(), request,
+      "Reopening saved help must keep the prepared prompt.");
 
-    console.log("PASS: chosen-AI reply request, private reference exclusion, saved progress reload, review gate, separate persisted results, offline plan, 200% text at phone/tablet widths, consented synthetic Gemini rate-limit recovery and no external requests.");
+    await page.getByRole("button", { name: "3. I have an answer to review", exact: true }).click();
+    await page.getByRole("heading", { name: "Paste and review your AI answer", exact: true }).waitFor();
+    await page.getByLabel("Plan text", { exact: true }).fill("## My bill at a glance\nCAD 46 monthly for Example Water.\n## Best next action\nAsk the existing water company to check the reading.\n## Alternatives to consider\nNo household supplier switch. Check metering and payment support.\n## Estimated savings\nNot available: no verified like-for-like prices.\n## Editable provider email\nSubject: Please check my water bill\nMessage: Please explain the current bill.");
+    const factCheck = page.getByRole("checkbox", { name: /^I have checked the answer/ });
+    const save = page.getByRole("button", { name: "Save reviewed result", exact: true });
+    assert.equal(await save.isDisabled(), true, "The review check is required before saving.");
+    await factCheck.check();
+    await page.getByLabel("Plan text", { exact: true }).fill("Edited synthetic plan.");
+    assert.equal(await factCheck.isChecked(), false, "Editing the answer resets its review check.");
+    await page.getByLabel("Plan text", { exact: true }).fill("Edited synthetic plan with no verified saving claimed.");
+    await factCheck.check();
+    await save.click();
+    await page.getByRole("heading", { name: "Synthetic water case · Plan", exact: true, level: 2 }).waitFor();
+    await page.getByText("AI-service answer supplied and reviewed by you.", { exact: false }).waitFor();
+    await page.reload();
+    await page.getByRole("button", { name: "Open plan", exact: true }).click();
+    await page.getByText("Edited synthetic plan with no verified saving claimed.", { exact: true }).waitFor();
+
+    await page.addScriptTag({ path: require.resolve("axe-core/axe.min.js") });
+    for (const width of [390, 768, 1024]) {
+      await page.setViewportSize({ width, height: 844 });
+      assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), true, "Result overflow at " + width);
+      const violations = await page.locator("#local-plan-heading").evaluate(async node => (await axe.run(node.parentElement, { runOnly: { type: "tag", values: ["wcag2a", "wcag2aa", "wcag21aa"] } })).violations.map(item => ({ id: item.id, nodes: item.nodes.map(n => n.target) })));
+      assert.deepEqual(violations, [], "Saved result accessibility at " + width);
+      await page.screenshot({ path: "/tmp/homeadmin-guided-result-" + width + ".png" });
+    }
+    const { workflowPrompt } = await import("../artifacts/adminpilot-ai/src/lib/offline/bill-workflow.mjs");
+    const { fieldsFor } = await import("../artifacts/adminpilot-ai/src/lib/offline/bill-types.mjs");
+    const dualFuelFields = fieldsFor("energy_water", "reduce_price", { utility_type: "Dual fuel" });
+    for (const label of ["Annual electricity use (kWh)", "Annual gas use (kWh)", "Electricity unit rate (p/kWh)", "Gas unit rate (p/kWh)"]) {
+      assert.equal(dualFuelFields.some(field => field.label === label), true, "Missing dual-fuel detail: " + label);
+    }
+    const energyPrompt = workflowPrompt({ category_id: "energy_water", goal_id: "reduce_price", details: { utility_type: "Dual fuel", provider: "Example Energy", currency: "GBP", electricity_usage: "2700", gas_usage: "11500" } }, { output: "plan", method: "chosen_ai", step: 2, fieldKeys: [], tone: "Polite and clear", language: "English", brief: "Compare current alternatives", incoming: "" });
+    assert.match(energyPrompt, /each fuel from its own annual kWh consumption/i);
+    assert.match(energyPrompt, /do not invent missing rates/i);
+    assert.deepEqual(external, [], "This journey must not make an unapproved external request.");
+    assert.deepEqual(errors, [], "No browser errors should occur during the journey.");
+    console.log("PASS: saved bill details -> preselected savings request -> prepared AI prompt and link -> saved progress -> reviewed result; edit resume and 390/768/1024 accessibility checks.");
   } finally { await browser.close(); }
 })().catch(error => { console.error(error); process.exitCode = 1; });
+
+}

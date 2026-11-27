@@ -1,4 +1,4 @@
-export type WorkflowDraft = { output: string; method: string; step: number; fieldKeys: string[]; tone: string; language: string; brief: string; incoming: string; subject: string; body: string; reviewed: boolean };
+export type WorkflowDraft = { output: string; method: string; aiProvider?: string; step: number; fieldKeys: string[]; tone: string; language: string; brief: string; incoming: string; subject: string; body: string; liveComparison: boolean; grounding?: any; messageSubject: string; messageBody: string; reviewed: boolean };
 export const outputs: { id: string; label: string; description: string }[];
 export const tones: string[];
 export const languages: string[];
@@ -6,5 +6,8 @@ export function workflowFields(task: any): {key: string; label: string; value: s
 export function workflowContext(task: any): string;
 export function initialWorkflow(task: any): WorkflowDraft;
 export function workflowPrompt(task: any, draft: WorkflowDraft): string;
+export function initialComparisonEmail(task: any): { subject: string; body: string };
 export function localWorkflowDraft(task: any, output: string, brief?: string): {subject: string; body: string};
 export function workflowResult(task: any, draft: WorkflowDraft, service?: string): any;
+
+export function comparisonResult(task: any, body: string, currentSubject?: string, currentBody?: string): { body: string; messageSubject: string; messageBody: string };

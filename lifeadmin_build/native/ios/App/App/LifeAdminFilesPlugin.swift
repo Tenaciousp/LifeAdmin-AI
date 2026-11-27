@@ -10,7 +10,8 @@ public class LifeAdminFilesPlugin: CAPPlugin, CAPBridgedPlugin, UIDocumentPicker
     public let pluginMethods: [CAPPluginMethod] = [
         CAPPluginMethod(name: "exportBackup", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "importBackup", returnType: CAPPluginReturnPromise),
-        CAPPluginMethod(name: "copyText", returnType: CAPPluginReturnPromise)
+        CAPPluginMethod(name: "copyText", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "openExternal", returnType: CAPPluginReturnPromise)
     ]
     private var pending: CAPPluginCall?
     private var temporary: URL?
@@ -76,6 +77,30 @@ public class LifeAdminFilesPlugin: CAPPlugin, CAPBridgedPlugin, UIDocumentPicker
         DispatchQueue.main.async {
             UIPasteboard.general.setItems([["public.utf8-plain-text": text]], options: [.localOnly: true, .expirationDate: Date().addingTimeInterval(300)])
             call.resolve()
+        }
+    }
+    @objc func openExternal(_ call: CAPPluginCall) {
+        guard let value = call.getString("url"), value.utf8.count <= 4096,
+              !value.contains("\r"), !value.contains("\n"),
+              let components = URLComponents(string: value),
+              let scheme = components.scheme?.lowercased(),
+              let url = components.url else {
+            call.reject("This link is invalid.", "external_url"); return
+        }
+        if scheme == "https" {
+            guard components.host?.isEmpty == false, components.user == nil, components.password == nil else {
+                call.reject("Only secure provider links are supported.", "external_url"); return
+            }
+        } else if scheme == "mailto" {
+            guard components.host == nil else { call.reject("This email link is invalid.", "external_url"); return }
+        } else {
+            call.reject("HomeAdmin opens secure web links and email drafts only.", "external_scheme"); return
+        }
+        DispatchQueue.main.async {
+            UIApplication.shared.open(url, options: [:]) { opened in
+                if opened { call.resolve() }
+                else { call.reject("No app is available to open this link.", "external_unavailable") }
+            }
         }
     }
     @objc func importBackup(_ call: CAPPluginCall) {
