@@ -10,7 +10,7 @@ const assert = require('node:assert/strict');
     for (const width of [390, 768, 1024]) {
       await page.setViewportSize({ width, height: 844 });
       await page.goto(process.env.HOMEADMIN_QA_URL || 'http://127.0.0.1:5174');
-      await page.getByRole('button', { name: 'Save bill', exact: true }).waitFor();
+      await page.getByRole('link', { name: 'Add my first bill', exact: true }).waitFor({ state: 'visible' });
       await page.addScriptTag({ path: require.resolve('axe-core/axe.min.js') });
       for (const expanded of [false, true]) {
         if (expanded) await page.getByText('Calendar privacy and how updates work', { exact: true }).click();
