@@ -103,7 +103,9 @@ const assert = require("node:assert/strict");
     await page.getByText("AI-service answer supplied and reviewed by you.", { exact: false }).waitFor();
     await page.reload();
     await page.getByRole("button", { name: "Open plan", exact: true }).click();
-    await page.getByText("Edited synthetic plan with no verified saving claimed.", { exact: true }).waitFor();
+    const fullPlan = page.locator("details").filter({ has: page.getByText("Read full AI plan", { exact: true }) });
+    await fullPlan.locator(":scope > summary").click();
+    await fullPlan.getByText("Edited synthetic plan with no verified saving claimed.", { exact: true }).waitFor({ state: "visible" });
 
     await page.addScriptTag({ path: require.resolve("axe-core/axe.min.js") });
     for (const width of [390, 768, 1024]) {
