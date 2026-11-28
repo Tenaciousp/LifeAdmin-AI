@@ -133,7 +133,8 @@ const assert = require('node:assert/strict');
     ].join('\n'));
     await page.getByRole('checkbox',{name:/^I have checked the answer/}).check();
     await button('Save reviewed result').click();
-    await heading('Network QA synthetic bill · Plan').waitFor();
+    const resultHeading = page.getByRole('heading', {name:'Network QA synthetic bill · Plan',exact:true,level:2});
+    await resultHeading.waitFor();
     for (const width of [320,375,768,1024]) {
       await page.setViewportSize({width,height:1024});
       for (const scale of [1,2]) {
@@ -147,7 +148,7 @@ const assert = require('node:assert/strict');
           if(previous && Math.abs(previous.y-current.y)<2) assert(current.x-(previous.x+previous.width)>=8,`Plan action gap is below 8 px at ${width}px / ${scale*100}% text`);
         }
         assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1),`Saved result overflow at ${width}px / ${scale*100}% text`);
-        await heading('Network QA synthetic bill · Plan').scrollIntoViewIfNeeded();
+        await resultHeading.scrollIntoViewIfNeeded();
         await page.screenshot({path:path.join(output,`saved-result-${width}-${scale}.png`)});
       }
     }
