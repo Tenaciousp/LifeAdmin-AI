@@ -328,10 +328,12 @@ final class LifeAdminUITests: XCTestCase {
             enterText(noteText, into: notes)
             closeKeyboard()
         }
-        let save = app.buttons["Save bill"]
+        let saveLabel = checkCurrentLayout ? "Save bill and continue to AI help" : "Save bill"
+        let savedMessage = checkCurrentLayout ? "Bill saved on this device. Your AI help is ready below." : "Bill saved on this device."
+        let save = app.buttons[saveLabel]
         reveal(save)
         save.tap()
-        XCTAssertTrue(app.staticTexts["Bill saved on this device."].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.staticTexts[savedMessage].waitForExistence(timeout: 10))
     }
 
     private func selectExportedBackup(named prefix: String = "homeadmin-backup") {
@@ -722,7 +724,9 @@ final class LifeAdminUITests: XCTestCase {
         let retry = app.buttons["Retry storage"]
         XCTAssertTrue(retry.exists)
         XCTAssertFalse(app.buttons["Search"].exists)
-        XCTAssertFalse(app.buttons["Save bill"].exists)
+        for label in ["Save bill and continue to AI help", "Save bill changes", "Save and return to AI help"] {
+            XCTAssertFalse(app.buttons[label].exists, "Unexpected save control while storage is unavailable: \(label)")
+        }
         XCTAssertFalse(app.buttons["Manage backups"].exists)
         XCTAssertFalse(app.otherElements["Your bills (0)"].exists)
         app.terminate()

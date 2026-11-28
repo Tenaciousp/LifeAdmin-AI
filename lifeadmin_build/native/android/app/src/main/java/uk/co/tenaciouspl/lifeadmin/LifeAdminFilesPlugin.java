@@ -8,6 +8,7 @@ import android.os.Build;
 import android.os.PersistableBundle;
 import android.content.Context;
 import android.content.Intent;
+import android.content.ActivityNotFoundException;
 import android.net.Uri;
 import androidx.activity.result.ActivityResult;
 import com.getcapacitor.JSObject;
@@ -65,6 +66,32 @@ public class LifeAdminFilesPlugin extends Plugin {
             }
             manager.setPrimaryClip(clip); call.resolve();
         } catch (Exception error) { call.reject("Copy failed. Select the text and copy manually.", "clipboard_write"); }
+    }
+    @PluginMethod public void openExternal(PluginCall call) {
+        String value = call.getString("url");
+        if (value == null || value.length() > 4096 || value.contains("\r") || value.contains("\n")) {
+            call.reject("This link is invalid.", "external_url"); return;
+        }
+        Uri uri = Uri.parse(value);
+        String scheme = uri.getScheme();
+        if (scheme == null) { call.reject("This link is invalid.", "external_url"); return; }
+        if ("https".equalsIgnoreCase(scheme)) {
+            if (uri.getHost() == null || uri.getUserInfo() != null) {
+                call.reject("Only secure provider links are supported.", "external_url"); return;
+            }
+        } else if (!"mailto".equalsIgnoreCase(scheme) || uri.getHost() != null) {
+            call.reject("HomeAdmin opens secure web links and email drafts only.", "external_scheme"); return;
+        }
+        try {
+            Intent intent = new Intent(Intent.ACTION_VIEW, uri);
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            getContext().startActivity(intent);
+            call.resolve();
+        } catch (ActivityNotFoundException error) {
+            call.reject("No app is available to open this link.", "external_unavailable");
+        } catch (Exception error) {
+            call.reject("This link could not be opened.", "external_unavailable");
+        }
     }
     private Uri selected(ActivityResult result) {
         return result.getResultCode() == Activity.RESULT_OK && result.getData() != null ? result.getData().getData() : null;

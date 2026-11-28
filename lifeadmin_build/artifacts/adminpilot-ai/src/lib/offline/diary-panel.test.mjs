@@ -1,0 +1,20 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import vm from 'node:vm';
+import ts from 'typescript';
+import {createRequire} from 'node:module';
+import {diaryEvents,diaryAlertState} from './diary.mjs';
+const require=createRequire(import.meta.url);
+test('diary UI distinguishes elapsed alarms and offers explicit bill editing without calendar writes',()=>{
+ const compiled=ts.transpileModule(fs.readFileSync(new URL('../../DiaryPanel.tsx',import.meta.url),'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,jsx:ts.JsxEmit.ReactJSX}}).outputText;
+ const exports={};let edits=[];
+ const forbidden=()=>{throw new Error('Unexpected calendar request');};
+ vm.runInNewContext(compiled,{exports,require:name=>name==='react'?{useEffect(){},useState:initial=>[typeof initial==='function'?initial():initial,()=>{}]}:name.includes('device-calendar')?{calendarAvailable:()=>false,syncDiary:forbidden,chooseCalendars:forbidden,removeDiaryEntries:forbidden}:name.includes('diary.mjs')?{diaryEvents,diaryAlertState:event=>diaryAlertState(event,new Date('2026-11-24T10:00:00Z'))}:name==='./Feedback'?{EmptyState:()=>null,LoadingSpinner:()=>null}:require(name)});
+ const bill={id:'fictional',status:'Open',details:{diary_enabled:'yes',diary_lead_days:'14',contract_expiry:'2026-11-27',renewal_date:'2026-12-12'}};
+ const tree=exports.default({tasks:[bill],onEdit:task=>edits.push(task)}), nodes=[],texts=[];
+ const walk=n=>{if(Array.isArray(n))n.forEach(walk);else if(typeof n==='string')texts.push(n);else if(n?.props){nodes.push(n);walk(n.props.children);}};walk(tree);
+ assert.ok(texts.some(t=>t.includes('no future HomeAdmin alarm')));assert.ok(texts.some(t=>t.includes('Eligible HomeAdmin alert time')));
+ const edit=nodes.find(n=>n.type==='button'&&n.props.children==='Edit bill reminder lead');assert.ok(edit);edit.props.onClick();
+ assert.deepEqual(edits,[bill]);assert.equal(bill.details.diary_lead_days,'14');
+});

@@ -42,8 +42,16 @@ jobs:
       - name: Test offline AI questions, diary dates and device repositories
         run: node --test artifacts/adminpilot-ai/src/lib/offline/*.test.mjs
 
+      - name: Test server-side Gemini routes with synthetic data
+        run: |
+          PYTHONPATH=artifacts/api-server python -m unittest discover -s artifacts/api-server/tests -p 'test_gemini_draft.py' -v
+          PYTHONPATH=artifacts/api-server python -m unittest discover -s artifacts/api-server/tests -p 'test_live_comparison.py' -v
+
       - name: Test Apple simulator runtime selection
         run: python -m unittest discover -s scripts -p test_apple_simulator_runtime.py -v
+
+      - name: Test Apple build profile boundaries
+        run: python -m unittest discover -s scripts -p test_apple_build_profile.py -v
 
       - name: Run automated tests
         run: npm test

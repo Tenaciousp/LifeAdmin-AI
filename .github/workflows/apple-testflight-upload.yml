@@ -138,6 +138,14 @@ jobs:
           assert evidence.get('build') == os.environ['BUILD_NUMBER']
           assert evidence.get('version') == '1.0'
           assert evidence.get('team') == 'C8T85FCR6R'
+          if int(os.environ['BUILD_NUMBER']) >= 8:
+              assert evidence.get('profile') in ('internal-offline', 'live-release')
+              assert evidence.get('customer_key_relay_enabled') is False
+              if evidence['profile'] == 'internal-offline':
+                  assert evidence.get('api_enabled') is False
+                  assert evidence.get('test_flight_internal_testing_only_requested') is True, 'Signed artifact must retain the Internal Only export request.'
+                  assert evidence.get('distribution_mode_requested') == 'testflight-internal-only'
+                  assert evidence.get('distribution_mode_verified') is True, 'Internal-only export must be verified before upload.'
           ipas = list(files.glob('*.ipa'))
           assert len(ipas) == 1, 'Expected exactly one signed IPA.'
           ipa = ipas[0]
@@ -183,8 +191,11 @@ jobs:
           assert action in ('validate', 'upload')
           ipa = next((Path(os.environ['RUNNER_TEMP']) / 'signed-build').glob('*.ipa'))
           local_help = subprocess.run(['xcrun', 'altool', '--help'], capture_output=True, text=True)
-          if '--app-password' not in local_help.stdout + local_help.stderr:
-              raise SystemExit('Runner altool lacks the required password option; no Apple authentication attempted.')
+          help_text = local_help.stdout + local_help.stderr
+          required_options = ('--app-password', '--validate-app', '--upload-package')
+          missing_options = [option for option in required_options if option not in help_text]
+          if missing_options:
+              raise SystemExit('Runner altool is missing required options: ' + ', '.join(missing_options) + '; no Apple authentication attempted.')
           def execute(operation):
               result = subprocess.run([
                   'xcrun', 'altool', operation, str(ipa), '--platform', 'ios',

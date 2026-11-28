@@ -8,6 +8,11 @@ export const aiServices = [
   { id: "claude", name: "Claude", url: "https://claude.ai/new" },
   { id: "perplexity", name: "Perplexity", url: "https://www.perplexity.ai/" },
 ];
+export const aiSelectionGuidance = "Choose an AI service you already use or subscribe to. HomeAdmin starts with Copilot and adds no AI subscription or API charge. Your selected service is saved only on this device; HomeAdmin does not check or store your account or payment details. Your AI provider's own plan and limits still apply.";
+export function externalAiResearchGuidance(serviceName) {
+  const service = aiServices.find(item => item.name === serviceName) || aiServices[0];
+  return `Your question asks ${service.name} to look for current offers and dated sources if that AI supports web search. HomeAdmin cannot verify an answer returned from another AI: open cited provider pages and confirm prices, terms and eligibility. Check the facts below, copy the question, open ${service.name}, then return with the answer. Nothing is sent until you paste and send it.`;
+}
 export const aiActions = [
   { id: "review", label: "Review my next steps", request: "Help me decide practical next steps for this household bill." },
   { id: "letter", label: "Write a letter or email", request: "Draft a clear, polite letter or email to the provider. Include an editable subject. Use placeholders for missing recipient and personal details." },

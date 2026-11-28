@@ -15,6 +15,7 @@ export function extractPlanSections(text) {
   if (typeof text !== "string") return sections;
   const lines = text.replace(/\r\n?/g, "\n").split("\n");
   const heading = line => {
+    if (line.trim() === "Savings comparison (customer-checked source, not independently verified by HomeAdmin)") return "other";
     const match = line.trim().match(/^#{1,4}\s+(.+)$/);
     if (!match) return null;
     const normalized = normalise(match[1]);

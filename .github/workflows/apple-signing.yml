@@ -3,6 +3,14 @@ name: HomeAdmin manual signed build
 on:
   workflow_dispatch:
     inputs:
+      build_profile:
+        description: Internal offline candidate or live release
+        required: true
+        type: choice
+        default: internal-offline
+        options:
+          - internal-offline
+          - live-release
       build_number:
         description: Unused Apple build number (verify in App Store Connect first)
         required: true
@@ -27,6 +35,7 @@ jobs:
         working-directory: lifeadmin_build/native
     env:
       APPLE_BUILD_NUMBER: ${{ inputs.build_number }}
+      HOMEADMIN_BUILD_PROFILE: ${{ inputs.build_profile }}
       VITE_AI_DRAFT_API_BASE_URL: ${{ vars.HOMEADMIN_AI_API_ORIGIN }}
     steps:
       - uses: actions/checkout@v4
@@ -101,18 +110,27 @@ jobs:
       - name: Build and verify bundled customer assets
         run: |
           python - <<'PY'
-          import os
-          from urllib.parse import urlsplit
+          import os, sys
+          from pathlib import Path
+          sys.path.insert(0, str(Path.cwd().parent / "scripts"))
+          from validate_apple_build_profile import validate_profile
+          profile = os.environ.get("HOMEADMIN_BUILD_PROFILE", "")
           origin = os.environ.get("VITE_AI_DRAFT_API_BASE_URL", "")
-          if origin:
-              parsed = urlsplit(origin)
-              if (parsed.scheme != "https" or not parsed.hostname or parsed.username is not None
-                      or parsed.password is not None or parsed.path not in ("", "/")
-                      or parsed.query or parsed.fragment or any(char.isspace() for char in origin)):
-                  raise SystemExit("HOMEADMIN_AI_API_ORIGIN must be an HTTPS origin without credentials, path, query or fragment.")
-              print("Optional in-app AI endpoint configured. Runtime availability and consent still apply.")
+          validate_profile(profile, origin)
+          if profile == "internal-offline":
+              os.environ["VITE_AI_DRAFT_API_BASE_URL"] = ""
+              print("Internal offline profile: in-app APIs disabled; Copilot and chosen-AI handoff remain.")
           else:
-              print("No in-app AI endpoint configured; chosen AI and offline drafts remain available.")
+              import json, urllib.request
+              request = urllib.request.Request(origin.rstrip("/") + "/api/health", headers={"Accept": "application/json"})
+              try:
+                  with urllib.request.urlopen(request, timeout=10) as response:
+                      health = json.loads(response.read().decode("utf-8"))
+              except Exception:
+                  raise SystemExit("The configured HomeAdmin AI service health check failed.") from None
+              if not isinstance(health, dict) or health.get("live_comparisons_available") is not True:
+                  raise SystemExit("Live bill comparisons are not available for a live release.")
+              print("Live-release profile: configured comparison service is available.")
           PY
           npm ci --prefix ..
           npm ci
@@ -163,6 +181,11 @@ jobs:
           options = plistlib.loads(options_path.read_bytes())
           options["signingCertificate"] = identity
           options["provisioningProfiles"]["uk.co.tenaciouspl.lifeadmin"] = profile_name
+          if os.environ.get("HOMEADMIN_BUILD_PROFILE") == "internal-offline":
+              if options.get("testFlightInternalTestingOnly") is not True:
+                  raise SystemExit("Internal offline export must retain the Internal Only option.")
+          elif "testFlightInternalTestingOnly" in options:
+              raise SystemExit("Live release must not inherit the Internal Only option.")
           options_path.write_bytes(plistlib.dumps(options))
           (temporary / "profile-uuid.txt").write_text(profile_uuid)
           print("Profile name and matching certificate selected for runner-only signing.")
@@ -175,6 +198,25 @@ jobs:
 
       - name: Archive and export signed IPA
         run: |
+          if test "$HOMEADMIN_BUILD_PROFILE" = "internal-offline"; then
+            xcode_version=$(xcodebuild -version)
+            printf '%s\n' "$xcode_version"
+            printf '%s\n' "$xcode_version" | grep -Eq '^Xcode 27([.]|$)' || {
+              echo "Expected Xcode 27 on the xcode-27 runner; refusing export."
+              exit 1
+            }
+            xcode_help=$(xcodebuild -help 2>&1)
+            printf '%s' "$xcode_help" | grep -q 'testFlightInternalTestingOnly' || {
+              echo "Selected Xcode does not document testFlightInternalTestingOnly; refusing export."
+              exit 1
+            }
+            python - <<'PY'
+          import os, plistlib
+          from pathlib import Path
+          options = plistlib.loads((Path(os.environ["RUNNER_TEMP"]) / "ExportOptions.plist").read_bytes())
+          assert options.get("testFlightInternalTestingOnly") is True
+          PY
+          fi
           xcodebuild -project ios/App/App.xcodeproj -scheme App -configuration Release \
             -sdk iphoneos -destination 'generic/platform=iOS' \
             -archivePath "$RUNNER_TEMP/HomeAdmin.xcarchive" archive
@@ -208,6 +250,16 @@ jobs:
               "source_commit": os.environ["GITHUB_SHA"], "build": info["CFBundleVersion"],
               "ipa_sha256": ipa_sha256,
               "version": info["CFBundleShortVersionString"], "team": "C8T85FCR6R",
+              "profile": os.environ["HOMEADMIN_BUILD_PROFILE"],
+              "api_enabled": os.environ["HOMEADMIN_BUILD_PROFILE"] == "live-release",
+              "customer_key_relay_enabled": False,
+              "test_flight_internal_testing_only_requested": (
+                  os.environ["HOMEADMIN_BUILD_PROFILE"] == "internal-offline"),
+              "xcode_version": subprocess.check_output(["xcodebuild", "-version"], text=True).splitlines()[0],
+              "distribution_mode_requested": ("testflight-internal-only"
+                  if os.environ["HOMEADMIN_BUILD_PROFILE"] == "internal-offline"
+                  else "app-store-connect"),
+              "distribution_mode_verified": False,
               "scope": "Signed build only; not uploaded, installed or accepted by Apple"
           }, indent=2) + "\n")
           PY

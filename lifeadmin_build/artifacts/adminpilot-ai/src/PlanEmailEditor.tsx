@@ -1,31 +1,12 @@
-import { copyDeviceText } from "./lib/offline/device-files.mjs";
+import { copyDeviceText, openExternalDeviceUrl } from "./lib/offline/device-files.mjs";
+
+import { locateEmail, replaceEmail } from "./lib/offline/plan-email.mjs";
 
 type Segment = { start: number; end: number; header: string; subject: string; message: string };
 const field = "mt-1 w-full min-h-[44px] rounded-xl border border-slate-300 bg-white p-3 text-slate-900";
 const button = "min-h-[44px] rounded-xl border border-violet-400 bg-white px-4 py-2 font-semibold text-violet-900";
 
-function locateEmail(plan: string): Segment | null {
-  const lines = plan.split("\n");
-  const heading = /^(?:#{1,4}\s*)?(?:6[.)]\s*)?(?:Editable provider email|Provider-message draft|Provider email|Negotiation letter|Provider message)\s*:?\s*$/i;
-  const index = lines.findIndex(line => heading.test(line.trim()));
-  if (index < 0) return null;
-  let stop = lines.length;
-  for (let i = index + 1; i < lines.length; i++) {
-    if (/^\s*#{1,4}\s+\S/.test(lines[i]) || /^\s*(?:Details to confirm|Things to check|Approval checklist)\s*:?\s*$/i.test(lines[i])) {
-      stop = i; break;
-    }
-  }
-  const email = lines.slice(index + 1, stop).join("\n").trim();
-  const subjectLine = email.match(/^Subject:\s*(.*)$/im);
-  const subject = subjectLine?.[1]?.trim() || "";
-  const message = email.replace(/^Subject:.*(?:\n|$)/im, "").replace(/^\s*Message:\s*/i, "").trim();
-  return { start: index, end: stop, header: lines[index], subject, message };
-}
-function replaceEmail(plan: string, segment: Segment, subject: string, message: string) {
-  const lines = plan.split("\n");
-  const replacement = [segment.header, "Subject: " + subject, "Message:", message.trim(), ""];
-  return [...lines.slice(0, segment.start), ...replacement, ...lines.slice(segment.end)].join("\n");
-}
+// Email parsing is shared with the regression fixtures.
 // Keep the displayed fallback in the saved plan even when the user makes no edits.
 export function planWithProviderEmail(plan: string, provider: string): string {
   if (locateEmail(plan)) return plan;
@@ -71,5 +52,11 @@ export default function PlanEmailEditor({ plan, provider, onChange, onStatus, on
         .then(() => onStatus("Edited email copied. Review before sending."))
         .catch(() => onError("Unable to copy the email. Select the text and copy manually."));
     }}>Copy edited provider email</button>
+    <button type="button" className={button + " ml-2 mt-3"} onClick={() => {
+      if (!section.subject.trim() || !section.message.trim()) { onError("Add an email subject and message before opening your email app."); return; }
+      onStatus("Opening your email app. Check the recipient and wording before sending.");
+      void openExternalDeviceUrl(`mailto:?subject=${encodeURIComponent(section.subject)}&body=${encodeURIComponent(section.message)}`)
+        .catch(() => onError("Email could not be opened. Copy the message into your provider's email or website form."));
+    }}>Open in email app</button>
   </section>;
 }

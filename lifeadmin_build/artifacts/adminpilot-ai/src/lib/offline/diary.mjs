@@ -28,3 +28,12 @@ export function diaryEvents(tasks) {
   if (events.length > 1000) throw new Error('Diary integration supports up to 1,000 dated entries. Disable diary entries for older bills before retrying.');
   return events;
 }
+
+// Mirrors the native calendar's local 09:00 alarm calculation; delivery is device-dependent.
+export function diaryAlertState(event, now = new Date()) {
+  if (!validDiaryDate(event?.date) || ![0,7,14,30].includes(event.leadDays) || !Number.isFinite(now.getTime())) throw new Error('Check the diary date and reminder lead.');
+  const [year,month,day] = event.date.split('-').map(Number);
+  const alert = new Date(year,month-1,day,9,0,0,0);
+  alert.setDate(alert.getDate()-event.leadDays);
+  return { key:event.key, alertAt:alert.toISOString(), status:alert > now ? 'future' : 'elapsed' };
+}

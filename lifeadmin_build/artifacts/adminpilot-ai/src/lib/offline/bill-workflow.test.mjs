@@ -74,6 +74,27 @@ test("reviewed AI plans retain structured results for reopening and backup", () 
   });
   assert.match(note.sections.approval_checklist, /Nothing has been sent/);
 });
+test("grounded live comparisons preserve raw sourced content and a separate editable provider email", () => {
+  const grounding = { sources: [{ title: "Official offer", url: "https://example.test/offer" }], citations: [], search_suggestions_html: "<a>Search</a>", checked_at: "2026-11-20T12:00:00Z", model: "gemini-test" };
+  const state = { ...draft("plan"), method: "gemini_api", liveComparison: true, grounding, messageSubject: "Check my price", messageBody: "Please confirm your best offer." };
+  const saved = workflowResult(bill, state);
+  assert.equal(saved.source, "external_ai_grounded");
+  assert.equal(saved.ai_service, "Google Gemini with Google Search");
+  assert.equal(saved.content, state.body);
+  assert.deepEqual(saved.live_comparison, grounding);
+  assert.deepEqual(saved.provider_email, { subject: state.messageSubject, body: state.messageBody, kind: "provider" });
+  assert.throws(() => workflowResult(bill, { ...state, grounding: { ...grounding, sources: [{ title: "unsafe", url: "javascript:alert(1)" }] } }), /sources/);
+  const letter = workflowResult(bill, { ...state, output: "letter", subject: "Reviewed subject" });
+  assert.equal(letter.source, "external_ai_api");
+  assert.equal(letter.live_comparison, null);
+});
+test("comparison intent through chosen AI is saved as a manual AI plan, not false live evidence", () => {
+  const saved = workflowResult(bill, { ...draft("plan"), method: "chosen_ai", liveComparison: true, reviewed: true }, "Copilot");
+  assert.equal(saved.source, "external_ai_manual");
+  assert.equal(saved.ai_service, "Copilot");
+  assert.equal(saved.live_comparison, null);
+  assert.equal(saved.provider_email, null);
+});
 test("offline plans retain their complete readable body", () => {
   const note = workflowResult(bill, { ...draft("plan"), method: "local" });
   assert.equal(note.content, "Reviewed result");

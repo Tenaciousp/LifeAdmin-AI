@@ -1,6 +1,7 @@
 import { money } from "./lib/offline/bill-overview.mjs";
 import { extractPlanSections } from "./lib/offline/plan-sections.mjs";
 import { hasDatedSourceReference } from "./lib/offline/source-evidence.mjs";
+import LinkifiedText from "./LinkifiedText";
 
 export default function PlanResultSummary({ plan, savedCost }: { plan: string; savedCost?: { monthly: number; yearly: number; currency: string } | null }) {
   const { bill, recommendation, alternatives, actions: actionList, savings: estimatedSavings } = extractPlanSections(plan);
@@ -11,23 +12,23 @@ export default function PlanResultSummary({ plan, savedCost }: { plan: string; s
     return <section aria-label="AI result overview" className="rounded-xl border border-amber-200 bg-amber-50 p-4">
       <h4 className="font-bold text-amber-950">Recommendation needs review</h4>
       {savedCost && <p className="mt-2 font-semibold">Your saved cost: {money(savedCost.monthly, savedCost.currency)} per month · {money(savedCost.yearly, savedCost.currency)} per year. Entered by you, not provider-verified.</p>}
-      {actionList && <div className="mt-3 rounded-lg border border-amber-200 bg-white p-3"><h5 className="font-bold">Actions included in the answer</h5><p className="mt-2 whitespace-pre-wrap break-words">{actionList}</p></div>}
+      {actionList && <div className="mt-3 rounded-lg border border-amber-200 bg-white p-3"><h5 className="font-bold">Actions included in the answer</h5><p className="mt-2 whitespace-pre-wrap break-words"><LinkifiedText text={actionList} /></p></div>}
       <p className="mt-2 text-sm text-amber-950">The AI answer has no clearly labelled recommendation or comparison. Read the full plan below and request a clearer answer before relying on savings claims.</p>
     </section>;
   }
   return <section aria-label="AI result overview" className="rounded-xl border border-violet-200 bg-white p-4">
     <h4 className="text-lg font-bold text-violet-950">Your AI results at a glance</h4>
     {savedCost && <div className="mt-3 rounded-xl border border-slate-200 p-3"><h5 className="font-bold">Your saved current cost</h5><p className="mt-1 text-sm text-slate-700">Calculated from the amount, currency and billing frequency you entered. Not a provider-verified charge.</p><p className="mt-2 font-semibold">{money(savedCost.monthly, savedCost.currency)} per month · {money(savedCost.yearly, savedCost.currency)} per year</p></div>}
-    {bill ? <div className="mt-3 rounded-xl border border-slate-200 p-3"><h5 className="font-bold">AI summary of your bill</h5><p className="mt-2 whitespace-pre-wrap break-words">{bill}</p></div> : !savedCost && <p className="mt-3 text-sm text-slate-700">No complete current-cost information was provided. Check the amount, currency and billing period before comparing.</p>}
+    {bill ? <div className="mt-3 rounded-xl border border-slate-200 p-3"><h5 className="font-bold">AI summary of your bill</h5><p className="mt-2 whitespace-pre-wrap break-words"><LinkifiedText text={bill} /></p></div> : !savedCost && <p className="mt-3 text-sm text-slate-700">No complete current-cost information was provided. Check the amount, currency and billing period before comparing.</p>}
     {recommendation ? <div className="mt-3 rounded-xl bg-violet-50 p-3">
       <h5 className="font-bold text-violet-950">Recommended next action</h5>
-      <p className="mt-2 whitespace-pre-wrap break-words">{recommendation}</p>
+      <p className="mt-2 whitespace-pre-wrap break-words"><LinkifiedText text={recommendation} /></p>
     </div> : <p className="mt-3 text-amber-900">No separate recommendation was found. Review the full response below.</p>}
-    {actionList && <div className="mt-3 rounded-xl border border-slate-200 p-3"><h5 className="font-bold">Your action list</h5><p className="mt-2 whitespace-pre-wrap break-words">{actionList}</p></div>}
+    {actionList && <div className="mt-3 rounded-xl border border-slate-200 p-3"><h5 className="font-bold">Your action list</h5><p className="mt-2 whitespace-pre-wrap break-words"><LinkifiedText text={actionList} /></p></div>}
     <div className="mt-3 rounded-xl border border-slate-200 p-3" aria-label="Savings evidence status"><h5 className="font-bold">Potential savings</h5>{estimatedSavings && <div className="mt-2 rounded-lg bg-amber-50 p-3"><p className="font-semibold text-amber-950">AI estimate, not a verified saving</p><p className="mt-1 whitespace-pre-wrap break-words text-sm text-slate-800">{estimatedSavings}</p></div>}{reviewedDifferences.length > 0 && <ul className="mt-2 space-y-1">{reviewedDifferences.map((difference, index) => <li key={index} className="font-semibold">{difference.direction === "saving" ? "Indicative saving: " : "Indicative extra cost: "}{difference.value} over {difference.months} months</li>)}</ul>}<p className="mt-2 text-sm text-slate-700">{customerChecked ? "Your plan contains a comparison using a source you checked. HomeAdmin has not independently verified the offer, price or availability." : "Any savings figures above are AI estimates unless supported by a provider offer you have checked. HomeAdmin has not independently verified prices or availability."} Compare equivalent services, contract length, introductory and later prices, fees, eligibility and exit costs before treating an offer as cheaper.</p></div>
     {alternatives ? <div className="mt-3 rounded-xl border border-slate-200 p-3">
       <h5 className="font-bold">Alternatives from the AI response</h5>
-      <p className="mt-2 whitespace-pre-wrap break-words">{alternatives}</p>
+      <p className="mt-2 whitespace-pre-wrap break-words"><LinkifiedText text={alternatives} /></p>
     </div> : <p className="mt-3 text-sm text-slate-700">No separate alternatives section was found.</p>}
     <p className="mt-3 text-sm font-semibold text-amber-950">{hasSourceEvidence ? "The AI response includes a web link and date. This is a reference supplied by the AI, not independent verification by HomeAdmin." : "The AI response does not include both a web link and a check date in the alternatives section."} Open the provider source and confirm the offer, eligibility, total cost and terms before acting. Savings are not guaranteed.</p>
   </section>;

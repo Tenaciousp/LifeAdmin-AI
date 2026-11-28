@@ -266,3 +266,33 @@ test("malformed bill display and detail fields never replace acknowledged record
   reopened.close();
 });
 
+
+test("legacy inline AI email survives native-adapter failure, editing, reopen and backup without stale copy", async () => {
+  const { savedPlanEmail } = await import('./plan-email.mjs');
+  const bridge = database(), store = await openNativeStore(bridge);
+  await store.createTask(bill);
+  const worksheet = 'Savings comparison (customer-checked source, not independently verified by HomeAdmin)\nCustomer-reviewed source URL: https://provider.example/fictional\nChecked on: 2026-11-23\n12-month difference: £268';
+  const plan = { id: 'legacy-ai', task_id: bill.id, title: 'Fictional saved AI plan', source: 'external_ai_manual', workflow_output: 'plan', provider_email: null, sections: { alternatives: 'Undated fictional alternative' }, content: '## Alternatives to consider\nUndated fictional alternative\n## Editable provider email\nSubject: Original subject\nMessage: Original body\n\n' + worksheet };
+  await store.savePlan(plan);
+  const expected = savedPlanEmail(plan), draft = { subject: 'Reviewed subject', body: 'Reviewed body' };
+  bridge.failNext();
+  await assert.rejects(store.updatePlanMessage(plan.id, draft, expected), /Injected commit failure/);
+  assert.deepEqual((await store.read()).plans, [plan]);
+  const edited = await store.updatePlanMessage(plan.id, draft, expected);
+  assert.equal(edited.provider_email, null);
+  assert.deepEqual(edited.sections, plan.sections);
+  assert.ok(edited.content.includes(worksheet));
+  const backup = await store.exportBackup(); store.close();
+  const reopened = await openNativeStore(bridge);
+  assert.deepEqual((await reopened.read()).plans, [edited]);
+  assert.deepEqual(savedPlanEmail(edited), { ...draft, kind: 'provider' });
+  await assert.rejects(reopened.updatePlanMessage(plan.id, { subject: 'Stale', body: 'Stale' }, expected), /Message changed/);
+  await reopened.clear(); await reopened.importBackup(backup, { replace: true });
+  const restored = (await reopened.read()).plans[0];
+  const copy = planTextForCopy(restored);
+  assert.doesNotMatch(copy, /Original subject|Original body/);
+  assert.equal(copy.match(/Subject: Reviewed subject/g).length, 1);
+  assert.ok(copy.includes(worksheet));
+  assert.deepEqual((await reopened.read()).tasks, [bill]);
+  reopened.close();
+});

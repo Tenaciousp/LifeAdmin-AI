@@ -1,3 +1,4 @@
+import { savedPlanEmail, locateEmail, replaceEmail } from "./plan-email.mjs";
 // Device-local repository. No account, server, analytics or automatic upload.
 const FORMAT = "lifeadmin-backup";
 const VERSION = 1;
@@ -86,13 +87,18 @@ export function parseBackup(text) {
 
 export function planWithEditedMessage(plan, draft, expected) {
   if (!plan) throw new Error("Plan not found.");
-  if (!plan.provider_email) throw new Error("This plan has no message draft.");
-  if (!expected || ["subject", "body", "kind"].some(key => expected[key] !== plan.provider_email[key])) {
+  const email = savedPlanEmail(plan);
+  if (!email) throw new Error("This plan has no message draft.");
+  if (!expected || ["subject", "body", "kind"].some(key => expected[key] !== email[key])) {
     throw new Error("Message changed. Reopen the app before editing again.");
   }
   if (!draft || typeof draft.subject !== "string" || typeof draft.body !== "string" ||
       !draft.subject.trim() || !draft.body.trim() || draft.subject.length > 200 || draft.body.length > 20000) {
     throw new Error("Enter a subject (up to 200 characters) and message (up to 20,000 characters).");
+  }
+  if (!plan.provider_email) {
+    const segment = locateEmail(plan.content);
+    return record({ ...plan, content: replaceEmail(plan.content, segment, draft.subject, draft.body) }, "plan");
   }
   return record({ ...plan, provider_email: { ...plan.provider_email,
     subject: draft.subject, body: draft.body } }, "plan");

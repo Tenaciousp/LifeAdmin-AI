@@ -35,3 +35,20 @@ test('date edits keep event identity and backup restore preserves dates without 
   await store.importBackup(backup,{replace:true});assert.deepEqual(diaryEvents((await store.read()).tasks),diaryEvents([task]));
   assert.doesNotMatch(backup,/calendarId|eventIdentifier|Managed by/);store.close();
 });
+
+test('elapsed selected leads are distinct from future alarms without changing event identity or user choice',async()=>{
+ const {diaryAlertState}=await import('./diary.mjs');
+ const now=new Date('2026-11-24T10:00:00Z');
+ const original={...task,details:{diary_enabled:'yes',diary_lead_days:'14',contract_expiry:'2026-11-27'}};
+ const event=diaryEvents([original])[0];
+ assert.equal(diaryAlertState(event,now).status,'elapsed');
+ const shorter=diaryEvents([{...original,details:{...original.details,diary_lead_days:'0'}}])[0];
+ assert.equal(shorter.key,event.key);assert.equal(event.leadDays,14);
+ const next=diaryAlertState(shorter,now);assert.equal(next.status,'future');
+ assert.equal(next.alertAt,'2026-11-27T09:00:00.000Z');
+ const control={...event,date:'2026-12-12'};
+ assert.equal(diaryAlertState(control,now).status,'future');
+ assert.equal(diaryAlertState(control,now).alertAt,'2026-11-28T09:00:00.000Z');
+ assert.equal(diaryAlertState(shorter,new Date(next.alertAt)).status,'elapsed');
+ assert.equal(original.details.diary_lead_days,'14');
+});
