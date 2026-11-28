@@ -39,45 +39,41 @@ const assert = require('node:assert/strict');
     page.on('websocket', socket => external.push(socket.url()));
     page.on('pageerror', error => errors.push(String(error)));
     await page.goto(origin + '/');
-    const idle = () => page.waitForFunction(() => Array.from(document.querySelectorAll('button')).some(button => button.textContent === 'Save bill' && !button.disabled));
-    await page.getByRole('button',{name:'Save bill',exact:true}).waitFor();
-    await idle();
-    await page.getByLabel('Bill or provider').fill('Cancel Netflix');
-    await page.getByRole('button',{name:'Search',exact:true}).click();
-    await page.getByRole('button',{name:'Use suggestion',exact:true}).click();
+    const button = name => page.getByRole('button',{name,exact:true});
+    const heading = name => page.getByRole('heading',{name,exact:true});
+    const prepare = async () => {
+      await button('Prepare comparison question').click();
+      await heading('Your AI question is ready').waitFor();
+    };
+    await button('Water').click();
+    await page.getByLabel('What would you like help with?').selectOption('check_bill');
     await page.getByLabel('Bill name',{exact:true}).fill('Network QA synthetic bill');
-    await page.getByLabel('Additional notes',{exact:true}).fill('SYNTHETIC-NETWORK-QA-7319');
-    await page.getByRole('button',{name:'Save bill',exact:true}).click();
-    await page.getByRole('heading',{name:'Your bills (1)',exact:true}).waitFor();
-    await idle();
-    await page.getByRole('button',{name:'Create offline template',exact:true}).click();
-    await page.getByRole('heading',{name:'Saved plans (1)',exact:true}).waitFor();
-    await idle();
-    await page.getByRole('button',{name:'Prepare AI prompt',exact:true}).click();
-    const prompt = page.getByRole('textbox',{name:/^AI prompt/});
-    assert((await prompt.inputValue()).length > 100);
-    await idle();
-    await prompt.fill('Reviewed synthetic prompt only');
-    await page.getByRole('button',{name:'Copy AI prompt',exact:true}).click();
-    await page.getByText('AI prompt copied. Paste into your chosen service after reviewing the details.',{exact:true}).waitFor();
-    await idle();
-    assert.equal(await page.evaluate(() => navigator.clipboard.readText()),'Reviewed synthetic prompt only');
+    await page.getByLabel('Water company (useful)',{exact:true}).fill('Example Water');
+    await page.getByLabel('Country / region of this bill').selectOption('Canada');
+    await page.getByLabel('Bill currency').selectOption('CAD');
+    await page.locator('summary').filter({hasText:'More bill details (optional)'}).click();
+    await page.locator('#amount').fill('46.00');
+    await page.getByLabel('Customer reference (optional)',{exact:true}).fill('SYNTHETIC-NETWORK-QA-7319');
+    await button('Save bill and continue to AI help').click();
+    await heading('Check your bill details').waitFor();
+    await prepare();
+    const prompt = page.getByLabel('Prepared AI request',{exact:true});
+    const reviewed = await prompt.inputValue();
+    assert(reviewed.length > 100);
+    assert.match(reviewed,/46\.00/);
+    assert.doesNotMatch(reviewed,/SYNTHETIC-NETWORK-QA-7319/);
+    assert.equal(await prompt.evaluate(element => element.readOnly),true);
+    await button('Copy question').click();
+    await page.getByRole('status').filter({hasText:'Question copied and progress saved.'}).waitFor();
+    assert.equal(await page.evaluate(() => navigator.clipboard.readText()),reviewed);
     const layouts = [];
     for (const width of [320,375,768,1024]) {
       await page.setViewportSize({width,height:1024});
       for (const scale of [1,2]) {
         await page.evaluate(scale => {document.documentElement.style.fontSize = `${16*scale}px`;},scale);
-        await page.getByRole('heading',{name:'Review your AI prompt',exact:true}).scrollIntoViewIfNeeded();
+        await page.getByRole('heading',{name:'Your AI question is ready',exact:true}).scrollIntoViewIfNeeded();
         const layout = await page.evaluate(() => ({width:innerWidth,scrollWidth:document.documentElement.scrollWidth,fontSize:getComputedStyle(document.documentElement).fontSize,clippedControls:[...document.querySelectorAll('button,input,select,textarea,a')].filter(e => e.getBoundingClientRect().width && (e.getBoundingClientRect().left < -1 || e.getBoundingClientRect().right > innerWidth+1)).map(e=>({name:e.textContent.trim().slice(0,60),left:e.getBoundingClientRect().left,right:e.getBoundingClientRect().right}))}));
-        const title = await page.locator('#saved-plans li h3').filter({hasText:'Network QA synthetic bill'}).boundingBox();
-        assert(title && title.width >= Math.min(180,width*0.4),`Saved plan title is squeezed at ${width}px / ${scale*100}% text`);
-        layouts.push({...layout,scale});
-        const controls=await Promise.all(['Copy plan','Copy message','Prepare AI prompt'].map(name=>page.getByRole('button',{name,exact:true}).boundingBox()));
-        for(let i=1;i<controls.length;i++) {
-          const previous=controls[i-1],current=controls[i];
-          assert(previous&&current,'Plan actions must be visible');
-          if(Math.abs(previous.y-current.y)<2) assert(current.x-(previous.x+previous.width)>=8,`Plan action gap is below 8 px at ${width}px / ${scale*100}% text`);
-        }
+        layouts.push({...layout,scale,screen:'guided question'});
         await page.screenshot({path:path.join(output,`layout-${width}-${scale}.png`)});
       }
     }
@@ -96,20 +92,19 @@ const assert = require('node:assert/strict');
     // Begin before the first focusable element, then traverse the full document.
     await page.evaluate(() => {document.body.tabIndex=-1;document.body.focus();});
     const tabStops=[];
-    for (let i=0;i<100;i++) {
+    for (let i=0;i<240;i++) {
       await page.keyboard.press('Tab');
       await page.waitForFunction(() => {const e=document.activeElement,r=e.getBoundingClientRect();return e===document.body || (r.bottom>0 && r.top<innerHeight);},{},{timeout:3000});
       const focused=await page.evaluate(() => {const e=document.activeElement,r=e.getBoundingClientRect(),s=getComputedStyle(e);return {tag:e.tagName,name:(e.getAttribute('aria-label')||e.textContent||e.id).trim().slice(0,80),href:e.getAttribute('href'),top:r.top,bottom:r.bottom,outlineStyle:s.outlineStyle,outlineWidth:s.outlineWidth,tabIndex:e.tabIndex};});
       if(focused.tag==='BODY') break;
       tabStops.push(focused);
     }
-    const links=await page.locator('a').evaluateAll(elements=>elements.map(e=>({name:e.textContent,href:e.getAttribute('href'),target:e.target,rel:e.rel})));
     console.log('Keyboard stops:',tabStops.length);
     for (const layout of layouts) {
       assert(layout.scrollWidth<=layout.width+1,JSON.stringify(layout));
       assert.deepEqual(layout.clippedControls,[],JSON.stringify(layout));
     }
-    for (const name of ['Copy AI prompt','Close AI prompt','Open Copilot (Microsoft, free option)','Manage backups','App privacy policy']) {
+    for (const name of ['Copy question','Close bill help','Open Copilot (Microsoft, free option)','Manage backups','App privacy policy']) {
       assert(tabStops.some(stop=>stop.name===name),`Tab traversal missed ${name}`);
     }
     assert(tabStops.every(stop=>stop.outlineStyle!=='none'&&parseFloat(stop.outlineWidth)>0),'A keyboard focus indicator is missing');
@@ -117,14 +112,46 @@ const assert = require('node:assert/strict');
     // Verify every provider by selecting each option instead of counting five
     // simultaneously visible links from the older all-links layout.
     const aiLinks=[];
-    const aiSelector=page.locator('label').filter({hasText:/^Your preferred AI/}).locator('select');
+    const aiSelector=page.getByRole('combobox',{name:/^AI service/});
     for (const [id,name,url] of [['chatgpt','ChatGPT','https://chatgpt.com/'],['gemini','Gemini','https://gemini.google.com/'],['copilot','Copilot','https://copilot.microsoft.com/'],['claude','Claude','https://claude.ai/new'],['perplexity','Perplexity','https://www.perplexity.ai/']]) {
+      await button('Change details').click();
       await aiSelector.selectOption(id);
+      await prepare();
       const link=await page.getByRole('link',{name:new RegExp('^Open '+name)}).evaluate(e=>({name:e.textContent,href:e.getAttribute('href'),target:e.target,rel:e.rel}));
       assert.equal(link.href,url);assert.equal(new URL(link.href).search,'');assert.equal(new URL(link.href).hash,'');assert.equal(link.target,'_blank');assert(link.rel.includes('noopener')&&link.rel.includes('noreferrer'));
       aiLinks.push(link);
     }
     assert.equal(aiLinks.length,5);
+    await button('I have an answer to review').click();
+    await heading('Paste and review your AI answer').waitFor();
+    await page.getByLabel('Answer from your AI',{exact:true}).fill([
+      '## Best next action','Ask the water company to check the meter reading.',
+      '## Alternatives to consider','Compare metering or repayment options, not suppliers.',
+      '## Estimated savings','Not available: no verified prices.',
+      '## Editable provider email','Subject: Please check my water bill',
+      'Message: Please explain the current bill.'
+    ].join('\n'));
+    await page.getByRole('checkbox',{name:/^I have checked the answer/}).check();
+    await button('Save reviewed result').click();
+    await heading('Network QA synthetic bill · Plan').waitFor();
+    for (const width of [320,375,768,1024]) {
+      await page.setViewportSize({width,height:1024});
+      for (const scale of [1,2]) {
+        await page.evaluate(scale => {document.documentElement.style.fontSize = `${16*scale}px`;},scale);
+        const title = await page.locator('#saved-plans li h3').filter({hasText:'Network QA synthetic bill'}).boundingBox();
+        assert(title && title.width >= Math.min(180,width*0.4),`Saved plan title is squeezed at ${width}px / ${scale*100}% text`);
+        const controls=await Promise.all([button('Copy plan'),button('Copy message'),page.getByRole('link',{name:'Open email app',exact:true})].map(control=>control.boundingBox()));
+        for(let i=0;i<controls.length;i++) {
+          const current=controls[i], previous=controls[i-1];
+          assert(current && current.x >= -1 && current.x + current.width <= width + 1,'Plan actions must be visible and not clipped');
+          if(previous && Math.abs(previous.y-current.y)<2) assert(current.x-(previous.x+previous.width)>=8,`Plan action gap is below 8 px at ${width}px / ${scale*100}% text`);
+        }
+        assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1),`Saved result overflow at ${width}px / ${scale*100}% text`);
+        await heading('Network QA synthetic bill · Plan').scrollIntoViewIfNeeded();
+        await page.screenshot({path:path.join(output,`saved-result-${width}-${scale}.png`)});
+      }
+    }
+    assert(requests.every(request=>new URL(request.url).origin===origin && ['GET','HEAD'].includes(request.method)), 'Browser must not send the bill or prompt');
     assert.deepEqual(external,[]);
     assert.deepEqual(errors,[]);
     const usabilityReport={scope:'Browser fallback with 100%/200% root font sizes; not native Apple Dynamic Type, VoiceOver, hardware keyboard, actual external navigation or WKWebView acceptance',passed:true,layouts,tabStops,aiLinks,pageErrors:errors};
